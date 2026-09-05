@@ -69,11 +69,10 @@ export function LandingExperience() {
     if (!story) return;
 
     let frame = 0;
-    const updateProgress = () => {
-      frame = 0;
-      const bounds = story.getBoundingClientRect();
-      const distance = Math.max(1, story.offsetHeight - window.innerHeight);
-      const progress = Math.min(1, Math.max(0, -bounds.top / distance));
+    let currentProgress = 0;
+    let targetProgress = 0;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const setProgress = (progress: number) => {
       const segment = (start: number, end: number) =>
         Math.min(1, Math.max(0, (progress - start) / (end - start))).toFixed(4);
       story.style.setProperty("--growth-progress", progress.toFixed(4));
@@ -82,11 +81,31 @@ export function LandingExperience() {
       story.style.setProperty("--leaf-growth", segment(0.38, 0.67));
       story.style.setProperty("--network-growth", segment(0.62, 0.9));
     };
+    const readTarget = () => {
+      const bounds = story.getBoundingClientRect();
+      const distance = Math.max(1, story.offsetHeight - window.innerHeight);
+      targetProgress = Math.min(1, Math.max(0, -bounds.top / distance));
+    };
+    const animate = () => {
+      const difference = targetProgress - currentProgress;
+      currentProgress += difference * 0.16;
+      if (Math.abs(difference) < 0.0005) currentProgress = targetProgress;
+      setProgress(currentProgress);
+      frame = currentProgress === targetProgress ? 0 : window.requestAnimationFrame(animate);
+    };
     const requestUpdate = () => {
-      if (!frame) frame = window.requestAnimationFrame(updateProgress);
+      readTarget();
+      if (reduceMotion.matches) {
+        currentProgress = targetProgress;
+        setProgress(currentProgress);
+      } else if (!frame) {
+        frame = window.requestAnimationFrame(animate);
+      }
     };
 
-    updateProgress();
+    readTarget();
+    currentProgress = targetProgress;
+    setProgress(currentProgress);
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", requestUpdate);
     return () => {
@@ -113,35 +132,46 @@ export function LandingExperience() {
 
       <section className="scroll-story" id="story" ref={storyRef} aria-label="How Sprout works">
         <div className="story-stage" data-scene={activeScene}>
+          <div className="story-landscape" />
+          <div className="growth-stage" aria-hidden="true">
+            <GrowthSystem />
+          </div>
           <div className="ambient-orb ambient-orb-one" />
           <div className="ambient-orb ambient-orb-two" />
-          <div className="story-copy" key={activeScene} aria-live="polite">
-            <p className="eyebrow">{chapters[activeScene].eyebrow}</p>
-            <h1>{chapters[activeScene].title}</h1>
-            <p className="story-body">{chapters[activeScene].body}</p>
-            {activeScene === 0 && (
-              <div className="story-actions">
-                <Link className="button button-primary" href="/workspace/acme/agent">
-                  Explore Sprout <ArrowRight size={16} />
-                </Link>
-                <span className="scroll-note">Scroll to grow the app</span>
+          <span className="sr-only" aria-live="polite">{chapters[activeScene].title}</span>
+          <div className="story-copy-stack">
+            {chapters.map((chapter, index) => (
+              <div
+                className={`story-copy ${index === activeScene ? "is-active" : ""}`}
+                key={chapter.eyebrow}
+                aria-hidden={index !== activeScene}
+              >
+                <p className="eyebrow">{chapter.eyebrow}</p>
+                <h1>{chapter.title}</h1>
+                <p className="story-body">{chapter.body}</p>
+                {index === activeScene && index === 0 && (
+                  <div className="story-actions">
+                    <Link className="button button-primary" href="/workspace/acme/agent">
+                      Explore Sprout <ArrowRight size={16} />
+                    </Link>
+                    <span className="scroll-note">Scroll to grow the app</span>
+                  </div>
+                )}
+                {index === activeScene && index === 6 && (
+                  <div className="story-actions final-actions">
+                    <Link className="button button-primary" href="/workspace/acme/agent">
+                      Build something small <ArrowRight size={16} />
+                    </Link>
+                    <Link className="button button-secondary" href="/workspace/acme/apps">
+                      View the workspace
+                    </Link>
+                  </div>
+                )}
               </div>
-            )}
-            {activeScene === 6 && (
-              <div className="story-actions final-actions">
-                <Link className="button button-primary" href="/workspace/acme/agent">
-                  Build something small <ArrowRight size={16} />
-                </Link>
-                <Link className="button button-secondary" href="/workspace/acme/apps">
-                  View the workspace
-                </Link>
-              </div>
-            )}
+            ))}
           </div>
 
           <div className="product-world" aria-hidden="true">
-            <div className="world-grid" />
-            <GrowthSystem />
             <div className="source-card">
               <div className="source-icon"><FileCode2 size={18} /></div>
               <div><strong>invoice-approval</strong><span>Next.js · ready</span></div>

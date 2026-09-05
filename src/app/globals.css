@@ -2418,6 +2418,221 @@ body {
   }
 }
 
+/* Centered landscape story */
+@media (min-width: 901px) {
+  .story-stage {
+    display: block;
+    padding: 0;
+    isolation: isolate;
+  }
+
+  .story-stage::before {
+    z-index: -1;
+    background:
+      linear-gradient(180deg, rgba(250, 246, 238, 0.2), transparent 54%),
+      radial-gradient(ellipse at 50% 31%, rgba(255, 252, 244, 0.76) 0 24%, rgba(255, 252, 244, 0.18) 52%, transparent 70%);
+    mask-image: none;
+  }
+
+  .story-landscape {
+    position: absolute;
+    z-index: -3;
+    inset: -2%;
+    background-image:
+      linear-gradient(180deg, rgba(249, 244, 234, 0.08), rgba(247, 240, 226, 0.02) 58%, rgba(49, 43, 26, 0.08)),
+      url("/images/sprout-growth-landscape.png");
+    background-position: center 62%;
+    background-size: cover;
+    filter: saturate(0.82) contrast(0.94);
+    transform: scale(calc(1.025 + var(--growth-progress) * 0.012));
+    transform-origin: center;
+    will-change: transform;
+  }
+
+  .story-copy-stack {
+    position: absolute;
+    z-index: 8;
+    top: clamp(112px, 15vh, 150px);
+    left: 50%;
+    width: min(920px, calc(100% - 80px));
+    min-height: 390px;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+
+  .story-copy {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    max-width: none;
+    align-items: center;
+    flex-direction: column;
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 420ms ease,
+      transform 620ms var(--ease-out),
+      visibility 0s linear 620ms;
+    animation: none;
+  }
+
+  .story-copy.is-active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0ms;
+  }
+
+  .story-copy h1 {
+    max-width: 15ch;
+    font-size: clamp(46px, 5.35vw, 76px);
+    text-shadow: 0 2px 30px rgba(255, 251, 242, 0.86);
+  }
+
+  .story-body {
+    max-width: 600px;
+    margin-top: 20px;
+    color: #645b50;
+    text-shadow: 0 1px 18px rgba(255, 251, 242, 0.95);
+  }
+
+  .story-actions {
+    justify-content: center;
+    margin-top: 25px;
+  }
+
+  .growth-stage {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .growth-stage .growth-system {
+    top: 68%;
+    left: 50%;
+    width: min(760px, 72vw);
+    height: auto;
+    transform: translate(-50%, -54%);
+    filter: drop-shadow(0 16px 28px rgba(49, 44, 27, 0.1));
+  }
+
+  .growth-soil {
+    opacity: 0.15;
+  }
+
+  .root {
+    stroke: #8f7657;
+    opacity: calc(0.28 + var(--root-growth) * 0.72);
+  }
+
+  .stem {
+    stroke: #61703e;
+  }
+
+  .product-world {
+    position: absolute;
+    z-index: 6;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    perspective: none;
+    pointer-events: none;
+  }
+
+  .world-grid {
+    display: none;
+  }
+
+  .source-card {
+    top: 73%;
+  }
+
+  .pipeline {
+    top: 80%;
+  }
+
+  .app-window {
+    top: 72%;
+    width: min(480px, 42vw);
+  }
+
+  .resource-db { top: 60%; left: 18%; }
+  .resource-secret { top: 61%; right: 18%; }
+  .resource-logs { right: 20%; bottom: 8%; }
+
+  .team-cluster {
+    right: 13%;
+    bottom: 10%;
+    height: 92px;
+    border: 1px solid rgba(74, 61, 46, 0.14);
+    border-radius: 16px;
+    padding: 13px;
+    background: rgba(255, 251, 244, 0.88);
+    box-shadow: 0 18px 48px rgba(64, 49, 32, 0.13);
+  }
+
+  .team-label {
+    color: #62584b;
+  }
+
+  .team-cluster .person {
+    top: 44px;
+  }
+
+  .mini-one { top: 59%; left: 12%; }
+  .mini-two { top: 57%; right: 12%; }
+  .mini-three { right: 17%; bottom: 8%; }
+
+  .story-stage[data-scene="0"] .source-card,
+  .story-stage[data-scene="3"] .source-card,
+  .story-stage[data-scene="4"] .source-card,
+  .story-stage[data-scene="5"] .source-card,
+  .story-stage[data-scene="6"] .source-card {
+    opacity: 0;
+  }
+
+  .story-stage[data-scene="5"] .app-window,
+  .story-stage[data-scene="6"] .app-window,
+  .story-stage[data-scene="5"] .resource {
+    opacity: 0;
+  }
+
+  .story-stage[data-scene="6"] .growth-system {
+    opacity: 0.62;
+  }
+
+  .story-chapters > section {
+    min-height: 86svh;
+  }
+
+  .story-chapters > section:last-child {
+    min-height: 100svh;
+  }
+}
+
+@media (max-width: 900px) {
+  .story-chapters::before {
+    background:
+      linear-gradient(rgba(249, 244, 234, 0.42), rgba(245, 237, 223, 0.2)),
+      url("/images/sprout-growth-landscape.png") center / cover fixed;
+  }
+
+  .story-chapters > section {
+    justify-content: center;
+    background: rgba(255, 251, 244, 0.72);
+    backdrop-filter: blur(10px);
+    text-align: center;
+  }
+
+  .mobile-story-copy > p:last-child {
+    margin-inline: auto;
+  }
+}
+
 /* Deployments */
 .app-section { display: grid; gap: 18px; }
 
