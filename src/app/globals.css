@@ -1054,6 +1054,79 @@ a {
   .member-row > button { grid-column: 3; grid-row: 1 / span 2; }
 }
 
+/* Application settings */
+.settings-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, .7fr) minmax(320px, 1.3fr);
+  gap: 28px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  background: rgba(18,24,19,.7);
+}
+
+.settings-panel-heading { display: flex; align-items: center; gap: 11px; }
+.settings-panel-heading h3 { margin: 0; font-size: 11px; font-weight: 620; }
+.settings-panel-heading p { margin: 5px 0 0; color: var(--faint); font-size: 8px; line-height: 1.5; }
+
+.settings-fields { display: grid; grid-template-columns: 1fr 110px; gap: 10px; }
+.settings-fields label { display: grid; gap: 6px; }
+.settings-fields label span { color: var(--faint); font-size: 8px; font-weight: 650; }
+.settings-fields input { height: 39px; border: 1px solid var(--line); border-radius: 9px; outline: 0; padding: 0 11px; background: #0c110d; color: var(--ink); font-size: 10px; }
+.settings-fields input:focus { border-color: rgba(185,244,140,.3); }
+
+.connected-setting { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.connected-setting > div { display: grid; gap: 5px; }
+.connected-setting strong { font-size: 10px; }
+.connected-setting small { color: var(--faint); font-size: 8px; }
+
+.danger-panel { border-color: rgba(242,154,145,.16); }
+.danger-panel .panel-icon { background: rgba(242,154,145,.07); color: var(--danger); }
+.danger-button { border: 1px solid rgba(242,154,145,.25); background: rgba(242,154,145,.08); color: var(--danger); justify-self: end; }
+.danger-button:disabled { opacity: .35; cursor: not-allowed; }
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3,6,4,.76);
+  backdrop-filter: blur(8px);
+}
+
+.confirmation-dialog {
+  position: relative;
+  width: min(100%, 430px);
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  padding: 27px;
+  background: #151b16;
+  box-shadow: var(--shadow-soft);
+}
+
+.dialog-close { position: absolute; top: 14px; right: 14px; display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--faint); cursor: pointer; }
+.dialog-danger-icon { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 12px; background: rgba(242,154,145,.08); color: var(--danger); }
+.confirmation-dialog h2 { margin: 17px 0 0; font-size: 19px; font-weight: 620; letter-spacing: -.025em; }
+.confirmation-dialog > p { margin: 9px 0 20px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.confirmation-dialog label { display: grid; gap: 7px; }
+.confirmation-dialog label span { color: var(--muted); font-size: 9px; }
+.confirmation-dialog input { height: 40px; border: 1px solid var(--line); border-radius: 9px; outline: 0; padding: 0 11px; background: #0b0f0c; color: var(--ink); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.confirmation-dialog input:focus { border-color: rgba(242,154,145,.35); }
+.confirmation-dialog > div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 19px; }
+
+@media (max-width: 780px) {
+  .settings-panel { grid-template-columns: 1fr; gap: 18px; }
+  .danger-button { justify-self: start; }
+}
+
+@media (max-width: 520px) {
+  .settings-fields { grid-template-columns: 1fr; }
+  .connected-setting { align-items: flex-start; flex-direction: column; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
