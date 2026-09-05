@@ -2,8 +2,9 @@
 
 import { ArrowRight, Check, Database, FileCode2, LockKeyhole, ScrollText, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Brand } from "@/components/brand";
+import { GrowthSystem } from "@/components/marketing/growth-system";
 
 const chapters = [
   {
@@ -45,6 +46,7 @@ const chapters = [
 
 export function LandingExperience() {
   const [activeScene, setActiveScene] = useState(0);
+  const storyRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-chapter]"));
@@ -62,6 +64,38 @@ export function LandingExperience() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const story = storyRef.current;
+    if (!story) return;
+
+    let frame = 0;
+    const updateProgress = () => {
+      frame = 0;
+      const bounds = story.getBoundingClientRect();
+      const distance = Math.max(1, story.offsetHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, -bounds.top / distance));
+      const segment = (start: number, end: number) =>
+        Math.min(1, Math.max(0, (progress - start) / (end - start))).toFixed(4);
+      story.style.setProperty("--growth-progress", progress.toFixed(4));
+      story.style.setProperty("--root-growth", segment(0.02, 0.28));
+      story.style.setProperty("--stem-growth", segment(0.16, 0.48));
+      story.style.setProperty("--leaf-growth", segment(0.38, 0.67));
+      story.style.setProperty("--network-growth", segment(0.62, 0.9));
+    };
+    const requestUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateProgress);
+    };
+
+    updateProgress();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+    return () => {
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
     <main className="landing-shell">
       <header className="landing-nav">
@@ -77,7 +111,7 @@ export function LandingExperience() {
         </div>
       </header>
 
-      <section className="scroll-story" id="story" aria-label="How Sprout works">
+      <section className="scroll-story" id="story" ref={storyRef} aria-label="How Sprout works">
         <div className="story-stage" data-scene={activeScene}>
           <div className="ambient-orb ambient-orb-one" />
           <div className="ambient-orb ambient-orb-two" />
@@ -107,6 +141,7 @@ export function LandingExperience() {
 
           <div className="product-world" aria-hidden="true">
             <div className="world-grid" />
+            <GrowthSystem />
             <div className="source-card">
               <div className="source-icon"><FileCode2 size={18} /></div>
               <div><strong>invoice-approval</strong><span>Next.js · ready</span></div>

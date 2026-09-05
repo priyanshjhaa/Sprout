@@ -236,6 +236,11 @@ a {
 
 .scroll-story {
   position: relative;
+  --growth-progress: 0;
+  --root-growth: 0;
+  --stem-growth: 0;
+  --leaf-growth: 0;
+  --network-growth: 0;
 }
 
 .story-stage {
@@ -338,6 +343,154 @@ a {
   perspective: 1200px;
 }
 
+.growth-system {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.growth-soil ellipse {
+  fill: rgba(164, 126, 83, 0.045);
+  stroke: rgba(127, 99, 67, 0.1);
+  stroke-width: 1;
+}
+
+.growth-soil path {
+  fill: none;
+  stroke: rgba(126, 98, 67, 0.16);
+  stroke-dasharray: 3 8;
+  stroke-linecap: round;
+}
+
+.growth-path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  vector-effect: non-scaling-stroke;
+  will-change: stroke-dashoffset, opacity;
+}
+
+.root {
+  stroke: url("#root-gradient");
+  stroke-width: 2.1;
+  stroke-dashoffset: calc(1 - var(--root-growth));
+  opacity: calc(0.18 + var(--root-growth) * 0.64);
+}
+
+.root-fine-left,
+.root-fine-right,
+.root-fine-edge {
+  stroke-width: 1.35;
+  opacity: calc(var(--root-growth) * 0.48);
+}
+
+.stem {
+  stroke: url("#stem-gradient");
+  stroke-width: 3.4;
+  stroke-dashoffset: calc(1 - var(--stem-growth));
+  opacity: calc(var(--stem-growth) * 0.9);
+}
+
+.branch-left,
+.branch-right,
+.branch-wide-left,
+.branch-wide-right {
+  stroke-width: 2.2;
+  stroke-dashoffset: calc(1 - var(--leaf-growth));
+  opacity: calc(var(--leaf-growth) * 0.8);
+}
+
+.growth-leaf {
+  color: var(--sprout);
+  opacity: var(--leaf-growth);
+  transform: scale(calc(0.62 + var(--leaf-growth) * 0.38));
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
+.growth-leaf > path:first-child {
+  fill: rgba(104, 118, 66, 0.15);
+  stroke: rgba(82, 96, 50, 0.72);
+  stroke-width: 1.3;
+}
+
+.growth-leaf > path:last-child {
+  fill: none;
+  stroke: rgba(82, 96, 50, 0.55);
+  stroke-width: 0.9;
+}
+
+.seed-halo circle {
+  fill: none;
+  stroke: rgba(104, 118, 66, 0.15);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: seed-breathe 3.2s ease-in-out infinite;
+}
+
+.seed-halo circle:last-child {
+  animation-delay: -1.1s;
+}
+
+.seed path {
+  fill: none;
+  stroke: rgba(255, 252, 242, 0.62);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.growth-network {
+  opacity: var(--network-growth);
+}
+
+.network-line {
+  stroke: rgba(104, 118, 66, 0.42);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 5;
+  stroke-dashoffset: calc(1 - var(--network-growth));
+}
+
+.network-node {
+  fill: #f8f1e6;
+  stroke: var(--sprout);
+  stroke-width: 1.5;
+  opacity: var(--network-growth);
+  transform: scale(var(--network-growth));
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.sap-particles {
+  color: var(--sprout);
+  opacity: var(--stem-growth);
+}
+
+.sap {
+  fill: currentColor;
+  filter: drop-shadow(0 0 4px rgba(104, 118, 66, 0.35));
+  animation: sap-pulse 1.8s ease-in-out infinite;
+}
+
+.sap-two { animation-delay: -0.6s; }
+.sap-three { animation-delay: -1.2s; }
+
+@keyframes seed-breathe {
+  0%, 100% { opacity: 0.3; transform: scale(0.92); }
+  50% { opacity: 0.68; transform: scale(1.08); }
+}
+
+@keyframes sap-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.9; }
+}
+
 .world-grid {
   position: absolute;
   inset: 3% -10% -4%;
@@ -378,7 +531,7 @@ a {
   box-shadow:
     0 0 0 10px rgba(104, 118, 66, 0.055),
     0 0 0 30px rgba(104, 118, 66, 0.025);
-  content: "";
+  content: none;
   transform: translate(-50%, -50%);
 }
 
@@ -1969,11 +2122,11 @@ body {
 }
 
 .story-copy {
-  animation: warm-copy-in 420ms var(--ease-out) both;
+  animation: warm-copy-in 190ms var(--ease-out) both;
 }
 
 @keyframes warm-copy-in {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0.45; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -2219,6 +2372,19 @@ body {
     background: rgba(255, 251, 244, 0.82);
     box-shadow: 0 22px 60px rgba(91, 72, 49, 0.1);
   }
+
+  .story-chapters > section:first-child::after {
+    position: absolute;
+    top: calc(8% + min(36vw, 135px));
+    left: 50%;
+    width: 2px;
+    height: 72px;
+    border-radius: 99px;
+    background: linear-gradient(#75834b, rgba(117, 131, 75, 0.08));
+    content: "";
+    transform: translateX(-50%) rotate(-4deg);
+    transform-origin: top;
+  }
 }
 
 @media (max-width: 760px) {
@@ -2228,6 +2394,27 @@ body {
 
   .sidebar-backdrop {
     background: rgba(68, 55, 40, 0.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .growth-path,
+  .network-line {
+    stroke-dashoffset: 0 !important;
+  }
+
+  .growth-leaf,
+  .network-node {
+    opacity: 0.72 !important;
+    transform: none !important;
+  }
+
+  .growth-network {
+    opacity: 0.48 !important;
+  }
+
+  .sap-particles {
+    display: none;
   }
 }
 
