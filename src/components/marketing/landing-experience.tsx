@@ -55,7 +55,7 @@ export function LandingExperience() {
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
         if (visible) setActiveScene(Number((visible.target as HTMLElement).dataset.chapter));
       },
-      { rootMargin: "-35% 0px -35% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
+      { rootMargin: "-12% 0px -20% 0px", threshold: [0, 0.1, 0.25] },
     );
 
     elements.forEach((element) => observer.observe(element));
@@ -81,7 +81,7 @@ export function LandingExperience() {
         <div className="story-stage" data-scene={activeScene}>
           <div className="ambient-orb ambient-orb-one" />
           <div className="ambient-orb ambient-orb-two" />
-          <div className="story-copy" aria-live="polite">
+          <div className="story-copy" key={activeScene} aria-live="polite">
             <p className="eyebrow">{chapters[activeScene].eyebrow}</p>
             <h1>{chapters[activeScene].title}</h1>
             <p className="story-body">{chapters[activeScene].body}</p>
@@ -167,4 +167,3 @@ export function LandingExperience() {
     </main>
   );
 }
-
