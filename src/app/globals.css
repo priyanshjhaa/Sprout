@@ -892,6 +892,92 @@ a {
   }
 }
 
+/* Environment */
+.inline-variable-form {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr auto auto;
+  align-items: end;
+  gap: 9px;
+  border: 1px solid rgba(185,244,140,.2);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(185,244,140,.035);
+}
+
+.inline-variable-form label { display: grid; gap: 6px; }
+.inline-variable-form label span { color: var(--faint); font-size: 8px; font-weight: 650; text-transform: uppercase; }
+.inline-variable-form input { height: 40px; border: 1px solid var(--line); border-radius: 9px; outline: 0; padding: 0 11px; background: #0c110d; color: var(--ink); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.inline-variable-form input:focus { border-color: rgba(185,244,140,.3); }
+
+.environment-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+  gap: 14px;
+}
+
+.configuration-panel {
+  align-self: start;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(18,24,19,.7);
+}
+
+.configuration-panel > header {
+  display: flex;
+  min-height: 70px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.configuration-panel > header > div { display: flex; align-items: center; gap: 10px; }
+.configuration-panel > header h3 { margin: 0; font-size: 11px; font-weight: 620; }
+.configuration-panel > header p { margin: 4px 0 0; color: var(--faint); font-size: 8px; }
+.configuration-panel > header > span { display: grid; min-width: 22px; height: 22px; place-items: center; border-radius: 99px; background: rgba(255,255,255,.035); color: var(--muted); font-size: 8px; }
+.panel-icon { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 9px; background: rgba(185,244,140,.08); color: var(--sprout); }
+
+.variable-row {
+  display: grid;
+  min-height: 63px;
+  grid-template-columns: minmax(150px, .8fr) minmax(150px, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.variable-row > div { display: grid; gap: 4px; }
+.variable-row strong { font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.variable-row small { color: var(--faint); font-size: 7px; }
+.variable-row code { overflow: hidden; color: var(--muted); font: 8px ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.variable-row button { display: grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--faint); cursor: pointer; }
+.variable-row button:hover { background: rgba(255,255,255,.035); color: var(--ink); }
+.variable-row .danger-icon:hover { color: var(--danger); }
+.variable-loading { display: grid; min-height: 190px; place-items: center; color: var(--faint); font-size: 9px; }
+.configuration-panel > footer { padding: 11px 16px; background: rgba(255,255,255,.018); color: var(--faint); font-size: 8px; }
+
+.resource-detail { display: flex; min-height: 68px; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+.resource-detail > span { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 9px; background: rgba(255,255,255,.035); color: var(--muted); }
+.resource-detail > div { display: grid; flex: 1; gap: 4px; }
+.resource-detail strong { font-size: 9px; }
+.resource-detail small { color: var(--faint); font-size: 8px; }
+.resource-detail > i { width: 6px; height: 6px; border-radius: 50%; background: var(--sprout); }
+.resource-detail > button { border: 0; background: transparent; color: var(--sprout); cursor: pointer; font-size: 8px; font-weight: 650; }
+
+@media (max-width: 980px) {
+  .environment-grid { grid-template-columns: 1fr; }
+  .inline-variable-form { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 620px) {
+  .inline-variable-form { grid-template-columns: 1fr auto; }
+  .inline-variable-form label { grid-column: 1 / -1; }
+  .variable-row { grid-template-columns: 1fr auto auto; padding: 11px 13px; }
+  .variable-row code { grid-column: 1 / -1; grid-row: 2; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
