@@ -1823,3 +1823,267 @@ a {
   .apps-toolbar > span { display: none; }
   .search-field { width: 100%; }
 }
+
+/* Application shell and overview */
+.application-page {
+  padding-top: 38px;
+}
+
+.app-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 24px;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.app-back-link:hover { color: var(--ink); }
+
+.application-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  margin-bottom: 24px;
+}
+
+.application-identity,
+.application-title-row,
+.application-actions {
+  display: flex;
+  align-items: center;
+}
+
+.application-identity { gap: 13px; }
+
+.application-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(185, 244, 140, 0.13);
+  border-radius: 13px;
+  background: rgba(185, 244, 140, 0.1);
+  color: var(--sprout);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.application-title-row { gap: 11px; }
+
+.application-title-row h1 {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 580;
+  letter-spacing: -0.035em;
+}
+
+.application-identity > div > span {
+  display: block;
+  margin-top: 5px;
+  color: var(--faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+}
+
+.application-actions { gap: 8px; }
+
+.application-tabs {
+  display: flex;
+  gap: 23px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+
+.application-tabs a {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 0 1px 13px;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 620;
+}
+
+.application-tabs a.active { color: var(--ink); }
+
+.application-tabs a.active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 99px 99px 0 0;
+  background: var(--sprout);
+  content: "";
+}
+
+.application-content { padding-top: 25px; }
+
+.overview-layout { display: grid; gap: 14px; }
+
+.health-card,
+.overview-card {
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: rgba(18, 24, 19, 0.7);
+}
+
+.health-card {
+  display: flex;
+  min-height: 155px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 27px;
+  background:
+    radial-gradient(circle at 88% 50%, rgba(133, 212, 84, 0.07), transparent 28%),
+    rgba(18, 24, 19, 0.7);
+}
+
+.health-copy {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.health-icon,
+.success-check {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(185, 244, 140, 0.1);
+  color: var(--sprout);
+}
+
+.health-copy p,
+.card-label {
+  margin: 0 0 7px;
+  color: var(--faint);
+  font-size: 9px;
+  font-weight: 680;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.health-copy h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.health-copy div > span {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.health-card > a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sprout);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+}
+
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.overview-card { padding: 19px; }
+
+.card-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.card-label svg { color: var(--faint); }
+.card-label span:last-child { color: #6d786c; font-size: 8px; letter-spacing: 0; text-transform: none; }
+
+.deployment-summary {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.success-check { width: 31px; height: 31px; }
+.deployment-summary > div { display: grid; gap: 4px; }
+.deployment-summary strong { font-size: 11px; }
+.deployment-summary small { color: var(--faint); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8px; }
+
+.overview-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 19px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line);
+  color: var(--faint);
+  font-size: 8px;
+}
+
+.overview-card-footer a { display: flex; align-items: center; gap: 5px; color: var(--sprout); font-weight: 620; }
+
+.resource-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  border-top: 1px solid var(--line);
+}
+
+.resource-summary-row > span {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+}
+
+.resource-summary-row > div { display: grid; flex: 1; gap: 3px; }
+.resource-summary-row strong { font-size: 10px; }
+.resource-summary-row small { color: var(--faint); font-size: 8px; }
+.resource-summary-row > i { width: 6px; height: 6px; border-radius: 50%; background: var(--sprout); }
+.resource-summary-row button { border: 0; background: transparent; color: var(--sprout); cursor: pointer; font-size: 9px; font-weight: 650; }
+
+.recent-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.recent-note p { margin: 0; font-size: 11px; font-weight: 620; }
+.recent-note div > span { display: block; margin-top: 5px; color: var(--faint); font-size: 9px; }
+.quiet-pulse { display: grid; width: 31px; height: 31px; place-items: center; border-radius: 50%; background: rgba(185,244,140,.05); }
+.quiet-pulse i { width: 7px; height: 7px; border-radius: 50%; background: var(--sprout); box-shadow: 0 0 0 5px rgba(185,244,140,.08); }
+
+.overview-loading { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.overview-loading span { min-height: 220px; border-radius: 17px; background: rgba(255,255,255,.025); }
+.overview-loading span:first-child { grid-column: 1 / -1; min-height: 155px; }
+
+@media (max-width: 820px) {
+  .overview-grid { grid-template-columns: 1fr; }
+  .health-card { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 600px) {
+  .application-header { align-items: flex-start; }
+  .application-title-row { align-items: flex-start; flex-direction: column; gap: 5px; }
+  .application-actions .button { width: 40px; padding: 0; font-size: 0; }
+  .application-actions .button svg { margin: 0; }
+  .application-tabs { gap: 19px; }
+}
