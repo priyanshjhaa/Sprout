@@ -82,6 +82,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+For database work, follow the [local PostgreSQL setup](./local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.
+
 Useful demo routes:
 
 ```text
@@ -100,6 +102,10 @@ npm run build      # Create a production build
 npm run start      # Run the production build
 npm run lint       # Run ESLint
 npm run typecheck  # Run TypeScript without emitting files
+npm run db:up      # Start the local PostgreSQL container
+npm run db:status  # Check PostgreSQL container health
+npm run db:migrate # Apply pending Drizzle migrations
+npm run db:down    # Stop PostgreSQL without deleting its data
 ```
 
 The production build currently uses Next.js with webpack because the restricted development environment used for this prototype does not permit one of Turbopack's internal CSS worker operations.
@@ -169,5 +175,6 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 ## Project documentation
 
 - [Frontend implementation plan](./frontend-implementation.md)
+- [Database design](./database-design.md)
+- [Local PostgreSQL setup](./local-postgres.md)
 - [Repository implementation guidance](./AGENTS.md)
-
