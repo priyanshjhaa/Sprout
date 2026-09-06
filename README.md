@@ -8,7 +8,7 @@ It explores a simple product question:
 
 The long-term goal is to make deploying and securely sharing a small application feel as straightforward as sharing a document. A developer or coding agent provides the application; Sprout handles the path from source code to a healthy URL, along with identity, configuration, logs, data, and access.
 
-This repository currently contains the first frontend prototype. Infrastructure and agent operations are represented with typed mock data and are clearly identified as demonstrations.
+This repository currently contains the first frontend prototype and the PostgreSQL schema/local development setup. Infrastructure and agent operations are represented with typed mock data and are clearly identified as demonstrations. A Go backend is planned and will be built incrementally using the repository's backend development and learning guide.
 
 ## Product direction
 
@@ -175,6 +175,7 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 ## Project documentation
 
 - [Frontend implementation plan](./frontend-implementation.md)
+- [Go backend development and learning plan](./backend-development-learning-plan.md)
 - [Database design](./database-design.md)
 - [Local PostgreSQL setup](./local-postgres.md)
 - [Repository implementation guidance](./AGENTS.md)
