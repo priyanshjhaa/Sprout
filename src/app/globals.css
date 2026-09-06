@@ -2672,7 +2672,7 @@ body {
   }
 
   .story-chapters > section {
-    min-height: 86svh;
+    min-height: 62svh;
   }
 
   .story-chapters > section:last-child {
