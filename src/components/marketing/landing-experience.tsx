@@ -49,28 +49,14 @@ export function LandingExperience() {
   const storyRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-chapter]"));
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActiveScene(Number((visible.target as HTMLElement).dataset.chapter));
-      },
-      { rootMargin: "-12% 0px -20% 0px", threshold: [0, 0.1, 0.25] },
-    );
-
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     const story = storyRef.current;
     if (!story) return;
 
     let frame = 0;
     let currentProgress = 0;
     let targetProgress = 0;
+    let currentScene = 0;
+    let lastFrameTime = performance.now();
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const setProgress = (progress: number) => {
       const segment = (start: number, end: number) =>
@@ -85,10 +71,18 @@ export function LandingExperience() {
       const bounds = story.getBoundingClientRect();
       const distance = Math.max(1, story.offsetHeight - window.innerHeight);
       targetProgress = Math.min(1, Math.max(0, -bounds.top / distance));
+      const nextScene = Math.min(chapters.length - 1, Math.round(targetProgress * (chapters.length - 1)));
+      if (nextScene !== currentScene) {
+        currentScene = nextScene;
+        setActiveScene(nextScene);
+      }
     };
-    const animate = () => {
+    const animate = (time: number) => {
+      const elapsed = Math.min(64, time - lastFrameTime);
+      lastFrameTime = time;
       const difference = targetProgress - currentProgress;
-      currentProgress += difference * 0.16;
+      const easing = 1 - Math.exp(-elapsed / 82);
+      currentProgress += difference * easing;
       if (Math.abs(difference) < 0.0005) currentProgress = targetProgress;
       setProgress(currentProgress);
       frame = currentProgress === targetProgress ? 0 : window.requestAnimationFrame(animate);
@@ -99,6 +93,7 @@ export function LandingExperience() {
         currentProgress = targetProgress;
         setProgress(currentProgress);
       } else if (!frame) {
+        lastFrameTime = performance.now();
         frame = window.requestAnimationFrame(animate);
       }
     };
@@ -133,6 +128,9 @@ export function LandingExperience() {
       <section className="scroll-story" id="story" ref={storyRef} aria-label="How Sprout works">
         <div className="story-stage" data-scene={activeScene}>
           <div className="story-landscape" />
+          <div className="growth-atmosphere" aria-hidden="true">
+            {Array.from({ length: 8 }, (_, index) => <i key={index} />)}
+          </div>
           <div className="growth-stage" aria-hidden="true">
             <GrowthSystem />
           </div>

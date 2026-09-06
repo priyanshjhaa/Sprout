@@ -2472,9 +2472,9 @@ body {
     visibility: hidden;
     pointer-events: none;
     transition:
-      opacity 420ms ease,
-      transform 620ms var(--ease-out),
-      visibility 0s linear 620ms;
+      opacity 110ms ease-out,
+      transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s linear 360ms;
     animation: none;
   }
 
@@ -2483,7 +2483,10 @@ body {
     transform: translateY(0) scale(1);
     visibility: visible;
     pointer-events: auto;
-    transition-delay: 0ms;
+    transition:
+      opacity 480ms ease,
+      transform 680ms cubic-bezier(0.16, 1, 0.3, 1),
+      visibility 0s;
   }
 
   .story-copy h1 {
@@ -2509,6 +2512,57 @@ body {
     z-index: 2;
     inset: 0;
     pointer-events: none;
+  }
+
+  .growth-stage::after {
+    position: absolute;
+    z-index: -1;
+    top: 68%;
+    left: 50%;
+    width: 240px;
+    height: 96px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(154, 174, 94, 0.2), transparent 70%);
+    content: "";
+    opacity: calc(0.08 + var(--leaf-growth) * 0.34);
+    transform: translate(-50%, -50%) scale(calc(0.78 + var(--leaf-growth) * 0.36));
+    filter: blur(12px);
+    will-change: opacity, transform;
+  }
+
+  .growth-atmosphere {
+    position: absolute;
+    z-index: 1;
+    inset: 74px 0 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .growth-atmosphere i {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: rgba(112, 125, 66, 0.48);
+    box-shadow: 0 0 12px rgba(255, 248, 211, 0.9);
+    opacity: calc(0.08 + var(--growth-progress) * 0.38);
+    animation: pollen-drift 10s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  .growth-atmosphere i:nth-child(1) { top: 30%; left: 11%; animation-delay: -2s; }
+  .growth-atmosphere i:nth-child(2) { top: 48%; left: 23%; width: 3px; height: 3px; animation-delay: -7s; }
+  .growth-atmosphere i:nth-child(3) { top: 21%; left: 36%; animation-delay: -4s; }
+  .growth-atmosphere i:nth-child(4) { top: 52%; left: 44%; width: 2px; height: 2px; animation-delay: -8s; }
+  .growth-atmosphere i:nth-child(5) { top: 28%; right: 36%; width: 3px; height: 3px; animation-delay: -5s; }
+  .growth-atmosphere i:nth-child(6) { top: 45%; right: 22%; animation-delay: -9s; }
+  .growth-atmosphere i:nth-child(7) { top: 24%; right: 10%; width: 2px; height: 2px; animation-delay: -3s; }
+  .growth-atmosphere i:nth-child(8) { top: 58%; right: 15%; width: 3px; height: 3px; animation-delay: -6s; }
+
+  @keyframes pollen-drift {
+    0%, 100% { transform: translate3d(0, 10px, 0); }
+    45% { transform: translate3d(14px, -15px, 0); }
+    70% { transform: translate3d(-7px, -24px, 0); }
   }
 
   .growth-stage .growth-system {
@@ -2541,6 +2595,18 @@ body {
     height: 100%;
     perspective: none;
     pointer-events: none;
+  }
+
+  .source-card,
+  .app-window,
+  .resource,
+  .team-cluster,
+  .mini-app,
+  .pipeline {
+    transition:
+      opacity 620ms ease,
+      transform 900ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 620ms ease;
   }
 
   .world-grid {
@@ -2630,6 +2696,17 @@ body {
 
   .mobile-story-copy > p:last-child {
     margin-inline: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .growth-atmosphere {
+    display: none;
+  }
+
+  .growth-stage::after {
+    opacity: 0.2;
+    transform: translate(-50%, -50%);
   }
 }
 
