@@ -8,7 +8,7 @@ It explores a simple product question:
 
 The long-term goal is to make deploying and securely sharing a small application feel as straightforward as sharing a document. A developer or coding agent provides the application; Sprout handles the path from source code to a healthy URL, along with identity, configuration, logs, data, and access.
 
-This repository currently contains the first frontend prototype and the PostgreSQL schema/local development setup. Infrastructure and agent operations are represented with typed mock data and are clearly identified as demonstrations. A Go backend is planned and will be built incrementally using the repository's backend development and learning guide.
+This repository currently contains the first frontend prototype, the PostgreSQL schema/local development setup, and the initial Go backend executable. Infrastructure and agent operations are represented with typed mock data and are clearly identified as demonstrations. The Go backend is being built incrementally using the repository's backend development and learning guide.
 
 ## Product direction
 
@@ -67,6 +67,7 @@ Requirements:
 
 - Node.js 20 or newer
 - npm
+- Go 1.27.x for backend development
 
 Install dependencies:
 
@@ -81,6 +82,17 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Verify and run the current backend foundation:
+
+```bash
+cd backend
+go test ./...
+go vet ./...
+go run ./cmd/api
+```
+
+The Milestone 0 command prints its readiness message and exits successfully. The HTTP server is introduced in the next backend milestone.
 
 For database work, follow the [local PostgreSQL setup](./local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.
 
@@ -130,6 +142,8 @@ src/
 │   └── query/            Query keys and typed hooks
 └── types/                Frontend domain types
 ```
+
+The Go backend begins in `backend/`. Its `cmd/api` package is the executable entrypoint; focused internal packages will be introduced only as their corresponding milestones require them.
 
 ## Design principles
 
