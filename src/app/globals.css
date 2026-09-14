@@ -2193,6 +2193,19 @@ body {
   color: #2e2923;
 }
 
+.story-copy h1,
+.mobile-story-copy h2,
+.auth-card h1 {
+  font-family: var(--font-hero), Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.story-copy h1 {
+  font-size: clamp(44px, 4.8vw, 68px);
+}
+
 .ambient-orb-one {
   background: radial-gradient(circle, rgba(112, 132, 68, 0.16), transparent 67%);
 }
@@ -2584,7 +2597,7 @@ body {
 
   .story-copy h1 {
     max-width: 15ch;
-    font-size: clamp(46px, 5.35vw, 76px);
+    font-size: clamp(44px, 4.8vw, 68px);
     text-shadow: 0 2px 30px rgba(255, 251, 242, 0.86);
   }
 
