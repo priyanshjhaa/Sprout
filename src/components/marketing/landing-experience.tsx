@@ -127,7 +127,10 @@ export function LandingExperience() {
 
       <section className="scroll-story" id="story" ref={storyRef} aria-label="How Sprout works">
         <div className="story-stage" data-scene={activeScene}>
-          <div className="story-landscape" />
+          <div className="story-landscape" aria-hidden="true">
+            <div className="landscape-breeze landscape-breeze-left" />
+            <div className="landscape-breeze landscape-breeze-right" />
+          </div>
           <div className="growth-atmosphere" aria-hidden="true">
             {Array.from({ length: 8 }, (_, index) => <i key={index} />)}
           </div>

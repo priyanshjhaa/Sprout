@@ -2460,6 +2460,40 @@ body {
     text-align: center;
   }
 
+  /* The painted foliage moves around its roots, with a softer trailing gust. */
+  .landscape-breeze {
+    position: absolute;
+    inset: 0;
+    background: url("/images/sprout-growth-landscape.png") center 62% / cover;
+    pointer-events: none;
+    transform-origin: 50% 76%;
+    animation: meadow-breeze 9s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .landscape-breeze-left {
+    mask-image: linear-gradient(to right, black 0%, black 13%, transparent 29%),
+      linear-gradient(to bottom, black 45%, transparent 77%);
+    mask-composite: intersect;
+    transform-origin: 10% 76%;
+  }
+
+  .landscape-breeze-right {
+    mask-image: linear-gradient(to left, black 0%, black 12%, transparent 28%),
+      linear-gradient(to bottom, black 45%, transparent 77%);
+    mask-composite: intersect;
+    transform-origin: 90% 76%;
+    animation-duration: 11s;
+    animation-delay: -3.5s;
+  }
+
+  @keyframes meadow-breeze {
+    0%, 100% { transform: skewX(-0.35deg) rotate(-0.12deg); }
+    35% { transform: skewX(0.65deg) rotate(0.18deg); }
+    62% { transform: skewX(0.15deg) rotate(0.04deg); }
+    80% { transform: skewX(0.4deg) rotate(0.1deg); }
+  }
+
   .story-copy {
     position: absolute;
     inset: 0;
@@ -2702,6 +2736,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .growth-atmosphere {
     display: none;
+  }
+
+  .landscape-breeze {
+    display: none;
+  }
+
+  .story-landscape {
+    transform: none;
+    will-change: auto;
   }
 
   .growth-stage::after {
