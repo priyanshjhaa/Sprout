@@ -22,6 +22,8 @@
   --radius-lg: 24px;
   --shadow-soft: 0 24px 70px rgba(91, 72, 49, 0.12);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --paper-grain: url("/images/paper-grain.svg");
+  --paper-edge: rgba(255, 253, 247, 0.8);
 }
 
 * {
@@ -209,17 +211,6 @@ a {
   align-items: center;
   justify-content: space-between;
   margin: auto;
-}
-
-.landing-nav::before {
-  position: absolute;
-  z-index: -1;
-  inset: 8px -15px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 17px;
-  background: rgba(11, 15, 12, 0.66);
-  content: "";
-  backdrop-filter: blur(18px);
 }
 
 .landing-nav-actions {
@@ -415,7 +406,7 @@ a {
 }
 
 .growth-leaf > path:first-child {
-  fill: rgba(104, 118, 66, 0.15);
+  fill: url("#leaf-fill");
   stroke: rgba(82, 96, 50, 0.72);
   stroke-width: 1.3;
 }
@@ -425,6 +416,65 @@ a {
   stroke: rgba(82, 96, 50, 0.55);
   stroke-width: 0.9;
 }
+
+/* Each organ emerges from its attachment point after its supporting stem. */
+.root-fine-left,
+.root-fine-right,
+.root-fine-edge {
+  stroke-dashoffset: calc(1 - var(--root-fine-growth, 0));
+}
+
+.branch-wide-left,
+.branch-wide-right {
+  stroke-dashoffset: calc(1 - var(--lower-branch-growth, 0));
+}
+
+.branch-left,
+.branch-right {
+  stroke-dashoffset: calc(1 - var(--upper-branch-growth, 0));
+}
+
+.growth-leaf {
+  --unfold: var(--upper-leaf-growth, 0);
+  opacity: var(--unfold);
+  transform-box: view-box;
+  transform: rotate(calc((1 - var(--unfold)) * var(--fold-angle, 38deg)))
+    scale(var(--unfold), calc(0.25 + var(--unfold) * 0.75));
+}
+
+.leaf-one { transform-origin: 258px 214px; }
+.leaf-two { transform-origin: 447px 188px; --fold-angle: -38deg; }
+.leaf-three { transform-origin: 222px 300px; --unfold: var(--lower-leaf-growth, 0); }
+.leaf-four { transform-origin: 494px 301px; --unfold: var(--lower-leaf-growth, 0); --fold-angle: -32deg; }
+
+.growth-bud {
+  opacity: var(--upper-branch-growth, 0);
+  transform-origin: 371px 164px;
+  transform: scale(var(--upper-branch-growth, 0));
+}
+
+.growth-bud path:first-child { fill: url("#leaf-fill"); }
+.growth-bud path:last-child { fill: none; stroke: #e0dda8; stroke-width: 0.8; }
+
+.seed .seed-shell {
+  fill: url("#seed-fill");
+  stroke: #c3a578;
+  stroke-width: 0.7;
+  transform-origin: 350px 370px;
+  opacity: calc(1 - var(--stem-growth) * 0.72);
+}
+
+.seed-shell-left {
+  transform: translate(calc(var(--seed-open, 0) * -8px), calc(var(--seed-open, 0) * 4px))
+    rotate(calc(var(--seed-open, 0) * -24deg));
+}
+
+.seed-shell-right {
+  transform: translate(calc(var(--seed-open, 0) * 9px), calc(var(--seed-open, 0) * 5px))
+    rotate(calc(var(--seed-open, 0) * 28deg));
+}
+
+.seed-halo { opacity: calc(0.55 * (1 - var(--stem-growth))); }
 
 .seed-halo circle {
   fill: none;
@@ -2101,17 +2151,11 @@ body {
   position: fixed;
   z-index: 0;
   inset: 0;
-  background-image: radial-gradient(rgba(75, 62, 47, 0.13) 0.55px, transparent 0.55px);
-  background-size: 5px 5px;
-  opacity: 0.22;
+  background-image: var(--paper-grain);
+  background-size: 180px 180px;
+  opacity: 0.7;
   pointer-events: none;
   content: "";
-}
-
-.landing-nav::before {
-  border-color: rgba(74, 61, 45, 0.1);
-  background: rgba(250, 246, 238, 0.76);
-  box-shadow: 0 8px 30px rgba(103, 83, 58, 0.05);
 }
 
 .story-stage::before {
@@ -2132,6 +2176,19 @@ body {
 
 .story-copy h1 {
   color: #2e2923;
+}
+
+.story-copy h1,
+.mobile-story-copy h2,
+.auth-card h1 {
+  font-family: var(--font-hero), Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+
+.story-copy h1 {
+  font-size: clamp(44px, 4.8vw, 68px);
 }
 
 .ambient-orb-one {
@@ -2460,6 +2517,40 @@ body {
     text-align: center;
   }
 
+  /* The painted foliage moves around its roots, with a softer trailing gust. */
+  .landscape-breeze {
+    position: absolute;
+    inset: 0;
+    background: url("/images/sprout-growth-landscape.png") center 62% / cover;
+    pointer-events: none;
+    transform-origin: 50% 76%;
+    animation: meadow-breeze 9s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .landscape-breeze-left {
+    mask-image: linear-gradient(to right, black 0%, black 13%, transparent 29%),
+      linear-gradient(to bottom, black 45%, transparent 77%);
+    mask-composite: intersect;
+    transform-origin: 10% 76%;
+  }
+
+  .landscape-breeze-right {
+    mask-image: linear-gradient(to left, black 0%, black 12%, transparent 28%),
+      linear-gradient(to bottom, black 45%, transparent 77%);
+    mask-composite: intersect;
+    transform-origin: 90% 76%;
+    animation-duration: 11s;
+    animation-delay: -3.5s;
+  }
+
+  @keyframes meadow-breeze {
+    0%, 100% { transform: skewX(-0.35deg) rotate(-0.12deg); }
+    35% { transform: skewX(0.65deg) rotate(0.18deg); }
+    62% { transform: skewX(0.15deg) rotate(0.04deg); }
+    80% { transform: skewX(0.4deg) rotate(0.1deg); }
+  }
+
   .story-copy {
     position: absolute;
     inset: 0;
@@ -2491,7 +2582,7 @@ body {
 
   .story-copy h1 {
     max-width: 15ch;
-    font-size: clamp(46px, 5.35vw, 76px);
+    font-size: clamp(44px, 4.8vw, 68px);
     text-shadow: 0 2px 30px rgba(255, 251, 242, 0.86);
   }
 
@@ -2566,9 +2657,9 @@ body {
   }
 
   .growth-stage .growth-system {
-    top: 68%;
+    top: 78%;
     left: 50%;
-    width: min(760px, 72vw);
+    width: min(620px, 58vw, 64vh);
     height: auto;
     transform: translate(-50%, -54%);
     filter: drop-shadow(0 16px 28px rgba(49, 44, 27, 0.1));
@@ -2704,9 +2795,85 @@ body {
     display: none;
   }
 
+  .growth-bud { opacity: 1; transform: none; }
+  .seed-shell { transform: none; }
+
+  .landscape-breeze {
+    display: none;
+  }
+
+  .story-landscape {
+    transform: none;
+    will-change: auto;
+  }
+
   .growth-stage::after {
     opacity: 0.2;
     transform: translate(-50%, -50%);
+  }
+}
+
+/* Tactile paper finishes: static texture, quiet edges, and botanical ink. */
+.story-stage::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background-image: var(--paper-grain);
+  background-size: 180px 180px;
+  opacity: 0.55;
+  pointer-events: none;
+  content: "";
+}
+
+.story-copy .eyebrow::after,
+.mobile-story-copy .eyebrow::after {
+  display: block;
+  width: 64px;
+  height: 7px;
+  margin: 13px auto 0;
+  background:
+    radial-gradient(ellipse at center, #899060 0 2px, transparent 2.5px) center / 7px 7px no-repeat,
+    linear-gradient(90deg, transparent, rgba(126, 119, 79, 0.4) 30%, transparent 45% 55%, rgba(126, 119, 79, 0.4) 70%, transparent) center / 100% 1px no-repeat;
+  content: "";
+}
+
+.dashboard-sidebar,
+.app-card:not(.app-card-skeleton),
+.auth-card,
+.source-card,
+.resource,
+.story-chapters > section {
+  background-image: var(--paper-grain);
+  background-size: 180px 180px;
+}
+
+.app-card:not(.app-card-skeleton),
+.auth-card {
+  box-shadow:
+    inset 0 1px 0 var(--paper-edge),
+    0 1px 2px rgba(77, 58, 35, 0.06),
+    0 16px 40px rgba(91, 72, 49, 0.065);
+}
+
+.app-preview {
+  background-image:
+    var(--paper-grain),
+    repeating-linear-gradient(135deg, transparent 0 8px, rgba(89, 88, 59, 0.035) 8px 9px);
+  background-size: 180px 180px, auto;
+  box-shadow: inset 0 1px 0 var(--paper-edge);
+}
+
+.landing-shell .button-primary {
+  background-image: var(--paper-grain), linear-gradient(180deg, rgba(255, 255, 232, 0.07), transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 253, 228, 0.22), 0 4px 10px rgba(65, 73, 39, 0.1);
+}
+
+@media (forced-colors: active) {
+  .story-stage::after,
+  .landing-shell::before,
+  .story-copy .eyebrow::after,
+  .mobile-story-copy .eyebrow::after {
+    display: none;
   }
 }
 
