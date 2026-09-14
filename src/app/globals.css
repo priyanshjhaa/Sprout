@@ -211,17 +211,6 @@ a {
   margin: auto;
 }
 
-.landing-nav::before {
-  position: absolute;
-  z-index: -1;
-  inset: 8px -15px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 17px;
-  background: rgba(11, 15, 12, 0.66);
-  content: "";
-  backdrop-filter: blur(18px);
-}
-
 .landing-nav-actions {
   display: flex;
   align-items: center;
@@ -2165,12 +2154,6 @@ body {
   opacity: 0.22;
   pointer-events: none;
   content: "";
-}
-
-.landing-nav::before {
-  border-color: rgba(74, 61, 45, 0.1);
-  background: rgba(250, 246, 238, 0.76);
-  box-shadow: 0 8px 30px rgba(103, 83, 58, 0.05);
 }
 
 .story-stage::before {
