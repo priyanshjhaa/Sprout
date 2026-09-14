@@ -8,6 +8,11 @@ export function GrowthSystem() {
       preserveAspectRatio="xMidYMid meet"
     >
       <defs>
+        <linearGradient id="leaf-fill" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#536335" />
+          <stop offset="0.55" stopColor="#91a460" />
+          <stop offset="1" stopColor="#c1ca88" />
+        </linearGradient>
         <linearGradient id="stem-gradient" x1="0" y1="1" x2="0" y2="0">
           <stop offset="0" stopColor="#8d7658" />
           <stop offset="0.42" stopColor="#77804c" />
@@ -18,9 +23,9 @@ export function GrowthSystem() {
           <stop offset="1" stopColor="#b59b7a" stopOpacity="0.25" />
         </linearGradient>
         <radialGradient id="seed-fill">
-          <stop offset="0" stopColor="#8c985e" />
-          <stop offset="0.7" stopColor="#6f7d47" />
-          <stop offset="1" stopColor="#56643a" />
+          <stop offset="0" stopColor="#b79a6b" />
+          <stop offset="0.7" stopColor="#88663f" />
+          <stop offset="1" stopColor="#5c442d" />
         </radialGradient>
         <filter id="seed-shadow" x="-80%" y="-80%" width="260%" height="260%">
           <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#68553d" floodOpacity="0.2" />
@@ -46,6 +51,10 @@ export function GrowthSystem() {
 
       <g className="growth-plant">
         <path className="growth-path stem stem-main" pathLength="1" d="M350 350 C350 310 343 277 351 242 C356 218 370 195 371 164" />
+        <g className="growth-bud">
+          <path d="M371 166 C353 152 357 137 365 127 C382 138 385 155 371 166Z" />
+          <path d="M371 165 Q370 146 365 133" />
+        </g>
         <path className="growth-path stem branch-left" pathLength="1" d="M349 286 C317 269 287 245 258 214" />
         <path className="growth-path stem branch-right" pathLength="1" d="M351 253 C388 240 421 218 447 188" />
         <path className="growth-path stem branch-wide-left" pathLength="1" d="M348 314 C303 311 264 315 222 300" />
@@ -74,8 +83,8 @@ export function GrowthSystem() {
         <circle cx="350" cy="350" r="32" />
       </g>
       <g className="seed" filter="url(#seed-shadow)">
-        <ellipse cx="350" cy="350" rx="18" ry="24" fill="url(#seed-fill)" transform="rotate(18 350 350)" />
-        <path d="M343 367 C350 351 354 341 361 331" />
+        <path className="seed-shell seed-shell-left" d="M351 328 C329 325 325 351 337 368 Q343 375 348 369 L347 358 L351 350 L348 341Z" />
+        <path className="seed-shell seed-shell-right" d="M351 328 C374 330 372 358 348 369 L347 358 L351 350 L348 341Z" />
       </g>
 
       <g className="growth-network">
@@ -95,4 +104,3 @@ export function GrowthSystem() {
     </svg>
   );
 }
-

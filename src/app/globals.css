@@ -415,7 +415,7 @@ a {
 }
 
 .growth-leaf > path:first-child {
-  fill: rgba(104, 118, 66, 0.15);
+  fill: url("#leaf-fill");
   stroke: rgba(82, 96, 50, 0.72);
   stroke-width: 1.3;
 }
@@ -425,6 +425,65 @@ a {
   stroke: rgba(82, 96, 50, 0.55);
   stroke-width: 0.9;
 }
+
+/* Each organ emerges from its attachment point after its supporting stem. */
+.root-fine-left,
+.root-fine-right,
+.root-fine-edge {
+  stroke-dashoffset: calc(1 - var(--root-fine-growth, 0));
+}
+
+.branch-wide-left,
+.branch-wide-right {
+  stroke-dashoffset: calc(1 - var(--lower-branch-growth, 0));
+}
+
+.branch-left,
+.branch-right {
+  stroke-dashoffset: calc(1 - var(--upper-branch-growth, 0));
+}
+
+.growth-leaf {
+  --unfold: var(--upper-leaf-growth, 0);
+  opacity: var(--unfold);
+  transform-box: view-box;
+  transform: rotate(calc((1 - var(--unfold)) * var(--fold-angle, 38deg)))
+    scale(var(--unfold), calc(0.25 + var(--unfold) * 0.75));
+}
+
+.leaf-one { transform-origin: 258px 214px; }
+.leaf-two { transform-origin: 447px 188px; --fold-angle: -38deg; }
+.leaf-three { transform-origin: 222px 300px; --unfold: var(--lower-leaf-growth, 0); }
+.leaf-four { transform-origin: 494px 301px; --unfold: var(--lower-leaf-growth, 0); --fold-angle: -32deg; }
+
+.growth-bud {
+  opacity: var(--upper-branch-growth, 0);
+  transform-origin: 371px 164px;
+  transform: scale(var(--upper-branch-growth, 0));
+}
+
+.growth-bud path:first-child { fill: url("#leaf-fill"); }
+.growth-bud path:last-child { fill: none; stroke: #e0dda8; stroke-width: 0.8; }
+
+.seed .seed-shell {
+  fill: url("#seed-fill");
+  stroke: #c3a578;
+  stroke-width: 0.7;
+  transform-origin: 350px 370px;
+  opacity: calc(1 - var(--stem-growth) * 0.72);
+}
+
+.seed-shell-left {
+  transform: translate(calc(var(--seed-open, 0) * -8px), calc(var(--seed-open, 0) * 4px))
+    rotate(calc(var(--seed-open, 0) * -24deg));
+}
+
+.seed-shell-right {
+  transform: translate(calc(var(--seed-open, 0) * 9px), calc(var(--seed-open, 0) * 5px))
+    rotate(calc(var(--seed-open, 0) * 28deg));
+}
+
+.seed-halo { opacity: calc(0.55 * (1 - var(--stem-growth))); }
 
 .seed-halo circle {
   fill: none;
@@ -2600,9 +2659,9 @@ body {
   }
 
   .growth-stage .growth-system {
-    top: 68%;
+    top: 78%;
     left: 50%;
-    width: min(760px, 72vw);
+    width: min(620px, 58vw, 64vh);
     height: auto;
     transform: translate(-50%, -54%);
     filter: drop-shadow(0 16px 28px rgba(49, 44, 27, 0.1));
@@ -2737,6 +2796,9 @@ body {
   .growth-atmosphere {
     display: none;
   }
+
+  .growth-bud { opacity: 1; transform: none; }
+  .seed-shell { transform: none; }
 
   .landscape-breeze {
     display: none;

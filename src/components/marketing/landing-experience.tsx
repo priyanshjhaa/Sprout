@@ -59,13 +59,21 @@ export function LandingExperience() {
     let lastFrameTime = performance.now();
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const setProgress = (progress: number) => {
-      const segment = (start: number, end: number) =>
-        Math.min(1, Math.max(0, (progress - start) / (end - start))).toFixed(4);
+      const segment = (start: number, end: number) => {
+        const value = Math.min(1, Math.max(0, (progress - start) / (end - start)));
+        return (value * value * (3 - 2 * value)).toFixed(4);
+      };
       story.style.setProperty("--growth-progress", progress.toFixed(4));
       story.style.setProperty("--root-growth", segment(0.02, 0.28));
       story.style.setProperty("--stem-growth", segment(0.16, 0.48));
       story.style.setProperty("--leaf-growth", segment(0.38, 0.67));
       story.style.setProperty("--network-growth", segment(0.62, 0.9));
+      story.style.setProperty("--seed-open", segment(0.01, 0.14));
+      story.style.setProperty("--root-fine-growth", segment(0.14, 0.36));
+      story.style.setProperty("--lower-branch-growth", segment(0.29, 0.43));
+      story.style.setProperty("--upper-branch-growth", segment(0.39, 0.54));
+      story.style.setProperty("--lower-leaf-growth", segment(0.4, 0.58));
+      story.style.setProperty("--upper-leaf-growth", segment(0.52, 0.7));
     };
     const readTarget = () => {
       const bounds = story.getBoundingClientRect();
@@ -103,9 +111,11 @@ export function LandingExperience() {
     setProgress(currentProgress);
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", requestUpdate);
+    reduceMotion.addEventListener("change", requestUpdate);
     return () => {
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", requestUpdate);
+      reduceMotion.removeEventListener("change", requestUpdate);
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, []);
