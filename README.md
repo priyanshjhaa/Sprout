@@ -98,6 +98,8 @@ The API listens on `http://127.0.0.1:8080`. Verify its liveness endpoint in anot
 curl http://127.0.0.1:8080/health/live
 ```
 
+Set `SPROUT_API_ADDRESS` to override the default address. `/health/live` reports that the process is alive, while `/health/ready` reports whether its required dependencies are ready for traffic.
+
 Press `Ctrl+C` in the server terminal to perform a graceful shutdown.
 
 For database work, follow the [local PostgreSQL setup](./local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.

@@ -1,8 +1,12 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -39,13 +43,17 @@ type testAddress string
 func (address testAddress) Network() string { return "tcp" }
 func (address testAddress) String() string  { return string(address) }
 
+func discardLogger() *slog.Logger {
+	return slog.New(slog.NewJSONHandler(io.Discard, nil))
+}
+
 func TestLiveness(t *testing.T) {
 	t.Parallel()
 
 	request := httptest.NewRequest(http.MethodGet, "/health/live", nil)
 	response := httptest.NewRecorder()
 
-	NewRouter().ServeHTTP(response, request)
+	NewRouter(discardLogger(), AlwaysReady).ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
@@ -64,6 +72,10 @@ func TestLiveness(t *testing.T) {
 	if body != expected {
 		t.Fatalf("response = %#v, want %#v", body, expected)
 	}
+
+	if requestID := response.Header().Get(requestIDHeader); requestID == "" {
+		t.Fatal("X-Request-ID is empty")
+	}
 }
 
 func TestLivenessRejectsUnsupportedMethod(t *testing.T) {
@@ -72,7 +84,7 @@ func TestLivenessRejectsUnsupportedMethod(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/health/live", nil)
 	response := httptest.NewRecorder()
 
-	NewRouter().ServeHTTP(response, request)
+	NewRouter(discardLogger(), AlwaysReady).ServeHTTP(response, request)
 
 	if response.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusMethodNotAllowed)
@@ -82,7 +94,7 @@ func TestLivenessRejectsUnsupportedMethod(t *testing.T) {
 func TestNewServerSetsTimeouts(t *testing.T) {
 	t.Parallel()
 
-	server := NewServer("127.0.0.1:8080")
+	server := NewServer("127.0.0.1:8080", discardLogger(), AlwaysReady)
 
 	if server.ReadHeaderTimeout != readHeaderTimeout {
 		t.Fatalf("ReadHeaderTimeout = %s, want %s", server.ReadHeaderTimeout, readHeaderTimeout)
@@ -105,7 +117,7 @@ func TestServeStopsAfterCancellation(t *testing.T) {
 	t.Cleanup(func() { _ = listener.Close() })
 
 	ctx, cancel := context.WithCancel(context.Background())
-	server := NewServer(listener.Addr().String())
+	server := NewServer(listener.Addr().String(), discardLogger(), AlwaysReady)
 	serveDone := make(chan error, 1)
 
 	go func() {
@@ -121,5 +133,58 @@ func TestServeStopsAfterCancellation(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("Serve() did not stop after context cancellation")
+	}
+}
+
+func TestReadinessReportsReady(t *testing.T) {
+	t.Parallel()
+
+	request := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
+	response := httptest.NewRecorder()
+
+	NewRouter(discardLogger(), AlwaysReady).ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+
+	var body healthResponse
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	expected := healthResponse{Status: "ready", Service: "sprout-api"}
+	if body != expected {
+		t.Fatalf("response = %#v, want %#v", body, expected)
+	}
+}
+
+func TestReadinessHidesDependencyError(t *testing.T) {
+	t.Parallel()
+
+	request := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
+	response := httptest.NewRecorder()
+	readiness := func(context.Context) error {
+		return errors.New("database password=sensitive-value")
+	}
+
+	NewRouter(discardLogger(), readiness).ServeHTTP(response, request)
+
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusServiceUnavailable)
+	}
+	if bytes.Contains(response.Body.Bytes(), []byte("sensitive-value")) {
+		t.Fatalf("response exposes dependency error: %s", response.Body.String())
+	}
+
+	var body errorEnvelope
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body.Error.Code != "service_not_ready" {
+		t.Fatalf("error code = %q, want service_not_ready", body.Error.Code)
+	}
+	if body.Error.RequestID == "" || body.Error.RequestID != response.Header().Get(requestIDHeader) {
+		t.Fatalf("error request ID = %q, header = %q", body.Error.RequestID, response.Header().Get(requestIDHeader))
 	}
 }

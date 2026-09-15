@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"time"
@@ -25,10 +26,26 @@ type healthResponse struct {
 	Service string `json:"service"`
 }
 
-func NewServer(address string) *http.Server {
+type errorEnvelope struct {
+	Error apiError `json:"error"`
+}
+
+type apiError struct {
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	RequestID string `json:"requestId"`
+}
+
+type ReadinessCheck func(context.Context) error
+
+func AlwaysReady(context.Context) error {
+	return nil
+}
+
+func NewServer(address string, logger *slog.Logger, readiness ReadinessCheck) *http.Server {
 	return &http.Server{
 		Addr:              address,
-		Handler:           NewRouter(),
+		Handler:           NewRouter(logger, readiness),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
@@ -36,9 +53,14 @@ func NewServer(address string) *http.Server {
 	}
 }
 
-func NewRouter() http.Handler {
+func NewRouter(logger *slog.Logger, readiness ReadinessCheck) http.Handler {
 	router := chi.NewRouter()
+	router.Use(requestIDMiddleware)
+	router.Use(requestLogger(logger))
+	router.Use(recoverPanic(logger))
+
 	router.Get("/health/live", handleLiveness)
+	router.Get("/health/ready", handleReadiness(readiness))
 
 	return router
 }
@@ -76,6 +98,36 @@ func handleLiveness(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, healthResponse{
 		Status:  "ok",
 		Service: "sprout-api",
+	})
+}
+
+func handleReadiness(readiness ReadinessCheck) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := readiness(r.Context()); err != nil {
+			writeAPIError(
+				w,
+				http.StatusServiceUnavailable,
+				"service_not_ready",
+				"The server is not ready to receive traffic.",
+				requestIDFromContext(r.Context()),
+			)
+			return
+		}
+
+		writeJSON(w, http.StatusOK, healthResponse{
+			Status:  "ready",
+			Service: "sprout-api",
+		})
+	}
+}
+
+func writeAPIError(w http.ResponseWriter, status int, code, message, requestID string) {
+	writeJSON(w, status, errorEnvelope{
+		Error: apiError{
+			Code:      code,
+			Message:   message,
+			RequestID: requestID,
+		},
 	})
 }
 

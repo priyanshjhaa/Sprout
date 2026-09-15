@@ -2,44 +2,53 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
+	"log/slog"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/priyanshjhaa/Sprout/backend/internal/config"
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
 )
 
 const serviceName = "sprout-api"
-const defaultAddress = "127.0.0.1:8080"
 
 func main() {
 	os.Exit(realMain())
 }
 
 func realMain() int {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	appConfig, err := config.Load(os.LookupEnv)
+	if err != nil {
+		logger.Error("configuration invalid", "error", err)
+		return 1
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	return run(ctx, defaultAddress, os.Stdout, os.Stderr)
+	return run(ctx, appConfig, logger)
 }
 
-func run(ctx context.Context, address string, stdout, stderr io.Writer) int {
-	listener, err := net.Listen("tcp", address)
+func run(ctx context.Context, appConfig config.Config, logger *slog.Logger) int {
+	listener, err := net.Listen("tcp", appConfig.APIAddress)
 	if err != nil {
-		fmt.Fprintf(stderr, "%s: listen: %v\n", serviceName, err)
+		logger.Error("listen failed", "error", err)
 		return 1
 	}
 
-	server := httpapi.NewServer(listener.Addr().String())
-	fmt.Fprintf(stdout, "%s: listening on http://%s\n", serviceName, listener.Addr())
+	server := httpapi.NewServer(listener.Addr().String(), logger, httpapi.AlwaysReady)
+	logger.Info("server listening", "service", serviceName, "address", listener.Addr().String())
 
 	if err := httpapi.Serve(ctx, listener, server); err != nil {
-		fmt.Fprintf(stderr, "%s: %v\n", serviceName, err)
+		logger.Error("server stopped unexpectedly", "error", err)
 		return 1
 	}
+
+	logger.Info("server stopped", "service", serviceName)
 
 	return 0
 }
