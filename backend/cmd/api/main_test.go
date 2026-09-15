@@ -2,22 +2,28 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"strings"
 	"testing"
 )
 
-func TestRunReportsReadyAndSucceeds(t *testing.T) {
+func TestRunReportsListenFailure(t *testing.T) {
 	t.Parallel()
 
 	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 
-	exitCode := run(&stdout)
+	exitCode := run(context.Background(), "127.0.0.1:not-a-port", &stdout, &stderr)
 
-	if exitCode != 0 {
-		t.Fatalf("run() exit code = %d, want 0", exitCode)
+	if exitCode != 1 {
+		t.Fatalf("run() exit code = %d, want 1", exitCode)
 	}
 
-	const expected = "sprout-api: backend foundation ready\n"
-	if stdout.String() != expected {
-		t.Fatalf("run() output = %q, want %q", stdout.String(), expected)
+	if stdout.Len() != 0 {
+		t.Fatalf("run() stdout = %q, want empty", stdout.String())
+	}
+
+	if !strings.Contains(stderr.String(), "sprout-api: listen:") {
+		t.Fatalf("run() stderr = %q, want listen error", stderr.String())
 	}
 }

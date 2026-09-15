@@ -83,7 +83,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Verify and run the current backend foundation:
+Verify and run the current backend:
 
 ```bash
 cd backend
@@ -92,7 +92,13 @@ go vet ./...
 go run ./cmd/api
 ```
 
-The Milestone 0 command prints its readiness message and exits successfully. The HTTP server is introduced in the next backend milestone.
+The API listens on `http://127.0.0.1:8080`. Verify its liveness endpoint in another terminal:
+
+```bash
+curl http://127.0.0.1:8080/health/live
+```
+
+Press `Ctrl+C` in the server terminal to perform a graceful shutdown.
 
 For database work, follow the [local PostgreSQL setup](./local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.
 
