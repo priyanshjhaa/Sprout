@@ -11,31 +11,51 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getApplicationByWorkspaceAndID = `-- name: GetApplicationByWorkspaceAndID :one
+const createApplicationForMember = `-- name: CreateApplicationForMember :one
+INSERT INTO applications (
+    workspace_id,
+    name,
+    slug,
+    description,
+    lifecycle,
+    default_hostname,
+    created_by
+)
 SELECT
-    application.id,
-    application.workspace_id,
-    application.name,
-    application.slug,
-    application.description,
-    application.lifecycle,
-    application.default_hostname,
-    application.created_by,
-    application.created_at,
-    application.updated_at
-FROM applications AS application
-JOIN workspaces AS workspace ON workspace.id = application.workspace_id
-WHERE workspace.slug = $1
-  AND application.id = $2
+    workspace.id,
+    $1,
+    $2,
+    $3,
+    'active',
+    $4,
+    $5
+FROM workspaces AS workspace
+JOIN workspace_memberships AS membership ON membership.workspace_id = workspace.id
+WHERE workspace.slug = $6
+  AND membership.user_id = $5
+  AND membership.role IN ('owner', 'editor')
+RETURNING id, workspace_id, name, slug, description, lifecycle, default_hostname,
+          created_by, created_at, updated_at
 `
 
-type GetApplicationByWorkspaceAndIDParams struct {
-	WorkspaceSlug string      `json:"workspace_slug"`
-	ApplicationID pgtype.UUID `json:"application_id"`
+type CreateApplicationForMemberParams struct {
+	Name            string      `json:"name"`
+	Slug            string      `json:"slug"`
+	Description     string      `json:"description"`
+	DefaultHostname string      `json:"default_hostname"`
+	UserID          pgtype.UUID `json:"user_id"`
+	WorkspaceSlug   string      `json:"workspace_slug"`
 }
 
-func (q *Queries) GetApplicationByWorkspaceAndID(ctx context.Context, arg GetApplicationByWorkspaceAndIDParams) (Application, error) {
-	row := q.db.QueryRow(ctx, getApplicationByWorkspaceAndID, arg.WorkspaceSlug, arg.ApplicationID)
+func (q *Queries) CreateApplicationForMember(ctx context.Context, arg CreateApplicationForMemberParams) (Application, error) {
+	row := q.db.QueryRow(ctx, createApplicationForMember,
+		arg.Name,
+		arg.Slug,
+		arg.Description,
+		arg.DefaultHostname,
+		arg.UserID,
+		arg.WorkspaceSlug,
+	)
 	var i Application
 	err := row.Scan(
 		&i.ID,
@@ -52,7 +72,7 @@ func (q *Queries) GetApplicationByWorkspaceAndID(ctx context.Context, arg GetApp
 	return i, err
 }
 
-const listApplicationsByWorkspaceSlug = `-- name: ListApplicationsByWorkspaceSlug :many
+const getApplicationForMember = `-- name: GetApplicationForMember :one
 SELECT
     application.id,
     application.workspace_id,
@@ -66,12 +86,63 @@ SELECT
     application.updated_at
 FROM applications AS application
 JOIN workspaces AS workspace ON workspace.id = application.workspace_id
+JOIN workspace_memberships AS membership ON membership.workspace_id = workspace.id
 WHERE workspace.slug = $1
+  AND application.id = $2
+  AND membership.user_id = $3
+`
+
+type GetApplicationForMemberParams struct {
+	WorkspaceSlug string      `json:"workspace_slug"`
+	ApplicationID pgtype.UUID `json:"application_id"`
+	UserID        pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) GetApplicationForMember(ctx context.Context, arg GetApplicationForMemberParams) (Application, error) {
+	row := q.db.QueryRow(ctx, getApplicationForMember, arg.WorkspaceSlug, arg.ApplicationID, arg.UserID)
+	var i Application
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.Lifecycle,
+		&i.DefaultHostname,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listApplicationsForMember = `-- name: ListApplicationsForMember :many
+SELECT
+    application.id,
+    application.workspace_id,
+    application.name,
+    application.slug,
+    application.description,
+    application.lifecycle,
+    application.default_hostname,
+    application.created_by,
+    application.created_at,
+    application.updated_at
+FROM applications AS application
+JOIN workspaces AS workspace ON workspace.id = application.workspace_id
+JOIN workspace_memberships AS membership ON membership.workspace_id = workspace.id
+WHERE workspace.slug = $1
+  AND membership.user_id = $2
 ORDER BY application.updated_at DESC, application.id
 `
 
-func (q *Queries) ListApplicationsByWorkspaceSlug(ctx context.Context, workspaceSlug string) ([]Application, error) {
-	rows, err := q.db.Query(ctx, listApplicationsByWorkspaceSlug, workspaceSlug)
+type ListApplicationsForMemberParams struct {
+	WorkspaceSlug string      `json:"workspace_slug"`
+	UserID        pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) ListApplicationsForMember(ctx context.Context, arg ListApplicationsForMemberParams) ([]Application, error) {
+	rows, err := q.db.Query(ctx, listApplicationsForMember, arg.WorkspaceSlug, arg.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -99,4 +170,61 @@ func (q *Queries) ListApplicationsByWorkspaceSlug(ctx context.Context, workspace
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateApplicationForMember = `-- name: UpdateApplicationForMember :one
+UPDATE applications AS application
+SET
+    name = COALESCE($1::text, application.name),
+    description = COALESCE($2::text, application.description),
+    lifecycle = COALESCE(
+        $3::application_lifecycle,
+        application.lifecycle
+    ),
+    updated_at = now()
+FROM workspaces AS workspace, workspace_memberships AS membership
+WHERE application.id = $4
+  AND application.workspace_id = workspace.id
+  AND workspace.slug = $5
+  AND membership.workspace_id = workspace.id
+  AND membership.user_id = $6
+  AND membership.role IN ('owner', 'editor')
+RETURNING application.id, application.workspace_id, application.name,
+          application.slug, application.description, application.lifecycle,
+          application.default_hostname, application.created_by,
+          application.created_at, application.updated_at
+`
+
+type UpdateApplicationForMemberParams struct {
+	Name          pgtype.Text              `json:"name"`
+	Description   pgtype.Text              `json:"description"`
+	Lifecycle     NullApplicationLifecycle `json:"lifecycle"`
+	ApplicationID pgtype.UUID              `json:"application_id"`
+	WorkspaceSlug string                   `json:"workspace_slug"`
+	UserID        pgtype.UUID              `json:"user_id"`
+}
+
+func (q *Queries) UpdateApplicationForMember(ctx context.Context, arg UpdateApplicationForMemberParams) (Application, error) {
+	row := q.db.QueryRow(ctx, updateApplicationForMember,
+		arg.Name,
+		arg.Description,
+		arg.Lifecycle,
+		arg.ApplicationID,
+		arg.WorkspaceSlug,
+		arg.UserID,
+	)
+	var i Application
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.Lifecycle,
+		&i.DefaultHostname,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

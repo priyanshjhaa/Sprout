@@ -94,7 +94,7 @@ func TestLivenessRejectsUnsupportedMethod(t *testing.T) {
 func TestNewServerSetsTimeouts(t *testing.T) {
 	t.Parallel()
 
-	server := NewServer("127.0.0.1:8080", discardLogger(), AlwaysReady)
+	server := NewServer("127.0.0.1:8080", NewRouter(discardLogger(), AlwaysReady))
 
 	if server.ReadHeaderTimeout != readHeaderTimeout {
 		t.Fatalf("ReadHeaderTimeout = %s, want %s", server.ReadHeaderTimeout, readHeaderTimeout)
@@ -117,7 +117,7 @@ func TestServeStopsAfterCancellation(t *testing.T) {
 	t.Cleanup(func() { _ = listener.Close() })
 
 	ctx, cancel := context.WithCancel(context.Background())
-	server := NewServer(listener.Addr().String(), discardLogger(), AlwaysReady)
+	server := NewServer(listener.Addr().String(), NewRouter(discardLogger(), AlwaysReady))
 	serveDone := make(chan error, 1)
 
 	go func() {

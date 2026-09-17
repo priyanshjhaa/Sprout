@@ -113,6 +113,8 @@ curl http://127.0.0.1:8080/health/live
 
 Set `SPROUT_API_ADDRESS` to override the default address. `/health/live` reports that the process is alive, while `/health/ready` now checks the PostgreSQL pool before reporting that the API is ready for traffic.
 
+The first versioned API slice supports listing, creating, viewing, and updating workspace applications under `/api/v1/workspaces/{workspaceSlug}/applications`. During local development these routes require an `X-Sprout-User-ID` header containing the UUID of an existing workspace member. This placeholder is not production authentication and will be replaced during the authentication milestone. The reviewed contract is in [`backend/openapi/openapi.yaml`](./backend/openapi/openapi.yaml).
+
 Press `Ctrl+C` in the server terminal to perform a graceful shutdown.
 
 For database work, follow the [local PostgreSQL setup](./local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.

@@ -16,12 +16,13 @@ func TestRunReportsListenFailure(t *testing.T) {
 
 	var logs bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&logs, nil))
+	router := httpapi.NewRouter(logger, httpapi.AlwaysReady)
 
 	exitCode := run(
 		context.Background(),
 		config.Config{APIAddress: "127.0.0.1:not-a-port"},
 		logger,
-		httpapi.AlwaysReady,
+		router,
 	)
 
 	if exitCode != 1 {

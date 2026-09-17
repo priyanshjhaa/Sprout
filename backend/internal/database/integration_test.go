@@ -62,6 +62,15 @@ func TestPoolAndGeneratedQueriesAgainstPostgreSQL(t *testing.T) {
 	).Scan(&workspaceID); err != nil {
 		t.Fatalf("insert workspace: %v", err)
 	}
+	if _, err := tx.Exec(
+		ctx,
+		`INSERT INTO workspace_memberships (workspace_id, user_id, role)
+		 VALUES ($1, $2, 'owner')`,
+		workspaceID,
+		userID,
+	); err != nil {
+		t.Fatalf("insert workspace membership: %v", err)
+	}
 
 	var applicationID pgtype.UUID
 	if err := tx.QueryRow(
@@ -79,41 +88,49 @@ func TestPoolAndGeneratedQueriesAgainstPostgreSQL(t *testing.T) {
 
 	queries := dbgen.New(tx)
 
-	workspace, err := queries.GetWorkspaceBySlug(ctx, workspaceSlug)
+	access, err := queries.GetWorkspaceAccess(ctx, dbgen.GetWorkspaceAccessParams{
+		WorkspaceSlug: workspaceSlug,
+		UserID:        userID,
+	})
 	if err != nil {
-		t.Fatalf("GetWorkspaceBySlug() error = %v", err)
+		t.Fatalf("GetWorkspaceAccess() error = %v", err)
 	}
-	if workspace.ID != workspaceID || workspace.Name != "Integration Workspace" {
-		t.Fatalf("workspace = %#v, want inserted workspace", workspace)
+	if access.WorkspaceID != workspaceID || access.Role != dbgen.WorkspaceRoleOwner {
+		t.Fatalf("workspace access = %#v, want owner access", access)
 	}
 
-	applications, err := queries.ListApplicationsByWorkspaceSlug(ctx, workspaceSlug)
+	applications, err := queries.ListApplicationsForMember(ctx, dbgen.ListApplicationsForMemberParams{
+		WorkspaceSlug: workspaceSlug,
+		UserID:        userID,
+	})
 	if err != nil {
-		t.Fatalf("ListApplicationsByWorkspaceSlug() error = %v", err)
+		t.Fatalf("ListApplicationsForMember() error = %v", err)
 	}
 	if len(applications) != 1 || applications[0].ID != applicationID {
 		t.Fatalf("applications = %#v, want inserted application", applications)
 	}
 
-	application, err := queries.GetApplicationByWorkspaceAndID(
+	application, err := queries.GetApplicationForMember(
 		ctx,
-		dbgen.GetApplicationByWorkspaceAndIDParams{
+		dbgen.GetApplicationForMemberParams{
 			WorkspaceSlug: workspaceSlug,
 			ApplicationID: applicationID,
+			UserID:        userID,
 		},
 	)
 	if err != nil {
-		t.Fatalf("GetApplicationByWorkspaceAndID() error = %v", err)
+		t.Fatalf("GetApplicationForMember() error = %v", err)
 	}
 	if application.Name != "Integration App" || application.Lifecycle != dbgen.ApplicationLifecycleActive {
 		t.Fatalf("application = %#v, want active Integration App", application)
 	}
 
-	_, err = queries.GetApplicationByWorkspaceAndID(
+	_, err = queries.GetApplicationForMember(
 		ctx,
-		dbgen.GetApplicationByWorkspaceAndIDParams{
+		dbgen.GetApplicationForMemberParams{
 			WorkspaceSlug: "different-workspace",
 			ApplicationID: applicationID,
+			UserID:        userID,
 		},
 	)
 	if !errors.Is(err, pgx.ErrNoRows) {

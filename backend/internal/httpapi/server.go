@@ -42,10 +42,10 @@ func AlwaysReady(context.Context) error {
 	return nil
 }
 
-func NewServer(address string, logger *slog.Logger, readiness ReadinessCheck) *http.Server {
+func NewServer(address string, handler http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              address,
-		Handler:           NewRouter(logger, readiness),
+		Handler:           handler,
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
@@ -53,7 +53,7 @@ func NewServer(address string, logger *slog.Logger, readiness ReadinessCheck) *h
 	}
 }
 
-func NewRouter(logger *slog.Logger, readiness ReadinessCheck) http.Handler {
+func NewRouter(logger *slog.Logger, readiness ReadinessCheck) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(requestIDMiddleware)
 	router.Use(requestLogger(logger))

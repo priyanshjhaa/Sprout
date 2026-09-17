@@ -4,12 +4,15 @@ import (
 	"context"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/priyanshjhaa/Sprout/backend/internal/application"
 	"github.com/priyanshjhaa/Sprout/backend/internal/config"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database"
+	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
 )
 
@@ -42,14 +45,20 @@ func realMain() int {
 		return database.Ping(ctx, pool)
 	}
 
-	return run(ctx, appConfig, logger, readiness)
+	queries := dbgen.New(pool)
+	repository := application.NewSQLRepository(queries)
+	service := application.NewService(repository)
+	router := httpapi.NewRouter(logger, readiness)
+	httpapi.RegisterApplicationRoutes(router, service, logger)
+
+	return run(ctx, appConfig, logger, router)
 }
 
 func run(
 	ctx context.Context,
 	appConfig config.Config,
 	logger *slog.Logger,
-	readiness httpapi.ReadinessCheck,
+	handler http.Handler,
 ) int {
 	listener, err := net.Listen("tcp", appConfig.APIAddress)
 	if err != nil {
@@ -57,7 +66,7 @@ func run(
 		return 1
 	}
 
-	server := httpapi.NewServer(listener.Addr().String(), logger, readiness)
+	server := httpapi.NewServer(listener.Addr().String(), handler)
 	logger.Info("server listening", "service", serviceName, "address", listener.Addr().String())
 
 	if err := httpapi.Serve(ctx, listener, server); err != nil {
