@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -10,7 +11,8 @@ import (
 const DefaultAPIAddress = "127.0.0.1:8080"
 
 type Config struct {
-	APIAddress string
+	APIAddress  string
+	DatabaseURL string
 }
 
 type LookupEnv func(key string) (string, bool)
@@ -25,7 +27,31 @@ func Load(lookupEnv LookupEnv) (Config, error) {
 		return Config{}, fmt.Errorf("SPROUT_API_ADDRESS: %w", err)
 	}
 
-	return Config{APIAddress: address}, nil
+	databaseURL, exists := lookupEnv("DATABASE_URL")
+	databaseURL = strings.TrimSpace(databaseURL)
+	if !exists || databaseURL == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL is required")
+	}
+	if !validDatabaseURL(databaseURL) {
+		return Config{}, fmt.Errorf("DATABASE_URL must be a valid PostgreSQL connection URL")
+	}
+
+	return Config{
+		APIAddress:  address,
+		DatabaseURL: databaseURL,
+	}, nil
+}
+
+func validDatabaseURL(databaseURL string) bool {
+	parsed, err := url.Parse(databaseURL)
+	if err != nil {
+		return false
+	}
+
+	validScheme := parsed.Scheme == "postgres" || parsed.Scheme == "postgresql"
+	databaseName := strings.Trim(parsed.Path, "/")
+
+	return validScheme && parsed.Host != "" && parsed.User != nil && databaseName != ""
 }
 
 func validateAddress(address string) error {

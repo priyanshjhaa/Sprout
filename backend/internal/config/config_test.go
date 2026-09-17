@@ -5,34 +5,44 @@ import (
 	"testing"
 )
 
+const testDatabaseURL = "postgresql://sprout:local-password@127.0.0.1:5432/sprout"
+
+func lookup(values map[string]string) LookupEnv {
+	return func(key string) (string, bool) {
+		value, exists := values[key]
+		return value, exists
+	}
+}
+
 func TestLoadUsesDefaultAddress(t *testing.T) {
 	t.Parallel()
 
-	config, err := Load(func(string) (string, bool) { return "", false })
+	appConfig, err := Load(lookup(map[string]string{"DATABASE_URL": testDatabaseURL}))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
 
-	if config.APIAddress != DefaultAPIAddress {
-		t.Fatalf("APIAddress = %q, want %q", config.APIAddress, DefaultAPIAddress)
+	if appConfig.APIAddress != DefaultAPIAddress {
+		t.Fatalf("APIAddress = %q, want %q", appConfig.APIAddress, DefaultAPIAddress)
+	}
+	if appConfig.DatabaseURL != testDatabaseURL {
+		t.Fatalf("DatabaseURL = %q, want configured URL", appConfig.DatabaseURL)
 	}
 }
 
 func TestLoadUsesConfiguredAddress(t *testing.T) {
 	t.Parallel()
 
-	config, err := Load(func(key string) (string, bool) {
-		if key == "SPROUT_API_ADDRESS" {
-			return " 0.0.0.0:9090 ", true
-		}
-		return "", false
-	})
+	appConfig, err := Load(lookup(map[string]string{
+		"SPROUT_API_ADDRESS": " 0.0.0.0:9090 ",
+		"DATABASE_URL":       testDatabaseURL,
+	}))
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
 	}
 
-	if config.APIAddress != "0.0.0.0:9090" {
-		t.Fatalf("APIAddress = %q, want 0.0.0.0:9090", config.APIAddress)
+	if appConfig.APIAddress != "0.0.0.0:9090" {
+		t.Fatalf("APIAddress = %q, want 0.0.0.0:9090", appConfig.APIAddress)
 	}
 }
 
@@ -54,7 +64,10 @@ func TestLoadRejectsInvalidAddress(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := Load(func(string) (string, bool) { return test.address, true })
+			_, err := Load(lookup(map[string]string{
+				"SPROUT_API_ADDRESS": test.address,
+				"DATABASE_URL":       testDatabaseURL,
+			}))
 			if err == nil {
 				t.Fatal("Load() error = nil, want validation error")
 			}
@@ -62,5 +75,28 @@ func TestLoadRejectsInvalidAddress(t *testing.T) {
 				t.Fatalf("Load() error = %q, want variable name", err)
 			}
 		})
+	}
+}
+
+func TestLoadRequiresDatabaseURL(t *testing.T) {
+	t.Parallel()
+
+	_, err := Load(lookup(nil))
+	if err == nil || err.Error() != "DATABASE_URL is required" {
+		t.Fatalf("Load() error = %v, want required DATABASE_URL error", err)
+	}
+}
+
+func TestLoadRejectsInvalidDatabaseURLWithoutExposingIt(t *testing.T) {
+	t.Parallel()
+
+	const invalidURL = "postgresql://sprout:sensitive-password@/missing-host"
+	_, err := Load(lookup(map[string]string{"DATABASE_URL": invalidURL}))
+
+	if err == nil {
+		t.Fatal("Load() error = nil, want validation error")
+	}
+	if strings.Contains(err.Error(), "sensitive-password") {
+		t.Fatalf("Load() error exposes password: %v", err)
 	}
 }

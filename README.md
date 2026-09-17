@@ -68,6 +68,7 @@ Requirements:
 - Node.js 20 or newer
 - npm
 - Go 1.27.x for backend development
+- `sqlc` 1.31.x for generating typed Go queries
 
 Install dependencies:
 
@@ -83,10 +84,22 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Verify and run the current backend:
+Start and migrate PostgreSQL, then load the untracked local environment into your current shell:
+
+```bash
+npm run db:up
+npm run db:migrate
+set -a
+source .env
+set +a
+```
+
+Only source an environment file you trust. Then generate, verify, and run the backend:
 
 ```bash
 cd backend
+sqlc generate
+sqlc vet
 go test ./...
 go vet ./...
 go run ./cmd/api
@@ -98,7 +111,7 @@ The API listens on `http://127.0.0.1:8080`. Verify its liveness endpoint in anot
 curl http://127.0.0.1:8080/health/live
 ```
 
-Set `SPROUT_API_ADDRESS` to override the default address. `/health/live` reports that the process is alive, while `/health/ready` reports whether its required dependencies are ready for traffic.
+Set `SPROUT_API_ADDRESS` to override the default address. `/health/live` reports that the process is alive, while `/health/ready` now checks the PostgreSQL pool before reporting that the API is ready for traffic.
 
 Press `Ctrl+C` in the server terminal to perform a graceful shutdown.
 
@@ -151,7 +164,7 @@ src/
 └── types/                Frontend domain types
 ```
 
-The Go backend begins in `backend/`. Its `cmd/api` package is the executable entrypoint; focused internal packages will be introduced only as their corresponding milestones require them.
+The Go backend lives in `backend/`. Its `cmd/api` package is the executable entrypoint. Drizzle remains the only schema and migration owner; reviewed SQL in `backend/queries` is converted by `sqlc` into typed query methods used through the bounded `pgx` connection pool.
 
 ## Design principles
 

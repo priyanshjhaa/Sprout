@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/priyanshjhaa/Sprout/backend/internal/config"
+	"github.com/priyanshjhaa/Sprout/backend/internal/database"
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
 )
 
@@ -30,17 +31,33 @@ func realMain() int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	return run(ctx, appConfig, logger)
+	pool, err := database.Open(ctx, appConfig.DatabaseURL)
+	if err != nil {
+		logger.Error("database connection failed")
+		return 1
+	}
+	defer pool.Close()
+
+	readiness := func(ctx context.Context) error {
+		return database.Ping(ctx, pool)
+	}
+
+	return run(ctx, appConfig, logger, readiness)
 }
 
-func run(ctx context.Context, appConfig config.Config, logger *slog.Logger) int {
+func run(
+	ctx context.Context,
+	appConfig config.Config,
+	logger *slog.Logger,
+	readiness httpapi.ReadinessCheck,
+) int {
 	listener, err := net.Listen("tcp", appConfig.APIAddress)
 	if err != nil {
 		logger.Error("listen failed", "error", err)
 		return 1
 	}
 
-	server := httpapi.NewServer(listener.Addr().String(), logger, httpapi.AlwaysReady)
+	server := httpapi.NewServer(listener.Addr().String(), logger, readiness)
 	logger.Info("server listening", "service", serviceName, "address", listener.Addr().String())
 
 	if err := httpapi.Serve(ctx, listener, server); err != nil {
