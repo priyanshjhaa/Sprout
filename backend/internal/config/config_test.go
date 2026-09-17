@@ -28,6 +28,37 @@ func TestLoadUsesDefaultAddress(t *testing.T) {
 	if appConfig.DatabaseURL != testDatabaseURL {
 		t.Fatalf("DatabaseURL = %q, want configured URL", appConfig.DatabaseURL)
 	}
+	if appConfig.WebOrigin != DefaultWebOrigin {
+		t.Fatalf("WebOrigin = %q, want %q", appConfig.WebOrigin, DefaultWebOrigin)
+	}
+}
+
+func TestLoadUsesConfiguredWebOrigin(t *testing.T) {
+	t.Parallel()
+
+	appConfig, err := Load(lookup(map[string]string{
+		"DATABASE_URL":      testDatabaseURL,
+		"SPROUT_WEB_ORIGIN": " https://sprout.example ",
+	}))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if appConfig.WebOrigin != "https://sprout.example" {
+		t.Fatalf("WebOrigin = %q, want https://sprout.example", appConfig.WebOrigin)
+	}
+}
+
+func TestLoadRejectsInvalidWebOrigin(t *testing.T) {
+	t.Parallel()
+
+	_, err := Load(lookup(map[string]string{
+		"DATABASE_URL":      testDatabaseURL,
+		"SPROUT_WEB_ORIGIN": "http://localhost:3000/dashboard",
+	}))
+	if err == nil || !strings.Contains(err.Error(), "SPROUT_WEB_ORIGIN") {
+		t.Fatalf("Load() error = %v, want SPROUT_WEB_ORIGIN validation error", err)
+	}
 }
 
 func TestLoadUsesConfiguredAddress(t *testing.T) {

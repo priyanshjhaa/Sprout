@@ -53,7 +53,7 @@ func TestLiveness(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/health/live", nil)
 	response := httptest.NewRecorder()
 
-	NewRouter(discardLogger(), AlwaysReady).ServeHTTP(response, request)
+	NewRouter(discardLogger(), AlwaysReady, "").ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
@@ -84,7 +84,7 @@ func TestLivenessRejectsUnsupportedMethod(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/health/live", nil)
 	response := httptest.NewRecorder()
 
-	NewRouter(discardLogger(), AlwaysReady).ServeHTTP(response, request)
+	NewRouter(discardLogger(), AlwaysReady, "").ServeHTTP(response, request)
 
 	if response.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusMethodNotAllowed)
@@ -94,7 +94,7 @@ func TestLivenessRejectsUnsupportedMethod(t *testing.T) {
 func TestNewServerSetsTimeouts(t *testing.T) {
 	t.Parallel()
 
-	server := NewServer("127.0.0.1:8080", NewRouter(discardLogger(), AlwaysReady))
+	server := NewServer("127.0.0.1:8080", NewRouter(discardLogger(), AlwaysReady, ""))
 
 	if server.ReadHeaderTimeout != readHeaderTimeout {
 		t.Fatalf("ReadHeaderTimeout = %s, want %s", server.ReadHeaderTimeout, readHeaderTimeout)
@@ -117,7 +117,7 @@ func TestServeStopsAfterCancellation(t *testing.T) {
 	t.Cleanup(func() { _ = listener.Close() })
 
 	ctx, cancel := context.WithCancel(context.Background())
-	server := NewServer(listener.Addr().String(), NewRouter(discardLogger(), AlwaysReady))
+	server := NewServer(listener.Addr().String(), NewRouter(discardLogger(), AlwaysReady, ""))
 	serveDone := make(chan error, 1)
 
 	go func() {
@@ -142,7 +142,7 @@ func TestReadinessReportsReady(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/health/ready", nil)
 	response := httptest.NewRecorder()
 
-	NewRouter(discardLogger(), AlwaysReady).ServeHTTP(response, request)
+	NewRouter(discardLogger(), AlwaysReady, "").ServeHTTP(response, request)
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
@@ -168,7 +168,7 @@ func TestReadinessHidesDependencyError(t *testing.T) {
 		return errors.New("database password=sensitive-value")
 	}
 
-	NewRouter(discardLogger(), readiness).ServeHTTP(response, request)
+	NewRouter(discardLogger(), readiness, "").ServeHTTP(response, request)
 
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusServiceUnavailable)

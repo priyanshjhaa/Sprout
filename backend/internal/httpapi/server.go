@@ -53,8 +53,9 @@ func NewServer(address string, handler http.Handler) *http.Server {
 	}
 }
 
-func NewRouter(logger *slog.Logger, readiness ReadinessCheck) *chi.Mux {
+func NewRouter(logger *slog.Logger, readiness ReadinessCheck, webOrigin string) *chi.Mux {
 	router := chi.NewRouter()
+	router.Use(corsMiddleware(webOrigin))
 	router.Use(requestIDMiddleware)
 	router.Use(requestLogger(logger))
 	router.Use(recoverPanic(logger))

@@ -8,11 +8,15 @@ import (
 	"strings"
 )
 
-const DefaultAPIAddress = "127.0.0.1:8080"
+const (
+	DefaultAPIAddress = "127.0.0.1:8080"
+	DefaultWebOrigin  = "http://localhost:3000"
+)
 
 type Config struct {
 	APIAddress  string
 	DatabaseURL string
+	WebOrigin   string
 }
 
 type LookupEnv func(key string) (string, bool)
@@ -36,10 +40,29 @@ func Load(lookupEnv LookupEnv) (Config, error) {
 		return Config{}, fmt.Errorf("DATABASE_URL must be a valid PostgreSQL connection URL")
 	}
 
+	webOrigin := DefaultWebOrigin
+	if value, exists := lookupEnv("SPROUT_WEB_ORIGIN"); exists {
+		webOrigin = strings.TrimSpace(value)
+	}
+	if !validWebOrigin(webOrigin) {
+		return Config{}, fmt.Errorf("SPROUT_WEB_ORIGIN must be a valid HTTP origin without a path")
+	}
+
 	return Config{
 		APIAddress:  address,
 		DatabaseURL: databaseURL,
+		WebOrigin:   webOrigin,
 	}, nil
+}
+
+func validWebOrigin(origin string) bool {
+	parsed, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+
+	return (parsed.Scheme == "http" || parsed.Scheme == "https") &&
+		parsed.Host != "" && parsed.Path == "" && parsed.RawQuery == "" && parsed.Fragment == ""
 }
 
 func validDatabaseURL(databaseURL string) bool {

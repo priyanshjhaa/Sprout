@@ -1006,7 +1006,8 @@ a {
 .status-live { color: var(--sprout); }
 .status-building { color: var(--info); }
 .status-failed { color: var(--danger); }
-.status-paused { color: var(--muted); }
+.status-paused,
+.status-archived { color: var(--muted); }
 
 @media (max-width: 900px) {
   .landing-nav {

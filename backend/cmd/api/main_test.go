@@ -16,7 +16,7 @@ func TestRunReportsListenFailure(t *testing.T) {
 
 	var logs bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&logs, nil))
-	router := httpapi.NewRouter(logger, httpapi.AlwaysReady)
+	router := httpapi.NewRouter(logger, httpapi.AlwaysReady, "http://localhost:3000")
 
 	exitCode := run(
 		context.Background(),

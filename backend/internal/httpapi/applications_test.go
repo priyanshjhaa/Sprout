@@ -58,7 +58,7 @@ func TestApplicationRoutesRequireDevelopmentIdentity(t *testing.T) {
 			return nil, nil
 		},
 	}
-	router := NewRouter(discardLogger(), AlwaysReady)
+	router := NewRouter(discardLogger(), AlwaysReady, "")
 	RegisterApplicationRoutes(router, service, discardLogger())
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/workspaces/acme/applications", nil)
 	response := httptest.NewRecorder()
@@ -92,7 +92,7 @@ func TestCreateApplicationReturnsExplicitDTO(t *testing.T) {
 			}, nil
 		},
 	}
-	router := NewRouter(discardLogger(), AlwaysReady)
+	router := NewRouter(discardLogger(), AlwaysReady, "")
 	RegisterApplicationRoutes(router, service, discardLogger())
 	body := bytes.NewBufferString(`{"name":"Invoice approvals","slug":"invoice-approvals","description":"Review invoices"}`)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/acme/applications", body)
@@ -126,7 +126,7 @@ func TestCreateApplicationRejectsUnknownJSONField(t *testing.T) {
 			return application.Application{}, nil
 		},
 	}
-	router := NewRouter(discardLogger(), AlwaysReady)
+	router := NewRouter(discardLogger(), AlwaysReady, "")
 	RegisterApplicationRoutes(router, service, discardLogger())
 	body := bytes.NewBufferString(`{"name":"Invoices","slug":"invoices","unexpected":true}`)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/acme/applications", body)
@@ -149,7 +149,7 @@ func TestCreateApplicationMapsConflict(t *testing.T) {
 			return application.Application{}, application.ErrConflict
 		},
 	}
-	router := NewRouter(discardLogger(), AlwaysReady)
+	router := NewRouter(discardLogger(), AlwaysReady, "")
 	RegisterApplicationRoutes(router, service, discardLogger())
 	body := bytes.NewBufferString(`{"name":"Invoices","slug":"invoices"}`)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/acme/applications", body)

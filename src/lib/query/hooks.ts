@@ -1,17 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api/mock-api";
+import { api } from "@/lib/api/api";
 import { queryKeys } from "@/lib/query/keys";
 
 export const useWorkspace = (slug: string) =>
   useQuery({ queryKey: queryKeys.workspace(slug), queryFn: api.getWorkspace });
 
 export const useApplications = (slug: string) =>
-  useQuery({ queryKey: queryKeys.apps(slug), queryFn: api.getApplications });
+  useQuery({ queryKey: queryKeys.apps(slug), queryFn: () => api.getApplications(slug) });
 
 export const useApplication = (slug: string, appId: string) =>
-  useQuery({ queryKey: queryKeys.app(slug, appId), queryFn: () => api.getApplication(appId) });
+  useQuery({ queryKey: queryKeys.app(slug, appId), queryFn: () => api.getApplication(slug, appId) });
 
 export const useDeployments = (slug: string, appId: string) =>
   useQuery({ queryKey: queryKeys.deployments(slug, appId), queryFn: () => api.getDeployments(appId) });
@@ -27,4 +27,3 @@ export const useAccess = (slug: string, appId: string) =>
 
 export const useAgentEvents = (slug: string) =>
   useQuery({ queryKey: queryKeys.agent(slug), queryFn: api.getAgentEvents });
-

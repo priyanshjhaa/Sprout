@@ -57,9 +57,9 @@ The dashboard deliberately keeps only **Agent** and **Apps** prominent. Operatio
 - Tailwind CSS
 - [TanStack Query](https://tanstack.com/query/latest) for server-state-shaped data
 - Lucide icons
-- Typed mock API adapters
+- A typed HTTP adapter for application data, with focused mocks for unfinished capabilities
 
-The frontend uses an explicit API boundary. Components consume typed TanStack Query hooks rather than importing fixtures directly. This allows the mock implementation to be replaced incrementally by a future HTTP API serving the dashboard, CLI, coding agents, and MCP server.
+The frontend uses an explicit API boundary. Components consume typed TanStack Query hooks rather than importing fixtures directly. The application list and detail views now read from the Go API; unfinished deployment, log, environment, access, and agent capabilities remain behind the same boundary as mocks.
 
 ## Getting started
 
@@ -84,11 +84,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Start and migrate PostgreSQL, then load the untracked local environment into your current shell:
+Start and migrate PostgreSQL, add the safe local demo records, then load the untracked local environment into your current shell:
 
 ```bash
 npm run db:up
 npm run db:migrate
+npm run db:seed
 set -a
 source .env
 set +a
@@ -105,7 +106,7 @@ go vet ./...
 go run ./cmd/api
 ```
 
-The API listens on `http://127.0.0.1:8080`. Verify its liveness endpoint in another terminal:
+The API listens on `http://127.0.0.1:8080`. Keep it running while using the dashboard and start `npm run dev` from the repository root in another terminal. Verify its liveness endpoint with:
 
 ```bash
 curl http://127.0.0.1:8080/health/live
@@ -126,7 +127,7 @@ Useful demo routes:
 /sign-in                               Authentication entry
 /workspace/acme/agent                  Agent workspace
 /workspace/acme/apps                   Application library
-/workspace/acme/apps/invoice-approvals Application overview
+/workspace/acme/apps/{application-id}  Application overview
 ```
 
 ## Project commands
@@ -140,6 +141,7 @@ npm run typecheck  # Run TypeScript without emitting files
 npm run db:up      # Start the local PostgreSQL container
 npm run db:status  # Check PostgreSQL container health
 npm run db:migrate # Apply pending Drizzle migrations
+npm run db:seed    # Add idempotent local demo records
 npm run db:down    # Stop PostgreSQL without deleting its data
 ```
 
@@ -161,7 +163,7 @@ src/
 │   ├── marketing/        Scroll-driven landing experience
 │   └── settings/         Application configuration
 ├── lib/
-│   ├── api/              Replaceable mock API adapter
+│   ├── api/              HTTP adapter and remaining focused mocks
 │   └── query/            Query keys and typed hooks
 └── types/                Frontend domain types
 ```

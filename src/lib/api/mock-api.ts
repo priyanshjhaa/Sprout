@@ -117,7 +117,7 @@ const agentEvents: AgentEvent[] = [
   { id: "4", label: "Health check passed", detail: "Application is ready", state: "complete" },
 ];
 
-export const api = {
+export const mockApi = {
   async getWorkspace() {
     await wait();
     return workspace;
@@ -153,4 +153,3 @@ export const api = {
     return agentEvents;
   },
 };
-

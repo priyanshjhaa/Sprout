@@ -48,7 +48,7 @@ func realMain() int {
 	queries := dbgen.New(pool)
 	repository := application.NewSQLRepository(queries)
 	service := application.NewService(repository)
-	router := httpapi.NewRouter(logger, readiness)
+	router := httpapi.NewRouter(logger, readiness, appConfig.WebOrigin)
 	httpapi.RegisterApplicationRoutes(router, service, logger)
 
 	return run(ctx, appConfig, logger, router)

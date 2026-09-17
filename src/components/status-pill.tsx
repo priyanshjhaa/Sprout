@@ -5,6 +5,7 @@ const labels: Record<AppStatus | DeploymentStatus, string> = {
   building: "Building",
   failed: "Needs attention",
   paused: "Paused",
+  archived: "Archived",
   live: "Live",
 };
 
@@ -16,4 +17,3 @@ export function StatusPill({ status }: { status: AppStatus | DeploymentStatus })
     </span>
   );
 }
-

@@ -19,7 +19,7 @@ func TestRequestLoggerRecordsSafeSummary(t *testing.T) {
 	request.Header.Set("Authorization", "Bearer sensitive-value")
 	response := httptest.NewRecorder()
 
-	NewRouter(logger, AlwaysReady).ServeHTTP(response, request)
+	NewRouter(logger, AlwaysReady, "").ServeHTTP(response, request)
 
 	logLine := logs.String()
 	if !strings.Contains(logLine, `"msg":"request completed"`) {
