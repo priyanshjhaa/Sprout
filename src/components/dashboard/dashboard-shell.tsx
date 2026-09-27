@@ -5,13 +5,14 @@ import {
   Bot,
   Boxes,
   ChevronDown,
+  LogOut,
   Menu,
   Settings,
   Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useUser, UserButton } from "@clerk/nextjs";
+import { SignOutButton, useUser, UserButton } from "@clerk/nextjs";
 import { useParams, usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
@@ -54,7 +55,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     });
 
   if (workspaceUnavailable) {
-    return <main className="auth-page"><section className="auth-card"><h1>Workspace unavailable</h1><p>You may no longer have access to this workspace.</p><Link className="button button-primary" href="/start">Open your workspace</Link></section></main>;
+    return <main className="auth-page"><section className="auth-card"><h1>Workspace unavailable</h1><p>You may no longer have access to this workspace.</p><Link className="button button-primary" href="/start">Open your workspace</Link><SignOutButton redirectUrl="/"><button className="button button-secondary" type="button">Sign out</button></SignOutButton></section></main>;
   }
 
   return (
@@ -95,6 +96,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           <UserButton />
           <span><strong>{user?.fullName ?? user?.username ?? "Account"}</strong><small>{user?.primaryEmailAddress?.emailAddress ?? "Signed in"}</small></span>
         </div>
+        <SignOutButton redirectUrl="/">
+          <button className="sidebar-link sidebar-sign-out" type="button"><LogOut size={17} strokeWidth={1.8} /><span>Sign out</span></button>
+        </SignOutButton>
       </aside>
 
       {mobileOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}

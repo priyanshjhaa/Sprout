@@ -1493,6 +1493,14 @@ a {
   padding: 9px;
 }
 
+.sidebar-sign-out {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
 .dashboard-content {
   position: relative;
   z-index: 1;
