@@ -9,6 +9,7 @@ servers:
 tags:
   - name: Applications
   - name: Identity
+  - name: Sharing
 paths:
   /api/v1/me:
     get:
@@ -155,6 +156,129 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+  /api/v1/workspaces/{workspaceSlug}/members:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+    get:
+      tags: [Sharing]
+      summary: List current workspace members
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Members of this workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/access:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+    get:
+      tags: [Sharing]
+      summary: View application sharing settings as owner or creator
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Application access settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAccess"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Sharing]
+      summary: Set workspace-wide or restricted application access
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [accessMode]
+              properties:
+                accessMode:
+                  $ref: "#/components/schemas/ApplicationAccessMode"
+      responses:
+        "200":
+          description: Updated application access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAccess"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/access/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Sharing]
+      summary: Grant or update access for an existing workspace member
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [role]
+              properties:
+                role:
+                  $ref: "#/components/schemas/ApplicationRole"
+      responses:
+        "200":
+          description: Updated application access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAccess"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Sharing]
+      summary: Revoke an explicit application grant
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Updated application access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAccess"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     clerkSession:
@@ -209,10 +333,16 @@ components:
     ApplicationLifecycle:
       type: string
       enum: [active, paused, archived]
+    ApplicationAccessMode:
+      type: string
+      enum: [workspace, restricted]
+    ApplicationRole:
+      type: string
+      enum: [editor, viewer]
     Application:
       type: object
       additionalProperties: false
-      required: [id, name, slug, description, lifecycle, defaultHostname, createdAt, updatedAt]
+      required: [id, name, slug, description, accessMode, lifecycle, defaultHostname, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -223,6 +353,8 @@ components:
           type: string
         description:
           type: string
+        accessMode:
+          $ref: "#/components/schemas/ApplicationAccessMode"
         lifecycle:
           $ref: "#/components/schemas/ApplicationLifecycle"
         defaultHostname:
@@ -242,6 +374,57 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Application"
+    Member:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+    MemberList:
+      type: object
+      additionalProperties: false
+      required: [members]
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+    ApplicationGrant:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          $ref: "#/components/schemas/ApplicationRole"
+    ApplicationAccess:
+      type: object
+      additionalProperties: false
+      required: [accessMode, grants]
+      properties:
+        accessMode:
+          $ref: "#/components/schemas/ApplicationAccessMode"
+        grants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationGrant"
     CreateApplication:
       type: object
       additionalProperties: false
