@@ -8,6 +8,8 @@ interface ApplicationResponse {
   name: string;
   slug: string;
   description: string;
+  accessMode: "workspace" | "restricted";
+  createdBy: string;
   lifecycle: ApplicationLifecycle;
   defaultHostname: string;
   createdAt: string;
@@ -16,6 +18,19 @@ interface ApplicationResponse {
 
 interface ApplicationListResponse {
   applications: ApplicationResponse[];
+}
+
+export interface WorkspaceMemberResponse {
+  id: string;
+  email: string;
+  displayName: string;
+  role: "owner" | "editor" | "viewer";
+}
+
+export interface ApplicationAccessResponse {
+  accessMode: "workspace" | "restricted";
+  createdBy: string;
+  grants: Array<Pick<WorkspaceMemberResponse, "id" | "email" | "displayName"> & { role: "editor" | "viewer" }>;
 }
 
 interface ErrorResponse {
@@ -48,16 +63,18 @@ export class APIError extends Error {
   }
 }
 
-async function request<T>(path: string, token: string | null): Promise<T> {
+async function request<T>(path: string, token: string | null, options: RequestInit = {}): Promise<T> {
   if (!token) {
     throw new APIError("Sign in to continue.", 401, "authentication_required");
   }
 
+  const headers = new Headers(options.headers);
+  headers.set("Accept", "application/json");
+  headers.set("Authorization", `Bearer ${token}`);
+
   const response = await fetch(`${apiURL}${path}`, {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    ...options,
+    headers,
   });
 
   if (!response.ok) {
@@ -109,6 +126,8 @@ function mapApplication(application: ApplicationResponse): Application {
     name: application.name,
     slug: application.slug,
     description: application.description,
+    accessMode: application.accessMode,
+    createdBy: application.createdBy,
     status: applicationStatus(application.lifecycle),
     url: application.defaultHostname,
     updatedAt: updatedLabel(application.updatedAt),
@@ -139,6 +158,40 @@ const applicationAPI = {
       token,
     );
     return mapApplication(response);
+  },
+
+  async getWorkspaceMembers(workspaceSlug: string, token: string | null): Promise<WorkspaceMemberResponse[]> {
+    const response = await request<{ members: WorkspaceMemberResponse[] }>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/members`, token,
+    );
+    return response.members;
+  },
+
+  getApplicationAccess(workspaceSlug: string, applicationID: string, token: string | null): Promise<ApplicationAccessResponse> {
+    return request<ApplicationAccessResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}/access`, token,
+    );
+  },
+
+  setApplicationAccessMode(workspaceSlug: string, applicationID: string, mode: ApplicationAccessResponse["accessMode"], token: string | null): Promise<ApplicationAccessResponse> {
+    return request<ApplicationAccessResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}/access`,
+      token, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessMode: mode }) },
+    );
+  },
+
+  grantApplicationAccess(workspaceSlug: string, applicationID: string, userID: string, role: "editor" | "viewer", token: string | null): Promise<ApplicationAccessResponse> {
+    return request<ApplicationAccessResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}/access/${encodeURIComponent(userID)}`,
+      token, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) },
+    );
+  },
+
+  revokeApplicationAccess(workspaceSlug: string, applicationID: string, userID: string, token: string | null): Promise<ApplicationAccessResponse> {
+    return request<ApplicationAccessResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}/access/${encodeURIComponent(userID)}`,
+      token, { method: "DELETE" },
+    );
   },
 };
 

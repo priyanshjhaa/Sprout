@@ -16,6 +16,8 @@ export interface Application {
   url: string;
   updatedAt: string;
   accent: string;
+  accessMode?: "workspace" | "restricted";
+  createdBy?: string;
 }
 
 export interface Deployment {

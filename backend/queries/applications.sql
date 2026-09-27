@@ -59,6 +59,7 @@ WHERE workspace.slug = sqlc.arg(workspace_slug)
 -- name: GetApplicationAuthorization :one
 SELECT membership.role AS workspace_role,
        application.access_mode,
+       application.created_by,
        application.created_by = sqlc.arg(user_id) AS is_creator,
        app_grant.role AS grant_role
 FROM applications AS application

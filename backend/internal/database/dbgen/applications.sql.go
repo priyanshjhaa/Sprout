@@ -76,6 +76,7 @@ func (q *Queries) CreateApplicationForMember(ctx context.Context, arg CreateAppl
 const getApplicationAuthorization = `-- name: GetApplicationAuthorization :one
 SELECT membership.role AS workspace_role,
        application.access_mode,
+       application.created_by,
        application.created_by = $1 AS is_creator,
        app_grant.role AS grant_role
 FROM applications AS application
@@ -97,6 +98,7 @@ type GetApplicationAuthorizationParams struct {
 type GetApplicationAuthorizationRow struct {
 	WorkspaceRole WorkspaceRole         `json:"workspace_role"`
 	AccessMode    ApplicationAccessMode `json:"access_mode"`
+	CreatedBy     pgtype.UUID           `json:"created_by"`
 	IsCreator     bool                  `json:"is_creator"`
 	GrantRole     NullApplicationRole   `json:"grant_role"`
 }
@@ -107,6 +109,7 @@ func (q *Queries) GetApplicationAuthorization(ctx context.Context, arg GetApplic
 	err := row.Scan(
 		&i.WorkspaceRole,
 		&i.AccessMode,
+		&i.CreatedBy,
 		&i.IsCreator,
 		&i.GrantRole,
 	)

@@ -48,8 +48,21 @@ export const useEnvironment = (slug: string, appId: string) => {
 };
 
 export const useAccess = (slug: string, appId: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.access(userId, slug, appId), queryFn: api.getMembers });
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.access(userId, slug, appId),
+    queryFn: async () => api.getApplicationAccess(slug, appId, await getToken()),
+    enabled: isLoaded && isSignedIn,
+  });
+};
+
+export const useWorkspaceMembers = (slug: string) => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.members(userId, slug),
+    queryFn: async () => api.getWorkspaceMembers(slug, await getToken()),
+    enabled: isLoaded && isSignedIn,
+  });
 };
 
 export const useAgentEvents = (slug: string) => {

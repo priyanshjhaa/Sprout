@@ -1304,6 +1304,9 @@ a {
 .member-row strong { font-size: 10px; }
 .member-row small { color: var(--faint); font-size: 8px; }
 .member-row select { height: 31px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; background: rgba(255,255,255,.025); color: var(--muted); font-size: 8px; }
+.member-row select:focus-visible, .toggle:focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; }
+.member-row select:disabled, .toggle:disabled { cursor: wait; opacity: .65; }
+.member-inherited { color: var(--muted); font-size: 10px; }
 .member-row > button { display: grid; width: 29px; height: 29px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--faint); cursor: pointer; }
 .member-row > button:hover { background: rgba(242,154,145,.06); color: var(--danger); }
 .members-panel > footer { display: flex; align-items: center; gap: 7px; padding: 11px 16px; background: rgba(255,255,255,.015); color: var(--faint); font-size: 8px; }

@@ -50,6 +50,7 @@ type applicationResponse struct {
 	AccessMode      string                `json:"accessMode"`
 	Lifecycle       application.Lifecycle `json:"lifecycle"`
 	DefaultHostname string                `json:"defaultHostname"`
+	CreatedBy       string                `json:"createdBy"`
 	CreatedAt       time.Time             `json:"createdAt"`
 	UpdatedAt       time.Time             `json:"updatedAt"`
 }
@@ -195,6 +196,7 @@ func mapApplicationResponse(item application.Application) applicationResponse {
 		AccessMode:      item.AccessMode,
 		Lifecycle:       item.Lifecycle,
 		DefaultHostname: item.DefaultHostname,
+		CreatedBy:       item.CreatedBy,
 		CreatedAt:       item.CreatedAt,
 		UpdatedAt:       item.UpdatedAt,
 	}

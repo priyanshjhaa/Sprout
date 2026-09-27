@@ -342,7 +342,7 @@ components:
     Application:
       type: object
       additionalProperties: false
-      required: [id, name, slug, description, accessMode, lifecycle, defaultHostname, createdAt, updatedAt]
+      required: [id, name, slug, description, accessMode, lifecycle, defaultHostname, createdBy, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -359,6 +359,9 @@ components:
           $ref: "#/components/schemas/ApplicationLifecycle"
         defaultHostname:
           type: string
+        createdBy:
+          type: string
+          format: uuid
         createdAt:
           type: string
           format: date-time
@@ -417,10 +420,13 @@ components:
     ApplicationAccess:
       type: object
       additionalProperties: false
-      required: [accessMode, grants]
+      required: [accessMode, createdBy, grants]
       properties:
         accessMode:
           $ref: "#/components/schemas/ApplicationAccessMode"
+        createdBy:
+          type: string
+          format: uuid
         grants:
           type: array
           items:

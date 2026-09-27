@@ -28,8 +28,9 @@ type Grant struct {
 }
 
 type Access struct {
-	Mode   string  `json:"accessMode"`
-	Grants []Grant `json:"grants"`
+	Mode      string  `json:"accessMode"`
+	CreatedBy string  `json:"createdBy"`
+	Grants    []Grant `json:"grants"`
 }
 
 type Service struct {
@@ -68,7 +69,7 @@ func (service *Service) ListMembers(ctx context.Context, workspaceSlug, actorID 
 }
 
 func (service *Service) GetAccess(ctx context.Context, workspaceSlug, applicationID, actorID string) (Access, error) {
-	permission, application, _, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
+	permission, application, _, creatorID, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
 	if err != nil {
 		return Access{}, err
 	}
@@ -84,14 +85,14 @@ func (service *Service) GetAccess(ctx context.Context, workspaceSlug, applicatio
 			ID: row.ID.String(), Email: row.Email, DisplayName: row.DisplayName, Role: string(row.Role),
 		}})
 	}
-	return Access{Mode: string(permission.Mode), Grants: grants}, nil
+	return Access{Mode: string(permission.Mode), CreatedBy: creatorID, Grants: grants}, nil
 }
 
 func (service *Service) SetMode(ctx context.Context, workspaceSlug, applicationID, actorID, mode string) (Access, error) {
 	if mode != string(authorization.WorkspaceWide) && mode != string(authorization.Restricted) {
 		return Access{}, ErrInvalid
 	}
-	_, application, actor, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
+	_, application, actor, _, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
 	if err != nil {
 		return Access{}, err
 	}
@@ -112,7 +113,7 @@ func (service *Service) Grant(ctx context.Context, workspaceSlug, applicationID,
 	if role != string(authorization.ApplicationEditor) && role != string(authorization.ApplicationViewer) {
 		return Access{}, ErrInvalid
 	}
-	_, application, actor, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
+	_, application, actor, _, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
 	if err != nil {
 		return Access{}, err
 	}
@@ -134,7 +135,7 @@ func (service *Service) Grant(ctx context.Context, workspaceSlug, applicationID,
 }
 
 func (service *Service) Revoke(ctx context.Context, workspaceSlug, applicationID, actorID, targetID string) (Access, error) {
-	_, application, actor, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
+	_, application, actor, _, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
 	if err != nil {
 		return Access{}, err
 	}
@@ -156,23 +157,23 @@ func (service *Service) Revoke(ctx context.Context, workspaceSlug, applicationID
 
 func (service *Service) manager(
 	ctx context.Context, workspaceSlug, applicationID, actorID string,
-) (authorization.ApplicationAccess, pgtype.UUID, pgtype.UUID, error) {
+) (authorization.ApplicationAccess, pgtype.UUID, pgtype.UUID, string, error) {
 	application, err := parseUUID(applicationID)
 	if err != nil {
-		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, ErrInvalid
+		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, "", ErrInvalid
 	}
 	actor, err := parseUUID(actorID)
 	if err != nil {
-		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, ErrInvalid
+		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, "", ErrInvalid
 	}
 	row, err := service.queries.GetApplicationAuthorization(ctx, dbgen.GetApplicationAuthorizationParams{
 		UserID: actor, WorkspaceSlug: workspaceSlug, ApplicationID: application,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, ErrNotFound
+		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, "", ErrNotFound
 	}
 	if err != nil {
-		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, err
+		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, "", err
 	}
 	grant := authorization.ApplicationRole("")
 	if row.GrantRole.Valid {
@@ -183,12 +184,12 @@ func (service *Service) manager(
 		Grant:         grant, Mode: authorization.AccessMode(row.AccessMode), IsCreator: row.IsCreator,
 	}
 	if !permission.CanView() {
-		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, ErrNotFound
+		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, "", ErrNotFound
 	}
 	if !permission.CanManageAccess() {
-		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, ErrForbidden
+		return authorization.ApplicationAccess{}, pgtype.UUID{}, pgtype.UUID{}, "", ErrForbidden
 	}
-	return permission, application, actor, nil
+	return permission, application, actor, row.CreatedBy.String(), nil
 }
 
 func parseUUID(value string) (pgtype.UUID, error) {

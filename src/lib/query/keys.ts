@@ -9,5 +9,6 @@ export const queryKeys = {
   environment: (userId: string | null | undefined, slug: string, appId: string) =>
     ["user", userId, "workspace", slug, "app", appId, "environment"] as const,
   access: (userId: string | null | undefined, slug: string, appId: string) => ["user", userId, "workspace", slug, "app", appId, "access"] as const,
+  members: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "members"] as const,
   agent: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "agent"] as const,
 };

@@ -24,6 +24,9 @@ func TestCORSAllowsConfiguredWebOrigin(t *testing.T) {
 	if response.Header().Get("Access-Control-Allow-Headers") != "Content-Type, Authorization" {
 		t.Fatalf("allow headers = %q, want bearer auth header", response.Header().Get("Access-Control-Allow-Headers"))
 	}
+	if response.Header().Get("Access-Control-Allow-Methods") != allowedRequestMethods {
+		t.Fatalf("allow methods = %q, want sharing methods", response.Header().Get("Access-Control-Allow-Methods"))
+	}
 }
 
 func TestCORSDoesNotAllowAnotherOrigin(t *testing.T) {
