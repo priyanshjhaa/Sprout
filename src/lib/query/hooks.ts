@@ -1,30 +1,58 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api/mock-api";
+import { useAuth } from "@clerk/nextjs";
+import { api } from "@/lib/api/api";
 import { queryKeys } from "@/lib/query/keys";
 
-export const useWorkspace = (slug: string) =>
-  useQuery({ queryKey: queryKeys.workspace(slug), queryFn: api.getWorkspace });
+export const useWorkspace = (slug: string) => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.workspace(userId, slug),
+    queryFn: async () => api.getWorkspace(slug, await getToken()),
+    enabled: isLoaded && isSignedIn,
+  });
+};
 
-export const useApplications = (slug: string) =>
-  useQuery({ queryKey: queryKeys.apps(slug), queryFn: api.getApplications });
+export const useApplications = (slug: string) => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.apps(userId, slug),
+    queryFn: async () => api.getApplications(slug, await getToken()),
+    enabled: isLoaded && isSignedIn,
+  });
+};
 
-export const useApplication = (slug: string, appId: string) =>
-  useQuery({ queryKey: queryKeys.app(slug, appId), queryFn: () => api.getApplication(appId) });
+export const useApplication = (slug: string, appId: string) => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.app(userId, slug, appId),
+    queryFn: async () => api.getApplication(slug, appId, await getToken()),
+    enabled: isLoaded && isSignedIn,
+  });
+};
 
-export const useDeployments = (slug: string, appId: string) =>
-  useQuery({ queryKey: queryKeys.deployments(slug, appId), queryFn: () => api.getDeployments(appId) });
+export const useDeployments = (slug: string, appId: string) => {
+  const { userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.deployments(userId, slug, appId), queryFn: () => api.getDeployments(appId) });
+};
 
-export const useLogs = (slug: string, appId: string) =>
-  useQuery({ queryKey: queryKeys.logs(slug, appId), queryFn: api.getLogs });
+export const useLogs = (slug: string, appId: string) => {
+  const { userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.logs(userId, slug, appId), queryFn: api.getLogs });
+};
 
-export const useEnvironment = (slug: string, appId: string) =>
-  useQuery({ queryKey: queryKeys.environment(slug, appId), queryFn: api.getEnvironment });
+export const useEnvironment = (slug: string, appId: string) => {
+  const { userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.environment(userId, slug, appId), queryFn: api.getEnvironment });
+};
 
-export const useAccess = (slug: string, appId: string) =>
-  useQuery({ queryKey: queryKeys.access(slug, appId), queryFn: api.getMembers });
+export const useAccess = (slug: string, appId: string) => {
+  const { userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.access(userId, slug, appId), queryFn: api.getMembers });
+};
 
-export const useAgentEvents = (slug: string) =>
-  useQuery({ queryKey: queryKeys.agent(slug), queryFn: api.getAgentEvents });
-
+export const useAgentEvents = (slug: string) => {
+  const { userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.agent(userId, slug), queryFn: api.getAgentEvents });
+};

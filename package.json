@@ -14,9 +14,11 @@
     "db:logs": "docker compose logs -f postgres",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed": "docker compose exec -T postgres psql -U sprout -d sprout < backend/dev/seed.sql",
     "db:check": "drizzle-kit check"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.7",
     "@tanstack/react-query": "latest",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

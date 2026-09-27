@@ -1001,6 +1001,11 @@ a {
   backdrop-filter: blur(22px);
 }
 
+.auth-card-sign-in {
+  width: min(100%, 520px);
+  padding: clamp(20px, 4vw, 42px);
+}
+
 .auth-card .seed-icon {
   width: 40px;
   height: 40px;
@@ -1021,6 +1026,11 @@ a {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.65;
+}
+
+.auth-clerk {
+  width: min(100%, 400px);
+  margin-inline: auto;
 }
 
 .auth-card small {
@@ -1056,7 +1066,8 @@ a {
 .status-live { color: var(--sprout); }
 .status-building { color: var(--info); }
 .status-failed { color: var(--danger); }
-.status-paused { color: var(--muted); }
+.status-paused,
+.status-archived { color: var(--muted); }
 
 @media (max-width: 900px) {
   .landing-nav {
@@ -1402,11 +1413,11 @@ a {
   position: fixed;
   z-index: 0;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(218, 242, 208, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(218, 242, 208, 0.018) 1px, transparent 1px);
-  background-size: 62px 62px;
-  mask-image: linear-gradient(90deg, transparent 230px, black 70%, transparent);
+  background-image: url("/images/workspace-contours.svg");
+  background-position: right -120px top 8vh;
+  background-repeat: no-repeat;
+  background-size: 1200px auto;
+  mask-image: linear-gradient(90deg, transparent 22%, black 68%);
   pointer-events: none;
   content: "";
 }
@@ -1540,6 +1551,14 @@ a {
 .sidebar-profile {
   border-color: transparent;
   padding: 9px;
+}
+
+.sidebar-sign-out {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
 }
 
 .dashboard-content {
@@ -2258,12 +2277,6 @@ body {
     radial-gradient(circle at 65% -8%, rgba(109, 127, 66, 0.09), transparent 34%),
     radial-gradient(circle at 100% 100%, rgba(190, 124, 72, 0.07), transparent 35%),
     var(--canvas);
-}
-
-.dashboard-frame::before {
-  background-image:
-    linear-gradient(rgba(78, 66, 50, 0.027) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(78, 66, 50, 0.027) 1px, transparent 1px);
 }
 
 .dashboard-sidebar {
@@ -3655,4 +3668,445 @@ body {
 .overview-loading span,
 .app-card-skeleton {
   background-color: rgba(110, 91, 68, 0.05);
+}
+
+/* Auth is the quiet handoff from the landing landscape into the workspace. */
+.auth-landscape-page {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 22px clamp(20px, 4vw, 64px) 24px;
+  background: #f3ede3;
+}
+
+.auth-landscape {
+  position: absolute;
+  z-index: -2;
+  inset: -28px;
+  background-image: url("/images/sprout-growth-landscape.png");
+  background-position: center 56%;
+  background-size: cover;
+  filter: blur(9px) saturate(0.76);
+  transform: scale(1.03);
+  pointer-events: none;
+}
+
+.auth-landscape-page::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(248, 244, 235, 0.7), rgba(248, 244, 235, 0.35) 52%, rgba(248, 244, 235, 0.53)),
+    linear-gradient(180deg, rgba(248, 244, 235, 0.5), transparent 40%, rgba(237, 229, 213, 0.28));
+  content: "";
+  pointer-events: none;
+}
+
+.auth-header,
+.auth-layout,
+.auth-footer {
+  position: relative;
+  width: min(100%, 1180px);
+  margin-inline: auto;
+}
+
+.auth-header {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.auth-header > a:last-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  transition: color 150ms ease;
+}
+
+.auth-header > a:last-child:hover { color: var(--ink); }
+
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(350px, 440px);
+  align-items: center;
+  gap: clamp(42px, 7vw, 110px);
+  flex: 1;
+  padding-block: 54px;
+}
+
+.auth-story { padding-bottom: 20px; }
+
+.auth-story .eyebrow {
+  margin-bottom: 22px;
+  color: var(--sprout-strong);
+}
+
+.auth-story h1 {
+  max-width: 640px;
+  margin: 0;
+  font-size: clamp(44px, 5.8vw, 76px);
+  font-weight: 570;
+  letter-spacing: -0.065em;
+  line-height: 0.99;
+}
+
+.auth-story-description {
+  max-width: 470px;
+  margin: 25px 0 0;
+  color: #5f584e;
+  font-size: clamp(15px, 1.4vw, 17px);
+  line-height: 1.65;
+}
+
+.auth-story-detail {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 56px;
+  color: var(--sprout-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.auth-story-detail .seed-icon {
+  width: 30px;
+  height: 30px;
+}
+
+.auth-form-panel {
+  min-width: 0;
+  border: 1px solid rgba(87, 73, 53, 0.14);
+  border-radius: 28px;
+  padding: clamp(24px, 3.2vw, 40px);
+  background: rgba(255, 251, 244, 0.94);
+  box-shadow: 0 28px 80px rgba(67, 52, 35, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.auth-form-kicker {
+  margin: 0 0 25px;
+  color: var(--sprout-strong);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+}
+
+.auth-clerk-form { width: 100%; }
+
+.auth-footer {
+  color: #776e60;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .auth-layout {
+    width: min(100%, 600px);
+    grid-template-columns: 1fr;
+    gap: 38px;
+    padding-block: 42px;
+  }
+
+  .auth-story { padding: 0; }
+  .auth-story h1 { max-width: 570px; }
+  .auth-story-detail { display: none; }
+  .auth-form-panel { width: min(100%, 500px); }
+}
+
+@media (max-width: 520px) {
+  .auth-landscape-page { padding-inline: 16px; }
+  .auth-header { min-height: 44px; }
+  .auth-header > a:last-child { font-size: 0; }
+  .auth-header > a:last-child svg { width: 19px; height: 19px; }
+  .auth-layout { gap: 28px; padding-block: 34px; }
+  .auth-story .eyebrow { margin-bottom: 13px; }
+  .auth-story h1 { font-size: clamp(38px, 10.5vw, 52px); }
+  .auth-story-description { margin-top: 16px; font-size: 14px; }
+  .auth-form-panel { padding: 22px 19px; }
+  .auth-footer { text-align: center; }
+}
+
+/* The workspace keeps the landscape as a quiet accent, not a page backdrop. */
+.dashboard-sidebar {
+  width: 252px;
+  padding: 27px 18px 19px;
+  background: linear-gradient(180deg, rgba(255, 251, 244, 0.95), rgba(239, 232, 220, 0.95));
+  box-shadow: 12px 0 38px rgba(87, 69, 44, 0.045);
+}
+
+.sidebar-brand {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 2px 12px 23px;
+}
+
+.sidebar-brand > span {
+  color: var(--faint);
+  font-size: 9px;
+  font-weight: 720;
+  letter-spacing: 0.12em;
+}
+
+.workspace-switcher {
+  margin-top: 21px;
+  padding: 12px;
+  background: rgba(255, 252, 246, 0.9);
+  box-shadow: 0 9px 24px rgba(91, 72, 49, 0.055);
+  cursor: default;
+}
+
+.workspace-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 11px;
+  background: rgba(104, 118, 66, 0.13);
+}
+
+.sidebar-navigation { padding-top: 31px; }
+
+.sidebar-group > p {
+  margin-bottom: 11px;
+  color: #8d806e;
+}
+
+.sidebar-link {
+  min-height: 42px;
+  border-radius: 11px;
+  font-size: 13px;
+}
+
+.sidebar-link.active {
+  background: rgba(104, 118, 66, 0.12);
+  color: var(--sprout-strong);
+  font-weight: 670;
+}
+
+.sidebar-account {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.sidebar-profile { padding: 9px 10px; }
+
+.sidebar-sign-out {
+  min-height: 36px;
+  padding-left: 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.dashboard-content { margin-left: 252px; }
+
+.dashboard-content::before {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 340px;
+  background-image: url("/images/sprout-growth-landscape.png");
+  background-position: center 58%;
+  background-size: cover;
+  opacity: 0.14;
+  filter: blur(6px) saturate(0.7);
+  mask-image: linear-gradient(black, transparent 95%);
+  pointer-events: none;
+  content: "";
+}
+
+.dashboard-topbar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--line);
+  padding: 0 clamp(24px, 4vw, 62px);
+  background: rgba(255, 251, 244, 0.45);
+  backdrop-filter: blur(18px);
+}
+
+.dashboard-topbar-path,
+.dashboard-topbar-state {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.dashboard-topbar-path > i,
+.dashboard-topbar-state > i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 2px 6px 2px 6px;
+  background: var(--sprout);
+  transform: rotate(-27deg);
+}
+
+.dashboard-topbar-path > strong {
+  overflow: hidden;
+  max-width: 220px;
+  color: var(--ink);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-topbar-state { color: var(--faint); }
+.dashboard-topbar-state > i { width: 5px; height: 5px; opacity: 0.7; }
+
+.dashboard-page { position: relative; z-index: 1; padding-top: 46px; }
+
+.page-heading h1 { font-weight: 590; letter-spacing: -0.052em; }
+.page-heading .eyebrow { color: var(--sprout-strong); }
+
+.agent-conversation,
+.agent-activity {
+  border-color: rgba(73, 61, 47, 0.11);
+  background: rgba(255, 251, 244, 0.85);
+  box-shadow: 0 18px 52px rgba(91, 72, 49, 0.065);
+}
+
+.agent-welcome h2 { font-size: clamp(25px, 3vw, 31px); }
+.agent-spark { border-color: rgba(104, 118, 66, 0.14); }
+.agent-composer { box-shadow: 0 12px 30px rgba(91, 72, 49, 0.055); }
+
+.application-header {
+  position: relative;
+  overflow: hidden;
+  min-height: 135px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 26px 29px;
+  background: linear-gradient(110deg, rgba(255, 251, 244, 0.94), rgba(236, 230, 213, 0.68));
+  box-shadow: 0 17px 45px rgba(91, 72, 49, 0.055);
+}
+
+.application-header::before {
+  position: absolute;
+  top: -70px;
+  right: -10px;
+  width: 42%;
+  height: 240px;
+  background: url("/images/sprout-growth-landscape.png") center / cover;
+  opacity: 0.12;
+  filter: blur(8px);
+  mask-image: linear-gradient(90deg, transparent, black);
+  pointer-events: none;
+  content: "";
+}
+
+.application-header > * { position: relative; z-index: 1; }
+
+.workspace-welcome {
+  display: grid;
+  min-height: 345px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 25px;
+  background: rgba(255, 251, 244, 0.9);
+  box-shadow: 0 24px 65px rgba(91, 72, 49, 0.08);
+}
+
+.workspace-welcome-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(30px, 5vw, 54px);
+}
+
+.workspace-welcome-copy .eyebrow { margin-bottom: 13px; }
+
+.workspace-welcome-copy h2 {
+  max-width: 490px;
+  margin: 0;
+  font-size: clamp(28px, 3.5vw, 42px);
+  font-weight: 570;
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+}
+
+.workspace-welcome-copy > p:not(.eyebrow) {
+  max-width: 470px;
+  margin: 16px 0 24px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.workspace-welcome-art {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: 345px;
+  place-items: center;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+  background: #e7e4d6;
+}
+
+.workspace-welcome-art::before {
+  position: absolute;
+  z-index: -1;
+  inset: -20px;
+  background: url("/images/sprout-growth-landscape.png") center 70% / cover;
+  opacity: 0.55;
+  filter: blur(3px) saturate(0.8);
+  content: "";
+}
+
+.workspace-welcome-art::after {
+  position: absolute;
+  width: 175px;
+  height: 175px;
+  border: 1px solid rgba(91, 104, 62, 0.22);
+  border-radius: 50%;
+  box-shadow: 0 0 0 48px rgba(255, 251, 244, 0.13), 0 0 0 49px rgba(91, 104, 62, 0.12);
+  content: "";
+}
+
+.workspace-welcome-art .seed-icon { z-index: 1; transform: scale(3); }
+
+.workspace-welcome-art > i {
+  position: absolute;
+  z-index: 1;
+  bottom: 22%;
+  width: 56%;
+  height: 1px;
+  background: rgba(91, 104, 62, 0.2);
+}
+
+.workspace-welcome-art > i:last-child { bottom: 20%; width: 38%; opacity: 0.65; }
+
+@media (max-width: 900px) {
+  .workspace-welcome { grid-template-columns: 1fr; }
+  .workspace-welcome-art { min-height: 210px; border-top: 1px solid var(--line); border-left: 0; }
+}
+
+@media (max-width: 760px) {
+  .dashboard-sidebar { width: min(280px, calc(100vw - 42px)); }
+  .dashboard-content { margin-left: 0; }
+  .dashboard-topbar { min-height: 59px; padding-inline: 20px; }
+  .dashboard-page { padding-top: 34px; }
+}
+
+@media (max-width: 540px) {
+  .dashboard-topbar-state { display: none; }
+  .dashboard-topbar-path > strong { max-width: 160px; }
+  .workspace-welcome-copy { padding: 28px 24px; }
+  .workspace-welcome-copy h2 { font-size: 30px; }
 }

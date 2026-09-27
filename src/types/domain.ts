@@ -1,4 +1,4 @@
-export type AppStatus = "running" | "building" | "failed" | "paused";
+export type AppStatus = "running" | "building" | "failed" | "paused" | "archived";
 export type DeploymentStatus = "live" | "building" | "failed";
 
 export interface Workspace {
@@ -58,4 +58,3 @@ export interface AgentEvent {
   detail: string;
   state: "complete" | "active" | "pending";
 }
-

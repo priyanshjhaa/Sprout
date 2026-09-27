@@ -1,0 +1,148 @@
+import { mockApi } from "@/lib/api/mock-api";
+import type { Application, AppStatus, Workspace } from "@/types/domain";
+
+type ApplicationLifecycle = "active" | "paused" | "archived";
+
+interface ApplicationResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  lifecycle: ApplicationLifecycle;
+  defaultHostname: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ApplicationListResponse {
+  applications: ApplicationResponse[];
+}
+
+interface ErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+    requestId?: string;
+  };
+}
+
+interface MeResponse {
+  id: string;
+  email: string;
+  displayName: string;
+  workspace: Workspace;
+}
+
+const apiURL = process.env.NEXT_PUBLIC_SPROUT_API_URL ?? "http://127.0.0.1:8080";
+const accents = ["mint", "amber", "blue", "rose"] as const;
+
+export class APIError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code: string,
+    readonly requestID?: string,
+  ) {
+    super(message);
+    this.name = "APIError";
+  }
+}
+
+async function request<T>(path: string, token: string | null): Promise<T> {
+  if (!token) {
+    throw new APIError("Sign in to continue.", 401, "authentication_required");
+  }
+
+  const response = await fetch(`${apiURL}${path}`, {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    let details: ErrorResponse = {};
+    try {
+      details = (await response.json()) as ErrorResponse;
+    } catch {
+      // A non-JSON failure still becomes a safe, predictable client error.
+    }
+
+    throw new APIError(
+      details.error?.message ?? "Sprout could not complete the request.",
+      response.status,
+      details.error?.code ?? "request_failed",
+      details.error?.requestId,
+    );
+  }
+
+  return (await response.json()) as T;
+}
+
+function applicationStatus(lifecycle: ApplicationLifecycle): AppStatus {
+  if (lifecycle === "active") return "running";
+  return lifecycle;
+}
+
+function applicationAccent(value: string): (typeof accents)[number] {
+  const total = Array.from(value).reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  return accents[total % accents.length];
+}
+
+function updatedLabel(value: string): string {
+  const updatedAt = new Date(value);
+  const elapsedMinutes = Math.max(0, Math.floor((Date.now() - updatedAt.getTime()) / 60_000));
+
+  if (elapsedMinutes < 1) return "Just now";
+  if (elapsedMinutes < 60) return `${elapsedMinutes} min ago`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `${elapsedHours} hr ago`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return elapsedDays === 1 ? "Yesterday" : `${elapsedDays} days ago`;
+}
+
+function mapApplication(application: ApplicationResponse): Application {
+  return {
+    id: application.id,
+    name: application.name,
+    slug: application.slug,
+    description: application.description,
+    status: applicationStatus(application.lifecycle),
+    url: application.defaultHostname,
+    updatedAt: updatedLabel(application.updatedAt),
+    accent: applicationAccent(application.id),
+  };
+}
+
+const applicationAPI = {
+  getMe(token: string | null): Promise<MeResponse> {
+    return request<MeResponse>("/api/v1/me", token);
+  },
+
+  getWorkspace(workspaceSlug: string, token: string | null): Promise<Workspace> {
+    return request<Workspace>(`/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}`, token);
+  },
+
+  async getApplications(workspaceSlug: string, token: string | null): Promise<Application[]> {
+    const response = await request<ApplicationListResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications`,
+      token,
+    );
+    return response.applications.map(mapApplication);
+  },
+
+  async getApplication(workspaceSlug: string, applicationID: string, token: string | null): Promise<Application> {
+    const response = await request<ApplicationResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}`,
+      token,
+    );
+    return mapApplication(response);
+  },
+};
+
+export const api = {
+  ...mockApi,
+  ...applicationAPI,
+};

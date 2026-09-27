@@ -3,6 +3,7 @@
 ## Source of truth
 
 - Follow `frontend-implementation.md` for the agreed frontend scope, information architecture, and implementation order.
+- Follow `backend-development-learning-plan.md` for Go backend architecture, teaching cadence, security rules, verification requirements, and milestone order.
 - Keep the product promise focused: Sprout helps people create, deploy, operate, and share small applications without exposing unnecessary infrastructure complexity.
 
 ## Implementation principles
@@ -24,6 +25,14 @@
 - Test behavior in proportion to risk. Critical navigation and product journeys deserve automated coverage.
 - Keep the application runnable after each implementation phase.
 - Avoid speculative abstractions, premature optimization, and backend simulations that pretend to be production infrastructure.
+
+## Go backend learning workflow
+
+- Teach backend mechanics through the Sprout capability being implemented; do not turn milestones into standalone syntax lessons.
+- Use the sequence: mental model, NestJS/Django comparison, request trace, implementation, verification, explain-back checkpoint, and commit.
+- Keep Drizzle as the only schema and migration owner. The Go service may use `pgx` and `sqlc` against the migrated schema but must not duplicate migrations.
+- Do not start concurrent work without defined ownership, cancellation, capacity, error propagation, and shutdown behavior.
+- Keep each backend milestone independently runnable, verified, and committed.
 
 
 <!-- BEGIN:nextjs-agent-rules -->

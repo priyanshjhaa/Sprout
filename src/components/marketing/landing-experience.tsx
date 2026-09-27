@@ -129,8 +129,8 @@ export function LandingExperience() {
           <Link className="button button-small button-quiet" href="/sign-in">
             Sign in
           </Link>
-          <Link className="button button-small button-primary" href="/workspace/acme/agent">
-            Enter demo
+          <Link className="button button-small button-primary" href="/start">
+            Open workspace
           </Link>
         </div>
       </header>
@@ -162,7 +162,7 @@ export function LandingExperience() {
                 <p className="story-body">{chapter.body}</p>
                 {index === activeScene && index === 0 && (
                   <div className="story-actions">
-                    <Link className="button button-primary" href="/workspace/acme/agent">
+                    <Link className="button button-primary" href="/start">
                       Explore Sprout <ArrowRight size={16} />
                     </Link>
                     <span className="scroll-note">Scroll to grow the app</span>
@@ -170,10 +170,10 @@ export function LandingExperience() {
                 )}
                 {index === activeScene && index === 6 && (
                   <div className="story-actions final-actions">
-                    <Link className="button button-primary" href="/workspace/acme/agent">
+                    <Link className="button button-primary" href="/start">
                       Build something small <ArrowRight size={16} />
                     </Link>
-                    <Link className="button button-secondary" href="/workspace/acme/apps">
+                    <Link className="button button-secondary" href="/start">
                       View the workspace
                     </Link>
                   </div>
