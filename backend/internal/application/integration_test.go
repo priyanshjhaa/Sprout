@@ -38,6 +38,7 @@ func TestApplicationServiceAgainstPostgreSQL(t *testing.T) {
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	ownerID := insertTestUser(t, ctx, tx, suffix+"-owner")
 	viewerID := insertTestUser(t, ctx, tx, suffix+"-viewer")
+	editorID := insertTestUser(t, ctx, tx, suffix+"-editor")
 	outsiderID := insertTestUser(t, ctx, tx, suffix+"-outsider")
 	workspaceSlug := "api-" + suffix
 
@@ -58,6 +59,7 @@ func TestApplicationServiceAgainstPostgreSQL(t *testing.T) {
 	}{
 		{userID: ownerID, role: "owner"},
 		{userID: viewerID, role: "viewer"},
+		{userID: editorID, role: "editor"},
 	} {
 		if _, err := tx.Exec(
 			ctx,
@@ -74,6 +76,7 @@ func TestApplicationServiceAgainstPostgreSQL(t *testing.T) {
 	service := NewService(repository)
 	owner := formatUUID(ownerID)
 	viewer := formatUUID(viewerID)
+	editor := formatUUID(editorID)
 	outsider := formatUUID(outsiderID)
 
 	created, err := service.Create(ctx, CreateInput{
@@ -140,6 +143,57 @@ func TestApplicationServiceAgainstPostgreSQL(t *testing.T) {
 	})
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("viewer Update() error = %v, want ErrForbidden", err)
+	}
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE applications SET access_mode = 'restricted' WHERE id = $1`, created.ID,
+	); err != nil {
+		t.Fatalf("restrict application: %v", err)
+	}
+	if _, err := service.Get(ctx, workspaceSlug, created.ID, editor); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ungranted editor Get() error = %v, want ErrNotFound", err)
+	}
+	if _, err := service.Get(ctx, workspaceSlug, created.ID, viewer); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ungranted viewer Get() error = %v, want ErrNotFound", err)
+	}
+	if items, err := service.List(ctx, workspaceSlug, editor); err != nil || len(items) != 0 {
+		t.Fatalf("ungranted editor List() = %#v, %v, want no applications", items, err)
+	}
+	if _, err := service.Get(ctx, workspaceSlug, created.ID, owner); err != nil {
+		t.Fatalf("owner Get() restricted error = %v", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO application_access_grants (application_id, user_id, role, granted_by)
+		 VALUES ($1, $2, 'viewer', $3)`, created.ID, viewerID, ownerID,
+	); err != nil {
+		t.Fatalf("grant viewer access: %v", err)
+	}
+	if _, err := service.Get(ctx, workspaceSlug, created.ID, viewer); err != nil {
+		t.Fatalf("granted viewer Get() error = %v", err)
+	}
+	if _, err := service.Update(ctx, UpdateInput{
+		WorkspaceSlug: workspaceSlug, ApplicationID: created.ID, UserID: viewer, Name: &updatedName,
+	}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("granted viewer Update() error = %v, want ErrForbidden", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE application_access_grants SET role = 'editor' WHERE application_id = $1 AND user_id = $2`,
+		created.ID, viewerID,
+	); err != nil {
+		t.Fatalf("elevate grant: %v", err)
+	}
+	if _, err := service.Update(ctx, UpdateInput{
+		WorkspaceSlug: workspaceSlug, ApplicationID: created.ID, UserID: viewer, Name: &updatedName,
+	}); err != nil {
+		t.Fatalf("granted editor Update() error = %v", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM workspace_memberships WHERE workspace_id = $1 AND user_id = $2`, workspaceID, viewerID,
+	); err != nil {
+		t.Fatalf("remove membership: %v", err)
+	}
+	if _, err := service.Get(ctx, workspaceSlug, created.ID, viewer); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("former member Get() error = %v, want ErrNotFound", err)
 	}
 
 	_, err = service.Create(ctx, CreateInput{

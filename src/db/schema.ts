@@ -16,6 +16,7 @@ import {
 
 export const workspaceRole = pgEnum("workspace_role", ["owner", "editor", "viewer"]);
 export const applicationRole = pgEnum("application_role", ["editor", "viewer"]);
+export const applicationAccessMode = pgEnum("application_access_mode", ["workspace", "restricted"]);
 export const applicationLifecycle = pgEnum("application_lifecycle", ["active", "paused", "archived"]);
 export const sourceProvider = pgEnum("source_provider", ["github", "gitlab", "manual", "agent"]);
 export const deploymentStatus = pgEnum("deployment_status", ["queued", "building", "live", "failed", "cancelled"]);
@@ -99,6 +100,7 @@ export const applications = pgTable(
     name: varchar("name", { length: 120 }).notNull(),
     slug: varchar("slug", { length: 63 }).notNull(),
     description: text("description").notNull().default(""),
+    accessMode: applicationAccessMode("access_mode").default("workspace").notNull(),
     lifecycle: applicationLifecycle("lifecycle").default("active").notNull(),
     defaultHostname: varchar("default_hostname", { length: 253 }).notNull(),
     createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "restrict" }),

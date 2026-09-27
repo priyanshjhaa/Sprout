@@ -27,6 +27,7 @@ type Application struct {
 	Name            string
 	Slug            string
 	Description     string
+	AccessMode      string
 	Lifecycle       Lifecycle
 	DefaultHostname string
 	CreatedBy       string
