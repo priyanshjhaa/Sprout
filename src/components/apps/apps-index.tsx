@@ -35,7 +35,9 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
           {[0, 1, 2, 3].map((item) => <div className="app-card app-card-skeleton" key={item} />)}
         </div>
       ) : isError ? (
-        <section className="soft-empty"><Boxes size={20} /><h2>Applications could not be loaded</h2><p>The demo data did not respond. You can safely try again.</p><button className="button button-secondary" onClick={() => refetch()}>Try again</button></section>
+        <section className="soft-empty"><Boxes size={20} /><h2>Applications could not be loaded</h2><p>Sprout could not reach your applications. You can safely try again.</p><button className="button button-secondary" onClick={() => refetch()}>Try again</button></section>
+      ) : applications?.length === 0 ? (
+        <section className="soft-empty"><Boxes size={20} /><h2>No applications yet</h2><p>Applications you bring into Sprout will appear here.</p><Link className="button button-secondary" href={`/workspace/${workspaceSlug}/agent`}>Explore the agent page</Link></section>
       ) : visibleApplications.length === 0 ? (
         <section className="soft-empty"><Search size={20} /><h2>No applications match “{search}”</h2><p>Try a different name or clear your search.</p><button className="button button-secondary" onClick={() => setSearch("")}>Clear search</button></section>
       ) : (
@@ -60,4 +62,3 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
     </main>
   );
 }
-

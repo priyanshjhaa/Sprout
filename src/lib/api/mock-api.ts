@@ -1,60 +1,13 @@
 import type {
   AgentEvent,
-  Application,
   Deployment,
   EnvironmentVariable,
   LogEntry,
   Member,
-  Workspace,
 } from "@/types/domain";
 
 const wait = (milliseconds = 260) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
-
-const workspace: Workspace = { id: "ws_acme", slug: "acme", name: "Acme studio" };
-
-const applications: Application[] = [
-  {
-    id: "invoice-approvals",
-    name: "Invoice approvals",
-    slug: "invoice-approvals",
-    description: "Review, route, and approve vendor invoices with a small team.",
-    status: "running",
-    url: "invoice-acme.sprout.run",
-    updatedAt: "12 min ago",
-    accent: "mint",
-  },
-  {
-    id: "hiring-pipeline",
-    name: "Hiring pipeline",
-    slug: "hiring-pipeline",
-    description: "A focused recruiting board for the product team.",
-    status: "running",
-    url: "hiring-acme.sprout.run",
-    updatedAt: "Yesterday",
-    accent: "amber",
-  },
-  {
-    id: "inventory-tracker",
-    name: "Inventory tracker",
-    slug: "inventory-tracker",
-    description: "Reconcile warehouse counts from weekly CSV uploads.",
-    status: "building",
-    url: "inventory-acme.sprout.run",
-    updatedAt: "Just now",
-    accent: "blue",
-  },
-  {
-    id: "research-library",
-    name: "Research library",
-    slug: "research-library",
-    description: "A searchable home for customer calls and product notes.",
-    status: "failed",
-    url: "research-acme.sprout.run",
-    updatedAt: "2 days ago",
-    accent: "rose",
-  },
-];
 
 const deployments: Deployment[] = [
   {
@@ -118,20 +71,6 @@ const agentEvents: AgentEvent[] = [
 ];
 
 export const mockApi = {
-  async getWorkspace() {
-    await wait();
-    return workspace;
-  },
-  async getApplications() {
-    await wait();
-    return applications;
-  },
-  async getApplication(appId: string) {
-    await wait();
-    const application = applications.find((item) => item.id === appId);
-    if (!application) throw new Error("Application not found");
-    return application;
-  },
   async getDeployments(appId: string) {
     await wait();
     return deployments.filter((deployment) => deployment.appId === appId);

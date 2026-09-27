@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Check, ChevronRight, ExternalLink, LoaderCircle, Sparkles } from "lucide-react";
+import { ArrowUp, Check, ChevronRight, LoaderCircle, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { StatusPill } from "@/components/status-pill";
@@ -58,8 +58,7 @@ export function AgentWorkspace({ workspaceSlug }: { workspaceSlug: string }) {
                 <div className="artifact-top"><span className="artifact-mark">IA</span><div><strong>Invoice approvals</strong><small>invoice-acme.sprout.run</small></div><StatusPill status="running" /></div>
                 <div className="artifact-preview"><span>Invoices</span><i /><i /><i /></div>
                 <div className="artifact-actions">
-                  <Link href={`/workspace/${workspaceSlug}/apps/invoice-approvals`}>View application</Link>
-                  <a href="https://invoice-acme.sprout.run" target="_blank" rel="noreferrer">Open <ExternalLink size={13} /></a>
+                  <Link href={`/workspace/${workspaceSlug}/apps`}>View applications</Link>
                 </div>
               </article>
             </div>
@@ -100,4 +99,3 @@ export function AgentWorkspace({ workspaceSlug }: { workspaceSlug: string }) {
     </main>
   );
 }
-

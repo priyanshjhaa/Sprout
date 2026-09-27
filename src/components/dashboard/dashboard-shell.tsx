@@ -11,6 +11,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useUser, UserButton } from "@clerk/nextjs";
 import { useParams, usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
@@ -31,7 +32,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const params = useParams<{ workspaceSlug: string }>();
   const workspaceSlug = params.workspaceSlug ?? "acme";
-  const { data: workspace } = useWorkspace(workspaceSlug);
+  const { data: workspace, isError: workspaceUnavailable } = useWorkspace(workspaceSlug);
+  const { user } = useUser();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navigation = (items: typeof primaryNavigation) =>
@@ -50,6 +52,10 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </Link>
       );
     });
+
+  if (workspaceUnavailable) {
+    return <main className="auth-page"><section className="auth-card"><h1>Workspace unavailable</h1><p>You may no longer have access to this workspace.</p><Link className="button button-primary" href="/start">Open your workspace</Link></section></main>;
+  }
 
   return (
     <div className="dashboard-frame">
@@ -70,7 +76,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <div className="sidebar-brand"><Brand /></div>
         <button className="workspace-switcher" type="button">
           <span className="workspace-avatar">A</span>
-          <span><strong>{workspace?.name ?? "Acme studio"}</strong><small>Personal workspace</small></span>
+          <span><strong>{workspace?.name ?? "Workspace"}</strong><small>Personal workspace</small></span>
           <ChevronDown size={15} />
         </button>
 
@@ -86,9 +92,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="sidebar-profile">
-          <span className="profile-avatar">PJ</span>
-          <span><strong>Priyansh Jha</strong><small>priyansh@acme.test</small></span>
-          <ChevronDown size={15} />
+          <UserButton />
+          <span><strong>{user?.fullName ?? user?.username ?? "Account"}</strong><small>{user?.primaryEmailAddress?.emailAddress ?? "Signed in"}</small></span>
         </div>
       </aside>
 
@@ -97,4 +102,3 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

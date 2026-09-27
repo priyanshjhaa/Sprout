@@ -1,5 +1,5 @@
 import { mockApi } from "@/lib/api/mock-api";
-import type { Application, AppStatus } from "@/types/domain";
+import type { Application, AppStatus, Workspace } from "@/types/domain";
 
 type ApplicationLifecycle = "active" | "paused" | "archived";
 
@@ -26,10 +26,14 @@ interface ErrorResponse {
   };
 }
 
+interface MeResponse {
+  id: string;
+  email: string;
+  displayName: string;
+  workspace: Workspace;
+}
+
 const apiURL = process.env.NEXT_PUBLIC_SPROUT_API_URL ?? "http://127.0.0.1:8080";
-const developmentUserID =
-  process.env.NEXT_PUBLIC_SPROUT_DEVELOPMENT_USER_ID ??
-  (process.env.NODE_ENV === "development" ? "11111111-1111-4111-8111-111111111111" : "");
 const accents = ["mint", "amber", "blue", "rose"] as const;
 
 export class APIError extends Error {
@@ -44,19 +48,15 @@ export class APIError extends Error {
   }
 }
 
-async function request<T>(path: string): Promise<T> {
-  if (!developmentUserID) {
-    throw new APIError(
-      "The temporary development identity is not configured.",
-      0,
-      "client_configuration_error",
-    );
+async function request<T>(path: string, token: string | null): Promise<T> {
+  if (!token) {
+    throw new APIError("Sign in to continue.", 401, "authentication_required");
   }
 
   const response = await fetch(`${apiURL}${path}`, {
     headers: {
       Accept: "application/json",
-      "X-Sprout-User-ID": developmentUserID,
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -117,16 +117,26 @@ function mapApplication(application: ApplicationResponse): Application {
 }
 
 const applicationAPI = {
-  async getApplications(workspaceSlug: string): Promise<Application[]> {
+  getMe(token: string | null): Promise<MeResponse> {
+    return request<MeResponse>("/api/v1/me", token);
+  },
+
+  getWorkspace(workspaceSlug: string, token: string | null): Promise<Workspace> {
+    return request<Workspace>(`/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}`, token);
+  },
+
+  async getApplications(workspaceSlug: string, token: string | null): Promise<Application[]> {
     const response = await request<ApplicationListResponse>(
       `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications`,
+      token,
     );
     return response.applications.map(mapApplication);
   },
 
-  async getApplication(workspaceSlug: string, applicationID: string): Promise<Application> {
+  async getApplication(workspaceSlug: string, applicationID: string, token: string | null): Promise<Application> {
     const response = await request<ApplicationResponse>(
       `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}`,
+      token,
     );
     return mapApplication(response);
   },

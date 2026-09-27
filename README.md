@@ -8,7 +8,7 @@ It explores a simple product question:
 
 The long-term goal is to make deploying and securely sharing a small application feel as straightforward as sharing a document. A developer or coding agent provides the application; Sprout handles the path from source code to a healthy URL, along with identity, configuration, logs, data, and access.
 
-This repository currently contains the first frontend prototype, the PostgreSQL schema/local development setup, and the initial Go backend executable. Infrastructure and agent operations are represented with typed mock data and are clearly identified as demonstrations. The Go backend is being built incrementally using the repository's backend development and learning guide.
+This repository contains the frontend prototype, the PostgreSQL schema/local development setup, and a Go API for workspace applications. Clerk handles sign-in; Go verifies sessions, maps users to local identities, and enforces workspace membership. Infrastructure and agent operations are still demonstrations.
 
 ## Product direction
 
@@ -36,7 +36,7 @@ The prototype includes:
 
 - A scroll-driven landing page that explains the application lifecycle inside one persistent visual environment
 - A simplified semantic mobile landing experience
-- Authentication entry screen
+- Clerk sign-in and a personal workspace created on first use
 - Responsive workspace shell and navigation
 - Agent workspace with a mocked application-creation journey
 - Searchable application library
@@ -56,6 +56,7 @@ The dashboard deliberately keeps only **Agent** and **Apps** prominent. Operatio
 - React and TypeScript
 - Tailwind CSS
 - [TanStack Query](https://tanstack.com/query/latest) for server-state-shaped data
+- [Clerk](https://clerk.com/docs) for user sessions
 - Lucide icons
 - A typed HTTP adapter for application data, with focused mocks for unfinished capabilities
 
@@ -76,22 +77,22 @@ Install dependencies:
 npm install
 ```
 
-Start the development server:
+Create a Clerk development application and place its publishable key and secret key in the ignored `.env.local` file, using `.env.example` as a guide. Keep the secret out of `NEXT_PUBLIC_` variables and commits.
 
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-Start and migrate PostgreSQL, add the safe local demo records, then load the untracked local environment into your current shell:
+Start and migrate PostgreSQL. The optional seed adds an `acme` example workspace for local database experiments; new Clerk users receive their own personal workspace automatically.
 
 ```bash
 npm run db:up
 npm run db:migrate
-npm run db:seed
+# Optional: npm run db:seed
+```
+
+Load the ignored local configuration into the shell that starts Go:
+
+```bash
 set -a
 source .env
+source .env.local
 set +a
 ```
 
@@ -106,7 +107,7 @@ go vet ./...
 go run ./cmd/api
 ```
 
-The API listens on `http://127.0.0.1:8080`. Keep it running while using the dashboard and start `npm run dev` from the repository root in another terminal. Verify its liveness endpoint with:
+The API listens on `http://127.0.0.1:8080`. In another terminal, run `npm run dev` from the repository root and open [http://localhost:3000](http://localhost:3000). Verify the API liveness endpoint with:
 
 ```bash
 curl http://127.0.0.1:8080/health/live
@@ -114,7 +115,7 @@ curl http://127.0.0.1:8080/health/live
 
 Set `SPROUT_API_ADDRESS` to override the default address. `/health/live` reports that the process is alive, while `/health/ready` now checks the PostgreSQL pool before reporting that the API is ready for traffic.
 
-The first versioned API slice supports listing, creating, viewing, and updating workspace applications under `/api/v1/workspaces/{workspaceSlug}/applications`. During local development these routes require an `X-Sprout-User-ID` header containing the UUID of an existing workspace member. This placeholder is not production authentication and will be replaced during the authentication milestone. The reviewed contract is in [`backend/openapi/openapi.yaml`](./backend/openapi/openapi.yaml).
+The API supports `/api/v1/me`, a membership-scoped workspace lookup, and listing, creating, viewing, and updating applications under `/api/v1/workspaces/{workspaceSlug}/applications`. Protected routes require `Authorization: Bearer <Clerk session token>`. The Go service verifies the token, then maps the Clerk subject to a local user ID before querying PostgreSQL. The reviewed contract is in [`backend/openapi/openapi.yaml`](./backend/openapi/openapi.yaml).
 
 Press `Ctrl+C` in the server terminal to perform a graceful shutdown.
 
@@ -124,10 +125,11 @@ Useful demo routes:
 
 ```text
 /                                      Landing experience
-/sign-in                               Authentication entry
-/workspace/acme/agent                  Agent workspace
-/workspace/acme/apps                   Application library
-/workspace/acme/apps/{application-id}  Application overview
+/sign-in                               Clerk sign-in
+/start                                 Open or create your personal workspace
+/workspace/{workspace-slug}/agent      Agent demo
+/workspace/{workspace-slug}/apps       Application library
+/workspace/{workspace-slug}/apps/{id}  Application overview
 ```
 
 ## Project commands
@@ -184,7 +186,7 @@ The Go backend lives in `backend/`. Its `cmd/api` package is the executable entr
 
 The following capabilities are mocked and are not connected to production infrastructure:
 
-- GitHub authentication and repository access
+- GitHub repository access
 - Coding-agent execution
 - Application builds and containers
 - DNS and TLS provisioning
@@ -202,7 +204,7 @@ The next implementation phases are intentionally incremental:
 
 1. Add automated component and critical-journey browser tests.
 2. Define the versioned backend API from the existing frontend domain model.
-3. Replace demo authentication with GitHub OAuth and real workspaces.
+3. Add invitations and per-application sharing to the verified identity and workspace foundation.
 4. Implement the smallest deployment loop: repository, Docker build, container, proxy, and URL.
 5. Connect deployment state and log streaming to the existing UI.
 6. Add database provisioning, encrypted secrets, resource limits, and rollback.
