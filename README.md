@@ -126,6 +126,7 @@ Useful demo routes:
 ```text
 /                                      Landing experience
 /sign-in                               Clerk sign-in
+/sign-up                               Clerk sign-up
 /start                                 Open or create your personal workspace
 /workspace/{workspace-slug}/agent      Agent demo
 /workspace/{workspace-slug}/apps       Application library

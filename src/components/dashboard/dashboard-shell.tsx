@@ -4,10 +4,10 @@ import {
   Activity,
   Bot,
   Boxes,
-  ChevronDown,
   LogOut,
   Menu,
   Settings,
+  Sprout,
   Users,
   X,
 } from "lucide-react";
@@ -74,12 +74,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </header>
 
       <aside className={`dashboard-sidebar${mobileOpen ? " mobile-open" : ""}`}>
-        <div className="sidebar-brand"><Brand /></div>
-        <button className="workspace-switcher" type="button">
-          <span className="workspace-avatar">A</span>
-          <span><strong>{workspace?.name ?? "Workspace"}</strong><small>Personal workspace</small></span>
-          <ChevronDown size={15} />
-        </button>
+        <div className="sidebar-brand"><Brand /><span>SMALL SOFTWARE, AT HOME</span></div>
+        <div className="workspace-switcher">
+          <span className="workspace-avatar"><Sprout size={17} strokeWidth={1.7} /></span>
+          <span><strong>{workspace?.name ?? "Your workspace"}</strong><small>Personal workspace</small></span>
+        </div>
 
         <nav className="sidebar-navigation" aria-label="Workspace navigation">
           <div className="sidebar-group">
@@ -92,17 +91,25 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </div>
         </nav>
 
-        <div className="sidebar-profile">
-          <UserButton />
-          <span><strong>{user?.fullName ?? user?.username ?? "Account"}</strong><small>{user?.primaryEmailAddress?.emailAddress ?? "Signed in"}</small></span>
+        <div className="sidebar-account">
+          <div className="sidebar-profile">
+            <UserButton />
+            <span><strong>{user?.fullName ?? user?.username ?? "Account"}</strong><small>{user?.primaryEmailAddress?.emailAddress ?? "Signed in"}</small></span>
+          </div>
+          <SignOutButton redirectUrl="/">
+            <button className="sidebar-link sidebar-sign-out" type="button"><LogOut size={17} strokeWidth={1.8} /><span>Sign out</span></button>
+          </SignOutButton>
         </div>
-        <SignOutButton redirectUrl="/">
-          <button className="sidebar-link sidebar-sign-out" type="button"><LogOut size={17} strokeWidth={1.8} /><span>Sign out</span></button>
-        </SignOutButton>
       </aside>
 
       {mobileOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
-      <div className="dashboard-content">{children}</div>
+      <div className="dashboard-content">
+        <header className="dashboard-topbar">
+          <div className="dashboard-topbar-path"><i aria-hidden="true" /><span>Workspace</span><span aria-hidden="true">/</span><strong>{workspace?.name ?? "Your workspace"}</strong></div>
+          <span className="dashboard-topbar-state"><i aria-hidden="true" /> A home for small software</span>
+        </header>
+        {children}
+      </div>
     </div>
   );
 }

@@ -37,7 +37,15 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
       ) : isError ? (
         <section className="soft-empty"><Boxes size={20} /><h2>Applications could not be loaded</h2><p>Sprout could not reach your applications. You can safely try again.</p><button className="button button-secondary" onClick={() => refetch()}>Try again</button></section>
       ) : applications?.length === 0 ? (
-        <section className="soft-empty"><Boxes size={20} /><h2>No applications yet</h2><p>Applications you bring into Sprout will appear here.</p><Link className="button button-secondary" href={`/workspace/${workspaceSlug}/agent`}>Explore the agent page</Link></section>
+        <section className="workspace-welcome">
+          <div className="workspace-welcome-copy">
+            <p className="eyebrow">A space to begin</p>
+            <h2>Your first useful thing belongs here.</h2>
+            <p>Apps you bring into Sprout will live in this workspace. For now, explore the agent preview to see how that journey could work.</p>
+            <Link className="button button-primary" href={`/workspace/${workspaceSlug}/agent`}>Explore the agent preview <ArrowRight size={16} /></Link>
+          </div>
+          <div className="workspace-welcome-art" aria-hidden="true"><span className="seed-icon"><span /><span /></span><i /><i /></div>
+        </section>
       ) : visibleApplications.length === 0 ? (
         <section className="soft-empty"><Search size={20} /><h2>No applications match “{search}”</h2><p>Try a different name or clear your search.</p><button className="button button-secondary" onClick={() => setSearch("")}>Clear search</button></section>
       ) : (
