@@ -9,8 +9,26 @@ const testDatabaseURL = "postgresql://sprout:local-password@127.0.0.1:5432/sprou
 
 func lookup(values map[string]string) LookupEnv {
 	return func(key string) (string, bool) {
+		if key == "CLERK_SECRET_KEY" {
+			value, exists := values[key]
+			if exists {
+				return value, true
+			}
+			return "sk_test_example", true
+		}
 		value, exists := values[key]
 		return value, exists
+	}
+}
+
+func TestLoadRequiresClerkSecretKey(t *testing.T) {
+	t.Parallel()
+	_, err := Load(lookup(map[string]string{
+		"DATABASE_URL":     testDatabaseURL,
+		"CLERK_SECRET_KEY": "",
+	}))
+	if err == nil || err.Error() != "CLERK_SECRET_KEY is required" {
+		t.Fatalf("Load() error = %v, want required Clerk key error", err)
 	}
 }
 

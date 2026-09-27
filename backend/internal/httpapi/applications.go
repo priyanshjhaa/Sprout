@@ -8,14 +8,12 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/priyanshjhaa/Sprout/backend/internal/application"
 )
 
-const developmentUserHeader = "X-Sprout-User-ID"
 const maxRequestBodyBytes = 64 * 1024
 
 type identityContextKey struct{}
@@ -62,33 +60,11 @@ type applicationListResponse struct {
 func RegisterApplicationRoutes(router chi.Router, service ApplicationService, logger *slog.Logger) {
 	handler := &applicationHandler{service: service, logger: logger}
 
-	router.Route("/api/v1", func(api chi.Router) {
-		api.Use(developmentIdentityMiddleware)
-		api.Route("/workspaces/{workspaceSlug}/applications", func(applications chi.Router) {
-			applications.Get("/", handler.list)
-			applications.Post("/", handler.create)
-			applications.Get("/{applicationId}", handler.get)
-			applications.Patch("/{applicationId}", handler.update)
-		})
-	})
-}
-
-func developmentIdentityMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userID := strings.TrimSpace(r.Header.Get(developmentUserHeader))
-		if userID == "" {
-			writeAPIError(
-				w,
-				http.StatusUnauthorized,
-				"authentication_required",
-				"A development user identity is required.",
-				requestIDFromContext(r.Context()),
-			)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), identityContextKey{}, userID)
-		next.ServeHTTP(w, r.WithContext(ctx))
+	router.Route("/workspaces/{workspaceSlug}/applications", func(applications chi.Router) {
+		applications.Get("/", handler.list)
+		applications.Post("/", handler.create)
+		applications.Get("/{applicationId}", handler.get)
+		applications.Patch("/{applicationId}", handler.update)
 	})
 }
 

@@ -8,7 +8,46 @@ servers:
     description: Local development
 tags:
   - name: Applications
+  - name: Identity
 paths:
+  /api/v1/me:
+    get:
+      tags: [Identity]
+      summary: Resolve the signed-in user and home workspace
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Signed-in Sprout identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "503":
+          description: Identity provider or database unavailable
+  /api/v1/workspaces/{workspaceSlug}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+    get:
+      tags: [Identity]
+      summary: Get a workspace through verified membership
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Workspace available to the member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/v1/workspaces/{workspaceSlug}/applications:
     parameters:
       - $ref: "#/components/parameters/WorkspaceSlug"
@@ -16,7 +55,7 @@ paths:
       tags: [Applications]
       summary: List applications available to the workspace member
       security:
-        - developmentIdentity: []
+        - clerkSession: []
       responses:
         "200":
           description: Applications in most-recently-updated order
@@ -34,7 +73,7 @@ paths:
       tags: [Applications]
       summary: Create an application in the workspace
       security:
-        - developmentIdentity: []
+        - clerkSession: []
       requestBody:
         required: true
         content:
@@ -72,7 +111,7 @@ paths:
       tags: [Applications]
       summary: Get one application available to the workspace member
       security:
-        - developmentIdentity: []
+        - clerkSession: []
       responses:
         "200":
           description: Application details
@@ -92,7 +131,7 @@ paths:
       tags: [Applications]
       summary: Update application details or lifecycle
       security:
-        - developmentIdentity: []
+        - clerkSession: []
       requestBody:
         required: true
         content:
@@ -118,11 +157,11 @@ paths:
           $ref: "#/components/responses/InternalError"
 components:
   securitySchemes:
-    developmentIdentity:
-      type: apiKey
-      in: header
-      name: X-Sprout-User-ID
-      description: Temporary local-development identity. Replaced by verified authentication in Milestone 5.
+    clerkSession:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Clerk session token verified by the Go API and mapped to a Sprout user.
   parameters:
     WorkspaceSlug:
       name: workspaceSlug
@@ -140,6 +179,33 @@ components:
         type: string
         format: uuid
   schemas:
+    Workspace:
+      type: object
+      additionalProperties: false
+      required: [id, slug, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        name:
+          type: string
+    Me:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, workspace]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        workspace:
+          $ref: "#/components/schemas/Workspace"
     ApplicationLifecycle:
       type: string
       enum: [active, paused, archived]

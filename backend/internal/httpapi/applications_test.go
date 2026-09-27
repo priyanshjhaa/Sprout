@@ -9,10 +9,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/priyanshjhaa/Sprout/backend/internal/application"
 )
 
 const handlerTestUserID = "11111111-1111-4111-8111-111111111111"
+
+func applicationRouterForTest(service ApplicationService) *chi.Mux {
+	router := NewRouter(discardLogger(), AlwaysReady, "")
+	router.Route("/api/v1", func(api chi.Router) {
+		api.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("Authorization") != "Bearer test-session" {
+					writeAPIError(w, http.StatusUnauthorized, "authentication_required", "A valid session is required.", requestIDFromContext(r.Context()))
+					return
+				}
+				ctx := context.WithValue(r.Context(), identityContextKey{}, handlerTestUserID)
+				next.ServeHTTP(w, r.WithContext(ctx))
+			})
+		})
+		RegisterApplicationRoutes(api, service, discardLogger())
+	})
+	return router
+}
 
 type stubApplicationService struct {
 	list   func(context.Context, string, string) ([]application.Application, error)
@@ -58,8 +77,7 @@ func TestApplicationRoutesRequireDevelopmentIdentity(t *testing.T) {
 			return nil, nil
 		},
 	}
-	router := NewRouter(discardLogger(), AlwaysReady, "")
-	RegisterApplicationRoutes(router, service, discardLogger())
+	router := applicationRouterForTest(service)
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/workspaces/acme/applications", nil)
 	response := httptest.NewRecorder()
 
@@ -92,11 +110,10 @@ func TestCreateApplicationReturnsExplicitDTO(t *testing.T) {
 			}, nil
 		},
 	}
-	router := NewRouter(discardLogger(), AlwaysReady, "")
-	RegisterApplicationRoutes(router, service, discardLogger())
+	router := applicationRouterForTest(service)
 	body := bytes.NewBufferString(`{"name":"Invoice approvals","slug":"invoice-approvals","description":"Review invoices"}`)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/acme/applications", body)
-	request.Header.Set(developmentUserHeader, handlerTestUserID)
+	request.Header.Set("Authorization", "Bearer test-session")
 	response := httptest.NewRecorder()
 
 	router.ServeHTTP(response, request)
@@ -126,11 +143,10 @@ func TestCreateApplicationRejectsUnknownJSONField(t *testing.T) {
 			return application.Application{}, nil
 		},
 	}
-	router := NewRouter(discardLogger(), AlwaysReady, "")
-	RegisterApplicationRoutes(router, service, discardLogger())
+	router := applicationRouterForTest(service)
 	body := bytes.NewBufferString(`{"name":"Invoices","slug":"invoices","unexpected":true}`)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/acme/applications", body)
-	request.Header.Set(developmentUserHeader, handlerTestUserID)
+	request.Header.Set("Authorization", "Bearer test-session")
 	response := httptest.NewRecorder()
 
 	router.ServeHTTP(response, request)
@@ -149,11 +165,10 @@ func TestCreateApplicationMapsConflict(t *testing.T) {
 			return application.Application{}, application.ErrConflict
 		},
 	}
-	router := NewRouter(discardLogger(), AlwaysReady, "")
-	RegisterApplicationRoutes(router, service, discardLogger())
+	router := applicationRouterForTest(service)
 	body := bytes.NewBufferString(`{"name":"Invoices","slug":"invoices"}`)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/workspaces/acme/applications", body)
-	request.Header.Set(developmentUserHeader, handlerTestUserID)
+	request.Header.Set("Authorization", "Bearer test-session")
 	response := httptest.NewRecorder()
 
 	router.ServeHTTP(response, request)

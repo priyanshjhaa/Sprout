@@ -9,11 +9,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/clerk/clerk-sdk-go/v2"
+	"github.com/go-chi/chi/v5"
 	"github.com/priyanshjhaa/Sprout/backend/internal/application"
 	"github.com/priyanshjhaa/Sprout/backend/internal/config"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
+	"github.com/priyanshjhaa/Sprout/backend/internal/identity"
 )
 
 const serviceName = "sprout-api"
@@ -48,8 +51,14 @@ func realMain() int {
 	queries := dbgen.New(pool)
 	repository := application.NewSQLRepository(queries)
 	service := application.NewService(repository)
+	clerk.SetKey(appConfig.ClerkSecretKey)
+	identityService := identity.NewService(identity.ClerkProfileProvider{}, identity.NewSQLRepository(pool))
 	router := httpapi.NewRouter(logger, readiness, appConfig.WebOrigin)
-	httpapi.RegisterApplicationRoutes(router, service, logger)
+	router.Route("/api/v1", func(api chi.Router) {
+		api.Use(httpapi.AuthenticationMiddleware(identityService, logger, appConfig.WebOrigin))
+		httpapi.RegisterIdentityRoutes(api, identityService, logger)
+		httpapi.RegisterApplicationRoutes(api, service, logger)
+	})
 
 	return run(ctx, appConfig, logger, router)
 }

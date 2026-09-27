@@ -14,9 +14,10 @@ const (
 )
 
 type Config struct {
-	APIAddress  string
-	DatabaseURL string
-	WebOrigin   string
+	APIAddress     string
+	DatabaseURL    string
+	WebOrigin      string
+	ClerkSecretKey string
 }
 
 type LookupEnv func(key string) (string, bool)
@@ -47,11 +48,17 @@ func Load(lookupEnv LookupEnv) (Config, error) {
 	if !validWebOrigin(webOrigin) {
 		return Config{}, fmt.Errorf("SPROUT_WEB_ORIGIN must be a valid HTTP origin without a path")
 	}
+	clerkSecretKey, exists := lookupEnv("CLERK_SECRET_KEY")
+	clerkSecretKey = strings.TrimSpace(clerkSecretKey)
+	if !exists || clerkSecretKey == "" {
+		return Config{}, fmt.Errorf("CLERK_SECRET_KEY is required")
+	}
 
 	return Config{
-		APIAddress:  address,
-		DatabaseURL: databaseURL,
-		WebOrigin:   webOrigin,
+		APIAddress:     address,
+		DatabaseURL:    databaseURL,
+		WebOrigin:      webOrigin,
+		ClerkSecretKey: clerkSecretKey,
 	}, nil
 }
 
