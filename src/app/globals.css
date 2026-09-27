@@ -1363,11 +1363,11 @@ a {
   position: fixed;
   z-index: 0;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(218, 242, 208, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(218, 242, 208, 0.018) 1px, transparent 1px);
-  background-size: 62px 62px;
-  mask-image: linear-gradient(90deg, transparent 230px, black 70%, transparent);
+  background-image: url("/images/workspace-contours.svg");
+  background-position: right -120px top 8vh;
+  background-repeat: no-repeat;
+  background-size: 1200px auto;
+  mask-image: linear-gradient(90deg, transparent 22%, black 68%);
   pointer-events: none;
   content: "";
 }
@@ -2220,12 +2220,6 @@ body {
     radial-gradient(circle at 65% -8%, rgba(109, 127, 66, 0.09), transparent 34%),
     radial-gradient(circle at 100% 100%, rgba(190, 124, 72, 0.07), transparent 35%),
     var(--canvas);
-}
-
-.dashboard-frame::before {
-  background-image:
-    linear-gradient(rgba(78, 66, 50, 0.027) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(78, 66, 50, 0.027) 1px, transparent 1px);
 }
 
 .dashboard-sidebar {
