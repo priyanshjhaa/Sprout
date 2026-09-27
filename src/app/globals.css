@@ -951,6 +951,11 @@ a {
   backdrop-filter: blur(22px);
 }
 
+.auth-card-sign-in {
+  width: min(100%, 520px);
+  padding: clamp(20px, 4vw, 42px);
+}
+
 .auth-card .seed-icon {
   width: 40px;
   height: 40px;
@@ -971,6 +976,11 @@ a {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.65;
+}
+
+.auth-clerk {
+  width: min(100%, 400px);
+  margin-inline: auto;
 }
 
 .auth-card small {
