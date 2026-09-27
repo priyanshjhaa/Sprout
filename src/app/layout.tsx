@@ -13,7 +13,12 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body>
-        <ClerkProvider signInForceRedirectUrl="/start" signUpForceRedirectUrl="/start">
+        <ClerkProvider
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          signInForceRedirectUrl="/start"
+          signUpForceRedirectUrl="/start"
+        >
           <Providers>{children}</Providers>
         </ClerkProvider>
       </body>
