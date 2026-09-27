@@ -69,12 +69,12 @@ func (service *Service) ListMembers(ctx context.Context, workspaceSlug, actorID 
 }
 
 func (service *Service) GetAccess(ctx context.Context, workspaceSlug, applicationID, actorID string) (Access, error) {
-	permission, application, _, creatorID, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
+	permission, application, actor, creatorID, err := service.manager(ctx, workspaceSlug, applicationID, actorID)
 	if err != nil {
 		return Access{}, err
 	}
 	rows, err := service.queries.ListApplicationGrants(ctx, dbgen.ListApplicationGrantsParams{
-		WorkspaceSlug: workspaceSlug, ApplicationID: application,
+		WorkspaceSlug: workspaceSlug, ApplicationID: application, ActorID: actor,
 	})
 	if err != nil {
 		return Access{}, err

@@ -19,12 +19,16 @@ JOIN applications AS application ON application.id = app_grant.application_id
 JOIN workspaces AS workspace ON workspace.id = application.workspace_id
 JOIN workspace_memberships AS membership
   ON membership.workspace_id = workspace.id AND membership.user_id = member.id
-WHERE workspace.slug = $1
-  AND application.id = $2
+JOIN workspace_memberships AS actor
+  ON actor.workspace_id = workspace.id AND actor.user_id = $1
+WHERE workspace.slug = $2
+  AND application.id = $3
+  AND (actor.role = 'owner' OR application.created_by = $1)
 ORDER BY app_grant.created_at, member.id
 `
 
 type ListApplicationGrantsParams struct {
+	ActorID       pgtype.UUID `json:"actor_id"`
 	WorkspaceSlug string      `json:"workspace_slug"`
 	ApplicationID pgtype.UUID `json:"application_id"`
 }
@@ -37,7 +41,7 @@ type ListApplicationGrantsRow struct {
 }
 
 func (q *Queries) ListApplicationGrants(ctx context.Context, arg ListApplicationGrantsParams) ([]ListApplicationGrantsRow, error) {
-	rows, err := q.db.Query(ctx, listApplicationGrants, arg.WorkspaceSlug, arg.ApplicationID)
+	rows, err := q.db.Query(ctx, listApplicationGrants, arg.ActorID, arg.WorkspaceSlug, arg.ApplicationID)
 	if err != nil {
 		return nil, err
 	}

@@ -18,8 +18,11 @@ JOIN applications AS application ON application.id = app_grant.application_id
 JOIN workspaces AS workspace ON workspace.id = application.workspace_id
 JOIN workspace_memberships AS membership
   ON membership.workspace_id = workspace.id AND membership.user_id = member.id
+JOIN workspace_memberships AS actor
+  ON actor.workspace_id = workspace.id AND actor.user_id = sqlc.arg(actor_id)
 WHERE workspace.slug = sqlc.arg(workspace_slug)
   AND application.id = sqlc.arg(application_id)
+  AND (actor.role = 'owner' OR application.created_by = sqlc.arg(actor_id))
 ORDER BY app_grant.created_at, member.id;
 
 -- name: SetApplicationAccessMode :one
