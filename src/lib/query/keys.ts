@@ -1,4 +1,6 @@
 export const queryKeys = {
+  workspaces: (userId: string | null | undefined) => ["user", userId, "workspaces"] as const,
+  invitations: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "invitations"] as const,
   me: (userId: string | null | undefined) => ["user", userId, "me"] as const,
   workspace: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug] as const,
   apps: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "apps"] as const,
@@ -9,5 +11,6 @@ export const queryKeys = {
   environment: (userId: string | null | undefined, slug: string, appId: string) =>
     ["user", userId, "workspace", slug, "app", appId, "environment"] as const,
   access: (userId: string | null | undefined, slug: string, appId: string) => ["user", userId, "workspace", slug, "app", appId, "access"] as const,
+  members: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "members"] as const,
   agent: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "agent"] as const,
 };

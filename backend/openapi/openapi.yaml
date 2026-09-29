@@ -9,6 +9,7 @@ servers:
 tags:
   - name: Applications
   - name: Identity
+  - name: Sharing
 paths:
   /api/v1/me:
     get:
@@ -155,6 +156,297 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+  /api/v1/workspaces/{workspaceSlug}/members:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+    get:
+      tags: [Sharing]
+      summary: List current workspace members
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Members of this workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/access:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+    get:
+      tags: [Sharing]
+      summary: View application sharing settings as owner or creator
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Application access settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAccess"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Sharing]
+      summary: Set workspace-wide or restricted application access
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [accessMode]
+              properties:
+                accessMode:
+                  $ref: "#/components/schemas/ApplicationAccessMode"
+      responses:
+        "200":
+          description: Updated application access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAccess"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/access/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    put:
+      tags: [Sharing]
+      summary: Grant or update access for an existing workspace member
+      security:
+        - clerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [role]
+              properties:
+                role:
+                  $ref: "#/components/schemas/ApplicationRole"
+      responses:
+        "200":
+          description: Updated application access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAccess"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Sharing]
+      summary: Revoke an explicit application grant
+      security:
+        - clerkSession: []
+      responses:
+        "200":
+          description: Updated application access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplicationAccess"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/workspaces:
+    get:
+      tags: [Identity]
+      summary: List workspaces the authenticated user belongs to
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Membership-scoped workspaces
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [workspaces]
+                properties:
+                  workspaces:
+                    type: array
+                    items: { $ref: "#/components/schemas/Workspace" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/invitations:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+    get:
+      tags: [Sharing]
+      summary: Owner-only list of unexpired, unused invitations (never tokens or hashes)
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Pending invitations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [invitations]
+                properties:
+                  invitations:
+                    type: array
+                    items: { $ref: "#/components/schemas/Invitation" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    post:
+      tags: [Sharing]
+      summary: Owner creates an email-bound invitation valid for seven days
+      description: Returns the token once with Cache-Control no-store. Store only its SHA-256 digest. No email is sent. At most 100 pending invitations per workspace. Duplicate pending email or existing member returns 409; expired invitations may be replaced.
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, role]
+              properties:
+                email: { type: string, format: email, maxLength: 320 }
+                role: { type: string, enum: [editor, viewer] }
+      responses:
+        "201":
+          description: Invitation metadata and one-time-display token
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Invitation"
+                  - type: object
+                    required: [token]
+                    properties:
+                      token: { type: string, minLength: 43, maxLength: 43, pattern: '^[A-Za-z0-9_-]{43}$' }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/invitations/{invitationId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - name: invitationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [Sharing]
+      summary: Owner revokes a pending invitation
+      security: [{ clerkSession: [] }]
+      responses:
+        "200": { $ref: "#/components/responses/TeamUpdated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/invitations/accept:
+    post:
+      tags: [Sharing]
+      summary: Accept a single-use invitation using the current Clerk-verified primary email
+      description: Consume invitation and insert membership in one transaction. Existing membership roles are preserved. Invalid, expired, revoked, used, or email-mismatched links return the same safe 404. Send the token only in the JSON body, never in a URL path or query.
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token: { type: string, minLength: 43, maxLength: 43 }
+      responses:
+        "200":
+          description: Joined workspace; navigate here, not to the personal workspace
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workspace" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: Fresh verified identity could not be obtained
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/members/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [Sharing]
+      summary: Owner changes a non-owner member's workspace role
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [role]
+              properties:
+                role: { type: string, enum: [editor, viewer] }
+      responses:
+        "200": { $ref: "#/components/responses/TeamUpdated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      tags: [Sharing]
+      summary: Owner removes a non-owner member and their application grants
+      description: Membership removal, grant cleanup, and revocation of pending invitations for the member's recorded email are atomic. Ownership transfer and owner removal are not supported.
+      security: [{ clerkSession: [] }]
+      responses:
+        "200": { $ref: "#/components/responses/TeamUpdated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
 components:
   securitySchemes:
     clerkSession:
@@ -179,6 +471,14 @@ components:
         type: string
         format: uuid
   schemas:
+    Invitation:
+      type: object
+      required: [id, email, role, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { type: string, enum: [editor, viewer] }
+        expiresAt: { type: string, format: date-time }
     Workspace:
       type: object
       additionalProperties: false
@@ -209,10 +509,16 @@ components:
     ApplicationLifecycle:
       type: string
       enum: [active, paused, archived]
+    ApplicationAccessMode:
+      type: string
+      enum: [workspace, restricted]
+    ApplicationRole:
+      type: string
+      enum: [editor, viewer]
     Application:
       type: object
       additionalProperties: false
-      required: [id, name, slug, description, lifecycle, defaultHostname, createdAt, updatedAt]
+      required: [id, name, slug, description, accessMode, lifecycle, defaultHostname, createdBy, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -223,10 +529,15 @@ components:
           type: string
         description:
           type: string
+        accessMode:
+          $ref: "#/components/schemas/ApplicationAccessMode"
         lifecycle:
           $ref: "#/components/schemas/ApplicationLifecycle"
         defaultHostname:
           type: string
+        createdBy:
+          type: string
+          format: uuid
         createdAt:
           type: string
           format: date-time
@@ -242,6 +553,60 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Application"
+    Member:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          type: string
+          enum: [owner, editor, viewer]
+    MemberList:
+      type: object
+      additionalProperties: false
+      required: [members]
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+    ApplicationGrant:
+      type: object
+      additionalProperties: false
+      required: [id, email, displayName, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        role:
+          $ref: "#/components/schemas/ApplicationRole"
+    ApplicationAccess:
+      type: object
+      additionalProperties: false
+      required: [accessMode, createdBy, grants]
+      properties:
+        accessMode:
+          $ref: "#/components/schemas/ApplicationAccessMode"
+        createdBy:
+          type: string
+          format: uuid
+        grants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationGrant"
     CreateApplication:
       type: object
       additionalProperties: false
@@ -290,6 +655,16 @@ components:
             requestId:
               type: string
   responses:
+    TeamUpdated:
+      description: Team change completed
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [ok]
+            properties:
+              ok: { type: boolean, const: true }
     BadRequest:
       description: Invalid path, body, or lifecycle transition
       content:
@@ -297,7 +672,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
     Unauthorized:
-      description: Missing or invalid development identity
+      description: Missing or invalid Clerk session
       content:
         application/json:
           schema:
@@ -315,7 +690,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
     Conflict:
-      description: Application slug already exists
+      description: Application slug, member, or pending invitation already exists, or invitation capacity reached
       content:
         application/json:
           schema:

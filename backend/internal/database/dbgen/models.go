@@ -101,6 +101,48 @@ func (ns NullAgentRunStatus) Value() (driver.Value, error) {
 	return string(ns.AgentRunStatus), nil
 }
 
+type ApplicationAccessMode string
+
+const (
+	ApplicationAccessModeWorkspace  ApplicationAccessMode = "workspace"
+	ApplicationAccessModeRestricted ApplicationAccessMode = "restricted"
+)
+
+func (e *ApplicationAccessMode) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ApplicationAccessMode(s)
+	case string:
+		*e = ApplicationAccessMode(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ApplicationAccessMode: %T", src)
+	}
+	return nil
+}
+
+type NullApplicationAccessMode struct {
+	ApplicationAccessMode ApplicationAccessMode `json:"application_access_mode"`
+	Valid                 bool                  `json:"valid"` // Valid is true if ApplicationAccessMode is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullApplicationAccessMode) Scan(value interface{}) error {
+	if value == nil {
+		ns.ApplicationAccessMode, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ApplicationAccessMode.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullApplicationAccessMode) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ApplicationAccessMode), nil
+}
+
 type ApplicationLifecycle string
 
 const (
@@ -561,16 +603,17 @@ type AgentRunEvent struct {
 }
 
 type Application struct {
-	ID              pgtype.UUID          `json:"id"`
-	WorkspaceID     pgtype.UUID          `json:"workspace_id"`
-	Name            string               `json:"name"`
-	Slug            string               `json:"slug"`
-	Description     string               `json:"description"`
-	Lifecycle       ApplicationLifecycle `json:"lifecycle"`
-	DefaultHostname string               `json:"default_hostname"`
-	CreatedBy       pgtype.UUID          `json:"created_by"`
-	CreatedAt       pgtype.Timestamptz   `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz   `json:"updated_at"`
+	ID              pgtype.UUID           `json:"id"`
+	WorkspaceID     pgtype.UUID           `json:"workspace_id"`
+	Name            string                `json:"name"`
+	Slug            string                `json:"slug"`
+	Description     string                `json:"description"`
+	Lifecycle       ApplicationLifecycle  `json:"lifecycle"`
+	DefaultHostname string                `json:"default_hostname"`
+	CreatedBy       pgtype.UUID           `json:"created_by"`
+	CreatedAt       pgtype.Timestamptz    `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz    `json:"updated_at"`
+	AccessMode      ApplicationAccessMode `json:"access_mode"`
 }
 
 type ApplicationAccessGrant struct {
@@ -654,6 +697,19 @@ type Workspace struct {
 	CreatedBy pgtype.UUID        `json:"created_by"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WorkspaceInvitation struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	Email       string             `json:"email"`
+	Role        WorkspaceRole      `json:"role"`
+	TokenHash   string             `json:"token_hash"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	AcceptedAt  pgtype.Timestamptz `json:"accepted_at"`
+	RevokedAt   pgtype.Timestamptz `json:"revoked_at"`
 }
 
 type WorkspaceMembership struct {

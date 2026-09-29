@@ -1304,6 +1304,35 @@ a {
 .member-row strong { font-size: 10px; }
 .member-row small { color: var(--faint); font-size: 8px; }
 .member-row select { height: 31px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; background: rgba(255,255,255,.025); color: var(--muted); font-size: 8px; }
+.member-row select:focus-visible, .toggle:focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; }
+.team-invite-panel { margin-bottom: 24px; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.team-invite-panel h2 { margin: 0; font-size: 20px; }
+.team-invite-panel p, .team-invite-panel small { color: var(--muted); line-height: 1.6; }
+.team-invite-form { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto; align-items: end; gap: 12px; margin: 20px 0 12px; }
+.team-invite-form label, .team-share-link label { display: grid; min-width: 0; gap: 8px; font-size: 12px; }
+.team-invite-form input, .team-invite-form select, .team-share-link input, .workspace-picker select { min-width: 0; width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--ink); }
+.team-invite-form input:focus-visible, .team-invite-form select:focus-visible, .team-share-link input:focus-visible, .workspace-picker select:focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; }
+.team-share-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; margin-top: 18px; }
+.team-member-row { grid-template-columns: auto minmax(0,1fr) 100px auto; padding-block: 14px; }
+.member-row.team-member-row > button { width: auto; height: auto; padding: 9px 12px; }
+.team-member-row small, .team-invitation-row strong { overflow-wrap: anywhere; }
+.team-member-row .team-remove-confirm { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.team-remove-confirm p { flex-basis: 100%; color: var(--muted); }
+.team-invitation-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px; border-top: 1px solid var(--line); }
+.team-invitation-row > div { display: grid; gap: 6px; min-width: 0; font-size: 13px; }
+.team-invitation-row small { color: var(--muted); }
+.workspace-picker { min-width: 0; flex: 1; }
+.workspace-picker select { padding: 4px 0; border: 0; font-size: 12px; }
+.invitation-accept { display: grid; gap: 18px; }
+.invitation-accept h1, .invitation-accept p { margin: 0; }
+.invitation-accept h1 { font-size: 28px; font-weight: 600; letter-spacing: -.03em; }
+.invitation-accept p { line-height: 1.65; }
+@media (max-width: 700px) {
+  .team-invite-form, .team-share-link { grid-template-columns: 1fr; }
+  .team-invite-panel { padding: 18px; }
+}
+.member-row select:disabled, .toggle:disabled { cursor: wait; opacity: .65; }
+.member-inherited { color: var(--muted); font-size: 10px; }
 .member-row > button { display: grid; width: 29px; height: 29px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--faint); cursor: pointer; }
 .member-row > button:hover { background: rgba(242,154,145,.06); color: var(--danger); }
 .members-panel > footer { display: flex; align-items: center; gap: 7px; padding: 11px 16px; background: rgba(255,255,255,.015); color: var(--faint); font-size: 8px; }

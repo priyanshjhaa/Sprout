@@ -35,7 +35,7 @@ WHERE workspace.slug = $6
   AND membership.user_id = $5
   AND membership.role IN ('owner', 'editor')
 RETURNING id, workspace_id, name, slug, description, lifecycle, default_hostname,
-          created_by, created_at, updated_at
+          created_by, created_at, updated_at, access_mode
 `
 
 type CreateApplicationForMemberParams struct {
@@ -68,6 +68,50 @@ func (q *Queries) CreateApplicationForMember(ctx context.Context, arg CreateAppl
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AccessMode,
+	)
+	return i, err
+}
+
+const getApplicationAuthorization = `-- name: GetApplicationAuthorization :one
+SELECT membership.role AS workspace_role,
+       application.access_mode,
+       application.created_by,
+       application.created_by = $1 AS is_creator,
+       app_grant.role AS grant_role
+FROM applications AS application
+JOIN workspaces AS workspace ON workspace.id = application.workspace_id
+JOIN workspace_memberships AS membership ON membership.workspace_id = workspace.id
+LEFT JOIN application_access_grants AS app_grant
+  ON app_grant.application_id = application.id AND app_grant.user_id = $1
+WHERE workspace.slug = $2
+  AND application.id = $3
+  AND membership.user_id = $1
+`
+
+type GetApplicationAuthorizationParams struct {
+	UserID        pgtype.UUID `json:"user_id"`
+	WorkspaceSlug string      `json:"workspace_slug"`
+	ApplicationID pgtype.UUID `json:"application_id"`
+}
+
+type GetApplicationAuthorizationRow struct {
+	WorkspaceRole WorkspaceRole         `json:"workspace_role"`
+	AccessMode    ApplicationAccessMode `json:"access_mode"`
+	CreatedBy     pgtype.UUID           `json:"created_by"`
+	IsCreator     bool                  `json:"is_creator"`
+	GrantRole     NullApplicationRole   `json:"grant_role"`
+}
+
+func (q *Queries) GetApplicationAuthorization(ctx context.Context, arg GetApplicationAuthorizationParams) (GetApplicationAuthorizationRow, error) {
+	row := q.db.QueryRow(ctx, getApplicationAuthorization, arg.UserID, arg.WorkspaceSlug, arg.ApplicationID)
+	var i GetApplicationAuthorizationRow
+	err := row.Scan(
+		&i.WorkspaceRole,
+		&i.AccessMode,
+		&i.CreatedBy,
+		&i.IsCreator,
+		&i.GrantRole,
 	)
 	return i, err
 }
@@ -83,13 +127,23 @@ SELECT
     application.default_hostname,
     application.created_by,
     application.created_at,
-    application.updated_at
+    application.updated_at,
+    application.access_mode
 FROM applications AS application
 JOIN workspaces AS workspace ON workspace.id = application.workspace_id
 JOIN workspace_memberships AS membership ON membership.workspace_id = workspace.id
 WHERE workspace.slug = $1
   AND application.id = $2
   AND membership.user_id = $3
+  AND (
+    membership.role = 'owner'
+    OR application.created_by = $3
+    OR application.access_mode = 'workspace'
+    OR EXISTS (
+      SELECT 1 FROM application_access_grants AS app_grant
+      WHERE app_grant.application_id = application.id AND app_grant.user_id = $3
+    )
+  )
 `
 
 type GetApplicationForMemberParams struct {
@@ -112,6 +166,7 @@ func (q *Queries) GetApplicationForMember(ctx context.Context, arg GetApplicatio
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AccessMode,
 	)
 	return i, err
 }
@@ -127,12 +182,22 @@ SELECT
     application.default_hostname,
     application.created_by,
     application.created_at,
-    application.updated_at
+    application.updated_at,
+    application.access_mode
 FROM applications AS application
 JOIN workspaces AS workspace ON workspace.id = application.workspace_id
 JOIN workspace_memberships AS membership ON membership.workspace_id = workspace.id
 WHERE workspace.slug = $1
   AND membership.user_id = $2
+  AND (
+    membership.role = 'owner'
+    OR application.created_by = $2
+    OR application.access_mode = 'workspace'
+    OR EXISTS (
+      SELECT 1 FROM application_access_grants AS app_grant
+      WHERE app_grant.application_id = application.id AND app_grant.user_id = $2
+    )
+  )
 ORDER BY application.updated_at DESC, application.id
 `
 
@@ -161,6 +226,7 @@ func (q *Queries) ListApplicationsForMember(ctx context.Context, arg ListApplica
 			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AccessMode,
 		); err != nil {
 			return nil, err
 		}
@@ -188,11 +254,21 @@ WHERE application.id = $4
   AND workspace.slug = $5
   AND membership.workspace_id = workspace.id
   AND membership.user_id = $6
-  AND membership.role IN ('owner', 'editor')
+  AND (
+    membership.role = 'owner'
+    OR application.created_by = $6
+    OR (application.access_mode = 'workspace' AND membership.role = 'editor')
+    OR EXISTS (
+      SELECT 1 FROM application_access_grants AS app_grant
+      WHERE app_grant.application_id = application.id
+        AND app_grant.user_id = $6
+        AND app_grant.role = 'editor'
+    )
+  )
 RETURNING application.id, application.workspace_id, application.name,
           application.slug, application.description, application.lifecycle,
           application.default_hostname, application.created_by,
-          application.created_at, application.updated_at
+          application.created_at, application.updated_at, application.access_mode
 `
 
 type UpdateApplicationForMemberParams struct {
@@ -225,6 +301,7 @@ func (q *Queries) UpdateApplicationForMember(ctx context.Context, arg UpdateAppl
 		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AccessMode,
 	)
 	return i, err
 }

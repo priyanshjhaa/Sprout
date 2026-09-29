@@ -17,6 +17,8 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
 	"github.com/priyanshjhaa/Sprout/backend/internal/identity"
+	"github.com/priyanshjhaa/Sprout/backend/internal/sharing"
+	"github.com/priyanshjhaa/Sprout/backend/internal/team"
 )
 
 const serviceName = "sprout-api"
@@ -51,6 +53,8 @@ func realMain() int {
 	queries := dbgen.New(pool)
 	repository := application.NewSQLRepository(queries)
 	service := application.NewService(repository)
+	sharingService := sharing.NewService(queries)
+	teamService := team.NewService(pool, identity.ClerkProfileProvider{})
 	clerk.SetKey(appConfig.ClerkSecretKey)
 	identityService := identity.NewService(identity.ClerkProfileProvider{}, identity.NewSQLRepository(pool))
 	router := httpapi.NewRouter(logger, readiness, appConfig.WebOrigin)
@@ -58,6 +62,8 @@ func realMain() int {
 		api.Use(httpapi.AuthenticationMiddleware(identityService, logger, appConfig.WebOrigin))
 		httpapi.RegisterIdentityRoutes(api, identityService, logger)
 		httpapi.RegisterApplicationRoutes(api, service, logger)
+		httpapi.RegisterSharingRoutes(api, sharingService, logger)
+		httpapi.RegisterTeamRoutes(api, teamService, logger)
 	})
 
 	return run(ctx, appConfig, logger, router)

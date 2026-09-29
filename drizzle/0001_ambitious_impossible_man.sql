@@ -1,0 +1,2 @@
+CREATE TYPE "public"."application_access_mode" AS ENUM('workspace', 'restricted');--> statement-breakpoint
+ALTER TABLE "applications" ADD COLUMN "access_mode" "application_access_mode" DEFAULT 'workspace' NOT NULL;

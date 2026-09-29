@@ -16,6 +16,7 @@ import {
 
 export const workspaceRole = pgEnum("workspace_role", ["owner", "editor", "viewer"]);
 export const applicationRole = pgEnum("application_role", ["editor", "viewer"]);
+export const applicationAccessMode = pgEnum("application_access_mode", ["workspace", "restricted"]);
 export const applicationLifecycle = pgEnum("application_lifecycle", ["active", "paused", "archived"]);
 export const sourceProvider = pgEnum("source_provider", ["github", "gitlab", "manual", "agent"]);
 export const deploymentStatus = pgEnum("deployment_status", ["queued", "building", "live", "failed", "cancelled"]);
@@ -91,6 +92,26 @@ export const workspaceMemberships = pgTable(
   ],
 );
 
+// Only a SHA-256 digest is persisted; the random invitation token is returned once.
+export const workspaceInvitations = pgTable("workspace_invitations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  email: varchar("email", { length: 320 }).notNull(),
+  role: workspaceRole("role").notNull(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+  createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (table) => [
+  uniqueIndex("workspace_invitations_token_unique").on(table.tokenHash),
+  uniqueIndex("workspace_invitations_pending_email_unique").on(table.workspaceId, table.email)
+    .where(sql`${table.acceptedAt} is null and ${table.revokedAt} is null`),
+  check("workspace_invitations_role", sql`${table.role} in ('editor', 'viewer')`),
+  check("workspace_invitations_email", sql`${table.email} = lower(trim(${table.email}))`),
+]);
+
 export const applications = pgTable(
   "applications",
   {
@@ -99,6 +120,7 @@ export const applications = pgTable(
     name: varchar("name", { length: 120 }).notNull(),
     slug: varchar("slug", { length: 63 }).notNull(),
     description: text("description").notNull().default(""),
+    accessMode: applicationAccessMode("access_mode").default("workspace").notNull(),
     lifecycle: applicationLifecycle("lifecycle").default("active").notNull(),
     defaultHostname: varchar("default_hostname", { length: 253 }).notNull(),
     createdBy: uuid("created_by").notNull().references(() => users.id, { onDelete: "restrict" }),

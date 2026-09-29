@@ -26,6 +26,8 @@ The application database must never store:
 
 Authentication is delegated to an identity provider. `users` stores only the provider name and stable subject identifier; there is no password column. Repository connections store normalized provider, owner, repository, and branch fields instead of arbitrary URLs, preventing credentials from being embedded in a clone URL.
 
+`workspace_invitations` stores a one-way SHA-256 digest of a 256-bit random invitation token, never the token itself. This digest cannot be presented to the API as an invitation credential. It is not a password hash; passwords remain entirely with Clerk. Email, requested role, creator, expiry and accepted/revoked timestamps are invitation metadata. Fresh verified identity and single-use consumption are enforced by Go transactions.
+
 Agent runs persist lifecycle state and typed events only. Raw requests and model responses remain out of PostgreSQL until a separate redaction, retention, and encryption design exists.
 
 ## Initial relationships
@@ -53,6 +55,7 @@ erDiagram
 | `users` | External identity mapping and display profile; no authentication secrets. |
 | `workspaces` | Tenant boundary and workspace identity. |
 | `workspace_memberships` | Workspace role for each user. |
+| `workspace_invitations` | Email-bound, expiring invitations; only a token digest and lifecycle metadata. |
 | `applications` | Application identity and lifecycle. Runtime health comes from its latest deployment. |
 | `source_connections` | Normalized repository identity; no tokens or arbitrary credential-bearing URLs. |
 | `deployments` | One immutable release attempt and its safe summary status. |

@@ -5,6 +5,21 @@ import { useAuth } from "@clerk/nextjs";
 import { api } from "@/lib/api/api";
 import { queryKeys } from "@/lib/query/keys";
 
+export const useMe = () => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.me(userId), queryFn: async () => api.getMe(await getToken()), enabled: isLoaded && isSignedIn });
+};
+
+export const useWorkspaces = () => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.workspaces(userId), queryFn: async () => api.getWorkspaces(await getToken()), enabled: isLoaded && isSignedIn });
+};
+
+export const useInvitations = (slug: string, isOwner: boolean) => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.invitations(userId, slug), queryFn: async () => api.getInvitations(slug, await getToken()), enabled: isLoaded && isSignedIn && isOwner });
+};
+
 export const useWorkspace = (slug: string) => {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   return useQuery({
@@ -48,8 +63,21 @@ export const useEnvironment = (slug: string, appId: string) => {
 };
 
 export const useAccess = (slug: string, appId: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.access(userId, slug, appId), queryFn: api.getMembers });
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.access(userId, slug, appId),
+    queryFn: async () => api.getApplicationAccess(slug, appId, await getToken()),
+    enabled: isLoaded && isSignedIn,
+  });
+};
+
+export const useWorkspaceMembers = (slug: string) => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.members(userId, slug),
+    queryFn: async () => api.getWorkspaceMembers(slug, await getToken()),
+    enabled: isLoaded && isSignedIn,
+  });
 };
 
 export const useAgentEvents = (slug: string) => {

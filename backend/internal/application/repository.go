@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/priyanshjhaa/Sprout/backend/internal/authorization"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
 )
 
@@ -122,8 +123,35 @@ func (repository *SQLRepository) Update(ctx context.Context, input UpdateInput) 
 	if err != nil {
 		return Application{}, ErrNotFound
 	}
-	if _, err := repository.authorize(ctx, input.WorkspaceSlug, parsedUserID, true); err != nil {
+	if _, err := repository.authorize(ctx, input.WorkspaceSlug, parsedUserID, false); err != nil {
 		return Application{}, err
+	}
+	access, err := repository.queries.GetApplicationAuthorization(ctx, dbgen.GetApplicationAuthorizationParams{
+		WorkspaceSlug: input.WorkspaceSlug,
+		ApplicationID: parsedApplicationID,
+		UserID:        parsedUserID,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Application{}, ErrNotFound
+	}
+	if err != nil {
+		return Application{}, err
+	}
+	grant := authorization.ApplicationRole("")
+	if access.GrantRole.Valid {
+		grant = authorization.ApplicationRole(access.GrantRole.ApplicationRole)
+	}
+	permission := authorization.ApplicationAccess{
+		WorkspaceRole: authorization.WorkspaceRole(access.WorkspaceRole),
+		Grant:         grant,
+		Mode:          authorization.AccessMode(access.AccessMode),
+		IsCreator:     access.IsCreator,
+	}
+	if !permission.CanView() {
+		return Application{}, ErrNotFound
+	}
+	if !permission.CanEdit() {
+		return Application{}, ErrForbidden
 	}
 
 	params := dbgen.UpdateApplicationForMemberParams{
@@ -202,6 +230,7 @@ func mapApplication(row dbgen.Application) Application {
 		Name:            row.Name,
 		Slug:            row.Slug,
 		Description:     row.Description,
+		AccessMode:      string(row.AccessMode),
 		Lifecycle:       Lifecycle(row.Lifecycle),
 		DefaultHostname: row.DefaultHostname,
 		CreatedBy:       formatUUID(row.CreatedBy),

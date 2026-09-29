@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { SignOutButton, useUser, UserButton } from "@clerk/nextjs";
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
-import { useWorkspace } from "@/lib/query/hooks";
+import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
 
 const primaryNavigation = [
   { label: "Agent", path: "agent", icon: Bot },
@@ -31,6 +31,8 @@ const secondaryNavigation = [
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const workspaces = useWorkspaces();
   const params = useParams<{ workspaceSlug: string }>();
   const workspaceSlug = params.workspaceSlug ?? "acme";
   const { data: workspace, isError: workspaceUnavailable } = useWorkspace(workspaceSlug);
@@ -77,7 +79,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <div className="sidebar-brand"><Brand /><span>SMALL SOFTWARE, AT HOME</span></div>
         <div className="workspace-switcher">
           <span className="workspace-avatar"><Sprout size={17} strokeWidth={1.7} /></span>
-          <span><strong>{workspace?.name ?? "Your workspace"}</strong><small>Personal workspace</small></span>
+          <label className="workspace-picker"><span className="sr-only">Switch workspace</span>
+            <select value={workspaceSlug} aria-label="Switch workspace" disabled={workspaces.isLoading || workspaces.isError} onChange={(event) => { setMobileOpen(false); router.push(`/workspace/${encodeURIComponent(event.target.value)}/apps`); }}>
+              {!workspaces.data?.some((item) => item.slug === workspaceSlug) && <option value={workspaceSlug}>{workspace?.name ?? "Your workspace"}</option>}
+              {workspaces.data?.map((item) => <option value={item.slug} key={item.id}>{item.name}</option>)}
+            </select><small>{workspaces.isError ? "Could not load workspaces" : "Your workspaces"}</small>
+          </label>
         </div>
 
         <nav className="sidebar-navigation" aria-label="Workspace navigation">
