@@ -194,6 +194,7 @@ WHERE workspace.slug = $4
   AND (actor.role = 'owner' OR application.created_by = $2)
   AND target.role != 'owner'
   AND target.user_id != application.created_by
+FOR SHARE OF actor, target
 ON CONFLICT (application_id, user_id)
 DO UPDATE SET role = EXCLUDED.role, granted_by = EXCLUDED.granted_by
 RETURNING user_id, role
@@ -212,6 +213,8 @@ type UpsertApplicationGrantRow struct {
 	Role   ApplicationRole `json:"role"`
 }
 
+// Hold membership rows until the grant write finishes. Removal then either
+// sees and deletes this grant, or completes first and prevents the insert.
 func (q *Queries) UpsertApplicationGrant(ctx context.Context, arg UpsertApplicationGrantParams) (UpsertApplicationGrantRow, error) {
 	row := q.db.QueryRow(ctx, upsertApplicationGrant,
 		arg.Role,

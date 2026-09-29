@@ -699,6 +699,19 @@ type Workspace struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type WorkspaceInvitation struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	Email       string             `json:"email"`
+	Role        WorkspaceRole      `json:"role"`
+	TokenHash   string             `json:"token_hash"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	AcceptedAt  pgtype.Timestamptz `json:"accepted_at"`
+	RevokedAt   pgtype.Timestamptz `json:"revoked_at"`
+}
+
 type WorkspaceMembership struct {
 	WorkspaceID pgtype.UUID        `json:"workspace_id"`
 	UserID      pgtype.UUID        `json:"user_id"`

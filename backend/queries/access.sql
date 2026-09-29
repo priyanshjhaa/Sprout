@@ -51,6 +51,9 @@ WHERE workspace.slug = sqlc.arg(workspace_slug)
   AND (actor.role = 'owner' OR application.created_by = sqlc.arg(actor_id))
   AND target.role != 'owner'
   AND target.user_id != application.created_by
+-- Hold membership rows until the grant write finishes. Removal then either
+-- sees and deletes this grant, or completes first and prevents the insert.
+FOR SHARE OF actor, target
 ON CONFLICT (application_id, user_id)
 DO UPDATE SET role = EXCLUDED.role, granted_by = EXCLUDED.granted_by
 RETURNING user_id, role;
