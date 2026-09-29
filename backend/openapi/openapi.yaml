@@ -539,6 +539,46 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorEnvelope" }
         "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/deployment-simulations/{deploymentId}/events:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+      - $ref: "#/components/parameters/SimulationId"
+      - in: header
+        name: Last-Event-ID
+        description: Optional SHA-256 snapshot cursor from a previous progress event. Deduplicates identical snapshots; does not replay historical events.
+        schema: { type: string, pattern: '^[a-f0-9]{64}$' }
+    get:
+      summary: Stream authorized simulation snapshots with server-sent events
+      security: [{ clerkSession: [] }]
+      description: |
+        Uses the Authorization bearer header, never a token in the URL. Each progress
+        event carries a complete DeploymentSimulation JSON snapshot and a hash id.
+        Intermediate snapshots may be coalesced. The complete event carries {} and
+        ends a terminal job's stream, including when its snapshot cursor matches.
+        The unavailable event carries {"code":"progress_unavailable"} and closes
+        the stream after a permission or dependency failure; the client must stop
+        displaying stale progress and re-fetch through normal authenticated APIs.
+        Comment heartbeats trigger authorization rechecks every 10 seconds.
+        Connections end after 25 seconds or token expiry, whichever is earlier.
+        Reconnect with a fresh token and the last snapshot id; retry hint is 1000ms.
+        Limits are 4 streams per user and 128 per process. Disconnecting does not
+        cancel a job. No raw build logs or durable event history are retained here.
+      responses:
+        "200":
+          description: SSE progress, complete, unavailable events and heartbeat comments
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: Stream capacity reached (Retry-After 3 seconds) or streaming unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "500": { $ref: "#/components/responses/InternalError" }
 components:
   requestBodies:
     EmptySimulationInput:

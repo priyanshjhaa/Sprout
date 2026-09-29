@@ -221,6 +221,7 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 - [Authorization policy](./authorization-policy.md)
 - [Workspace invitations: learning and verification](./workspace-invitations-learning.md)
 - [Bounded deployment simulations: learning and verification](./deployment-worker-learning.md)
+- [Live simulation progress: streaming and learning](./deployment-streaming-learning.md)
 - [Database design](./database-design.md)
 - [Local PostgreSQL setup](./local-postgres.md)
 - [Repository implementation guidance](./AGENTS.md)

@@ -28,6 +28,7 @@ type Manager struct {
 	unhealthy  bool
 	workers    sync.WaitGroup
 	timeout    time.Duration
+	progress   *progressBroker
 }
 
 func NewManager(repository Repository, runner Runner, logger *slog.Logger, workers, capacity int, timeout time.Duration) (*Manager, error) {
@@ -35,7 +36,7 @@ func NewManager(repository Repository, runner Runner, logger *slog.Logger, worke
 		return nil, ErrInvalid
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	manager := &Manager{repository: repository, runner: runner, logger: logger, queue: make(chan *task, capacity), ctx: ctx, cancel: cancel, active: make(map[string]*task), timeout: timeout}
+	manager := &Manager{repository: repository, runner: runner, logger: logger, queue: make(chan *task, capacity), ctx: ctx, cancel: cancel, active: make(map[string]*task), timeout: timeout, progress: newProgressBroker()}
 	for range workers {
 		manager.workers.Add(1)
 		go manager.work()
@@ -103,6 +104,7 @@ func (m *Manager) Cancel(ctx context.Context, scope Scope, id string) (Job, erro
 	if item := m.active[scope.ApplicationID]; item != nil && item.job.ID == id {
 		item.cancel()
 	}
+	m.progress.notify(id)
 	return job, nil
 }
 
@@ -160,16 +162,19 @@ func (m *Manager) execute(item *task) {
 			m.mu.Unlock()
 			m.logger.Error("simulation persistence failed", "deployment_id", item.job.ID)
 		}
+		m.progress.notify(item.job.ID)
 	}()
 	if err := m.repository.Start(ctx, item.scope, item.job.ID); err != nil {
 		status, code = "failed", "start_rejected"
 		return
 	}
+	m.progress.notify(item.job.ID)
 	for _, stage := range stages {
 		if err := m.repository.Advance(ctx, item.job.ID, stage, "running"); err != nil {
 			status, code = "failed", "progress_unavailable"
 			return
 		}
+		m.progress.notify(item.job.ID)
 		if err := m.runner(ctx, stage); err != nil {
 			status, code = "failed", "simulated_step_failed"
 			return
@@ -178,5 +183,6 @@ func (m *Manager) execute(item *task) {
 			status, code = "failed", "progress_unavailable"
 			return
 		}
+		m.progress.notify(item.job.ID)
 	}
 }

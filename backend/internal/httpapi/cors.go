@@ -2,7 +2,7 @@ package httpapi
 
 import "net/http"
 
-const allowedRequestHeaders = "Content-Type, Authorization"
+const allowedRequestHeaders = "Content-Type, Authorization, Last-Event-ID"
 const allowedRequestMethods = "GET, POST, PATCH, PUT, DELETE, OPTIONS"
 
 func corsMiddleware(webOrigin string) func(http.Handler) http.Handler {

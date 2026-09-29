@@ -1,6 +1,6 @@
 # Bounded deployment simulations
 
-This implements backend learning milestone 6 on `deployment-jobs`. It deliberately does **not** build, execute or deploy an application. SSE and real Docker operations remain later milestones.
+This implements backend learning milestone 6 on `deployment-jobs`. It deliberately does **not** build, execute or deploy an application. SSE is now covered in [the streaming milestone](./deployment-streaming-learning.md); real Docker operations remain future work.
 
 ## The idea in plain language
 

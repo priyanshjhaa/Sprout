@@ -93,6 +93,7 @@ func realMain() int {
 		httpapi.RegisterSharingRoutes(api, sharingService, logger)
 		httpapi.RegisterTeamRoutes(api, teamService, logger)
 		httpapi.RegisterDeploymentSimulationRoutes(api, worker, logger)
+		httpapi.RegisterDeploymentStreamRoutes(api, worker, logger, ctx)
 	})
 
 	return run(ctx, appConfig, logger, router)
