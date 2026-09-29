@@ -447,7 +447,105 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/deployment-simulations:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+    post:
+      summary: Queue an explicitly simulated deployment (no application code runs)
+      description: Requires application edit permission and an active application. Two process-owned workers, eight waiting slots, one accepted job per application. Queue saturation returns 503 with Retry-After. Closing the request after acceptance does not cancel the job. No automatic retry or idempotency-key replay is provided; after an ambiguous response, list jobs before resubmitting.
+      security: [{ clerkSession: [] }]
+      requestBody: { $ref: "#/components/requestBodies/EmptySimulationInput" }
+      responses:
+        "201":
+          description: Persisted queued simulation; Location identifies the job
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Application inactive or already has an accepted simulation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "503": { $ref: "#/components/responses/SimulationUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    get:
+      summary: List the latest 50 simulations for an application the actor can view
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Newest-first simulations with typed stages, not runtime logs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deployments]
+                properties:
+                  deployments:
+                    type: array
+                    maxItems: 50
+                    items: { $ref: "#/components/schemas/DeploymentSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/deployment-simulations/{deploymentId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+      - $ref: "#/components/parameters/SimulationId"
+    get:
+      summary: Inspect simulation progress through current application permissions
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Simulation state and ordered source/build/package stages
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/deployment-simulations/{deploymentId}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+      - $ref: "#/components/parameters/SimulationId"
+    post:
+      summary: Cancel queued or running simulation work (application editors only)
+      description: Persist cancellation before signalling the worker. Terminal jobs return 409 and cannot be overwritten by late completion. An application's slot is released once its worker observes cancellation.
+      security: [{ clerkSession: [] }]
+      requestBody: { $ref: "#/components/requestBodies/EmptySimulationInput" }
+      responses:
+        "200":
+          description: Cancelled simulation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Simulation already terminal
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "500": { $ref: "#/components/responses/InternalError" }
 components:
+  requestBodies:
+    EmptySimulationInput:
+      required: true
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: false }
   securitySchemes:
     clerkSession:
       type: http
@@ -455,6 +553,11 @@ components:
       bearerFormat: JWT
       description: Clerk session token verified by the Go API and mapped to a Sprout user.
   parameters:
+    SimulationId:
+      name: deploymentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     WorkspaceSlug:
       name: workspaceSlug
       in: path
@@ -471,6 +574,31 @@ components:
         type: string
         format: uuid
   schemas:
+    DeploymentSimulation:
+      type: object
+      additionalProperties: false
+      required: [id, applicationId, simulated, status, failureCode, createdAt, startedAt, finishedAt, stages]
+      properties:
+        id: { type: string, format: uuid }
+        applicationId: { type: string, format: uuid }
+        simulated: { type: boolean, const: true }
+        status: { type: string, enum: [queued, building, succeeded, failed, cancelled] }
+        failureCode:
+          type: [string, "null"]
+          enum: [null, job_cancelled, server_shutdown, job_timeout, worker_panic, start_rejected, progress_unavailable, simulated_step_failed, process_interrupted]
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: [string, "null"], format: date-time }
+        finishedAt: { type: [string, "null"], format: date-time }
+        stages:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, status, failureCode]
+            properties:
+              name: { type: string, enum: [source, build, package] }
+              status: { type: string, enum: [pending, running, succeeded, failed, skipped] }
+              failureCode: { type: [string, "null"] }
     Invitation:
       type: object
       required: [id, email, role, expiresAt]
@@ -655,6 +783,15 @@ components:
             requestId:
               type: string
   responses:
+    SimulationUnavailable:
+      description: Queue full or simulation worker unavailable; no new job accepted
+      headers:
+        Retry-After:
+          description: Present when the queue is full
+          schema: { type: string }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
     TeamUpdated:
       description: Team change completed
       content:

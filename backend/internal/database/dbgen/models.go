@@ -282,6 +282,7 @@ const (
 	DeploymentStatusLive      DeploymentStatus = "live"
 	DeploymentStatusFailed    DeploymentStatus = "failed"
 	DeploymentStatusCancelled DeploymentStatus = "cancelled"
+	DeploymentStatusSucceeded DeploymentStatus = "succeeded"
 )
 
 func (e *DeploymentStatus) Scan(src interface{}) error {
@@ -647,6 +648,7 @@ type Deployment struct {
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	StartedAt          pgtype.Timestamptz `json:"started_at"`
 	FinishedAt         pgtype.Timestamptz `json:"finished_at"`
+	Simulated          bool               `json:"simulated"`
 }
 
 type DeploymentStageEvent struct {

@@ -220,6 +220,7 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 - [Go backend development and learning plan](./backend-development-learning-plan.md)
 - [Authorization policy](./authorization-policy.md)
 - [Workspace invitations: learning and verification](./workspace-invitations-learning.md)
+- [Bounded deployment simulations: learning and verification](./deployment-worker-learning.md)
 - [Database design](./database-design.md)
 - [Local PostgreSQL setup](./local-postgres.md)
 - [Repository implementation guidance](./AGENTS.md)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/go-chi/chi/v5"
@@ -15,6 +16,7 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/config"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
+	"github.com/priyanshjhaa/Sprout/backend/internal/deployment"
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
 	"github.com/priyanshjhaa/Sprout/backend/internal/identity"
 	"github.com/priyanshjhaa/Sprout/backend/internal/sharing"
@@ -46,7 +48,33 @@ func realMain() int {
 	}
 	defer pool.Close()
 
+	deploymentRepository := deployment.NewSQLRepository(pool)
+	startupCtx, startupCancel := context.WithTimeout(ctx, 10*time.Second)
+	releaseWorkerLock, err := deploymentRepository.AcquireProcessLock(startupCtx)
+	startupCancel()
+	if err != nil {
+		logger.Error("simulation worker ownership or recovery failed; only one API process is supported")
+		return 1
+	}
+	defer releaseWorkerLock()
+	worker, err := deployment.NewManager(deploymentRepository, deployment.Simulate, logger, 2, 8, 15*time.Second)
+	if err != nil {
+		logger.Error("simulation worker configuration invalid")
+		return 1
+	}
+	defer func() {
+		if err := worker.Close(); err != nil {
+			logger.Error("simulation shutdown incomplete; persisted jobs will be recovered on restart")
+		}
+	}()
+
 	readiness := func(ctx context.Context) error {
+		if err := deploymentRepository.CheckOwnership(ctx); err != nil {
+			return err
+		}
+		if err := worker.Ready(); err != nil {
+			return err
+		}
 		return database.Ping(ctx, pool)
 	}
 
@@ -64,6 +92,7 @@ func realMain() int {
 		httpapi.RegisterApplicationRoutes(api, service, logger)
 		httpapi.RegisterSharingRoutes(api, sharingService, logger)
 		httpapi.RegisterTeamRoutes(api, teamService, logger)
+		httpapi.RegisterDeploymentSimulationRoutes(api, worker, logger)
 	})
 
 	return run(ctx, appConfig, logger, router)

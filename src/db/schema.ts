@@ -19,7 +19,7 @@ export const applicationRole = pgEnum("application_role", ["editor", "viewer"]);
 export const applicationAccessMode = pgEnum("application_access_mode", ["workspace", "restricted"]);
 export const applicationLifecycle = pgEnum("application_lifecycle", ["active", "paused", "archived"]);
 export const sourceProvider = pgEnum("source_provider", ["github", "gitlab", "manual", "agent"]);
-export const deploymentStatus = pgEnum("deployment_status", ["queued", "building", "live", "failed", "cancelled"]);
+export const deploymentStatus = pgEnum("deployment_status", ["queued", "building", "live", "failed", "cancelled", "succeeded"]);
 export const deploymentStage = pgEnum("deployment_stage", [
   "source",
   "build",
@@ -162,6 +162,7 @@ export const deployments = pgTable(
     sourceConnectionId: uuid("source_connection_id").references(() => sourceConnections.id, { onDelete: "set null" }),
     triggeredBy: uuid("triggered_by").references(() => users.id, { onDelete: "set null" }),
     status: deploymentStatus("status").default("queued").notNull(),
+    simulated: boolean("simulated").default(false).notNull(),
     branch: varchar("branch", { length: 255 }),
     commitSha: varchar("commit_sha", { length: 64 }),
     failureCode: varchar("failure_code", { length: 80 }),
@@ -173,6 +174,9 @@ export const deployments = pgTable(
   (table) => [
     index("deployments_application_created_idx").on(table.applicationId, table.createdAt),
     index("deployments_status_idx").on(table.status),
+    uniqueIndex("deployments_one_active_simulation_per_app").on(table.applicationId)
+      .where(sql`${table.simulated} = true and ${table.status} in ('queued', 'building')`),
+    check("deployments_simulation_not_live", sql`not ${table.simulated} or ${table.status} <> 'live'`),
     check("deployments_duration_nonnegative", sql`${table.durationMs} is null or ${table.durationMs} >= 0`),
   ],
 );
