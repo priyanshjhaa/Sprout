@@ -21,6 +21,19 @@ If membership is removed, all access ends immediately, even if an application gr
 
 This policy governs Sprout's control-plane API. Authentication and authorization for a deployed application's own URL are separate concerns and are not implied by these grants.
 
+## Invitations and membership management
+
+- Only workspace owners create/list/revoke invitations or change/remove members. Nonmembers receive `404`; non-owner members receive `403`.
+- Invitations grant only `editor` or `viewer`. Owner promotion, ownership transfer, owner removal and owner demotion are deliberately unsupported.
+- Invitation tokens contain 32 cryptographically random bytes. PostgreSQL stores only a SHA-256 digest, email, role, creator, expiry and consumption/revocation timestamps. Raw tokens are returned once, never listed or logged.
+- Links expire after seven days and can be accepted once. The accepting Clerk subject must map to the authenticated local user, and a fresh Clerk lookup must supply the matching verified primary email. Cached profile email is insufficient.
+- The invitation token travels in a browser URL fragment, then in a POST body. The browser temporarily keeps it in per-tab session storage across OAuth and removes it after acceptance. Never include tokens in request paths, query strings, analytics, screenshots or logs.
+- Workspace mutation transactions acquire the same workspace row lock. Consuming an invitation and creating membership commit together; retries cannot alter an existing member's role. Concurrent acceptance has one winner. Invitation responses use `Cache-Control: no-store`.
+- Duplicate pending email invitations return `409`; revoke the old invitation before replacing it. Expired invitations may be replaced. At most 100 unexpired pending invitations are allowed per workspace.
+- Removal deletes membership and explicit application grants, and revokes pending invitations addressed to the member's recorded email, in one transaction. Grant insertion locks the relevant memberships so a simultaneous removal cannot leave a newly inserted grant behind.
+- Downgrading workspace role does not erase explicit application grants or creator privileges. Review application access separately. A removed creator has no access; if later re-invited, creator privileges apply again.
+- No email delivery or deployed-application URL authorization is included. See [verification and learning notes](./workspace-invitations-learning.md).
+
 ## Request trace and learning checkpoint
 
 Browser session → Clerk verifies identity → Go resolves the local user → SQL checks workspace membership and application scope → service applies the operation rule → SQL performs the read or write → response. In NestJS this might be split between guards and services; in Django between middleware, permissions, and views. In Go the checks are explicit dependencies, and a middleware identity alone is never enough.

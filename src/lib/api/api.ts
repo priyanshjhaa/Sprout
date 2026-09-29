@@ -33,6 +33,13 @@ export interface ApplicationAccessResponse {
   grants: Array<Pick<WorkspaceMemberResponse, "id" | "email" | "displayName"> & { role: "editor" | "viewer" }>;
 }
 
+export interface InvitationResponse {
+  id: string;
+  email: string;
+  role: "editor" | "viewer";
+  expiresAt: string;
+}
+
 interface ErrorResponse {
   error?: {
     code?: string;
@@ -136,6 +143,30 @@ function mapApplication(application: ApplicationResponse): Application {
 }
 
 const applicationAPI = {
+  async getWorkspaces(token: string | null): Promise<Workspace[]> {
+    return (await request<{ workspaces: Workspace[] }>("/api/v1/workspaces", token)).workspaces;
+  },
+  async getInvitations(slug: string, token: string | null): Promise<InvitationResponse[]> {
+    return (await request<{ invitations: InvitationResponse[] }>(`/api/v1/workspaces/${encodeURIComponent(slug)}/invitations`, token)).invitations;
+  },
+  createInvitation(slug: string, email: string, role: "editor" | "viewer", token: string | null): Promise<InvitationResponse & { token: string }> {
+    return request(`/api/v1/workspaces/${encodeURIComponent(slug)}/invitations`, token,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, role }) });
+  },
+  revokeInvitation(slug: string, id: string, token: string | null): Promise<{ ok: boolean }> {
+    return request(`/api/v1/workspaces/${encodeURIComponent(slug)}/invitations/${encodeURIComponent(id)}`, token, { method: "DELETE" });
+  },
+  acceptInvitation(invitationToken: string, token: string | null): Promise<Workspace> {
+    return request("/api/v1/invitations/accept", token,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: invitationToken }) });
+  },
+  changeMemberRole(slug: string, id: string, role: "editor" | "viewer", token: string | null): Promise<{ ok: boolean }> {
+    return request(`/api/v1/workspaces/${encodeURIComponent(slug)}/members/${encodeURIComponent(id)}`, token,
+      { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+  },
+  removeMember(slug: string, id: string, token: string | null): Promise<{ ok: boolean }> {
+    return request(`/api/v1/workspaces/${encodeURIComponent(slug)}/members/${encodeURIComponent(id)}`, token, { method: "DELETE" });
+  },
   getMe(token: string | null): Promise<MeResponse> {
     return request<MeResponse>("/api/v1/me", token);
   },

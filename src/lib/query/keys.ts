@@ -1,4 +1,6 @@
 export const queryKeys = {
+  workspaces: (userId: string | null | undefined) => ["user", userId, "workspaces"] as const,
+  invitations: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "invitations"] as const,
   me: (userId: string | null | undefined) => ["user", userId, "me"] as const,
   workspace: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug] as const,
   apps: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "apps"] as const,

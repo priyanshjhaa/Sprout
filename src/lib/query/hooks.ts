@@ -5,6 +5,21 @@ import { useAuth } from "@clerk/nextjs";
 import { api } from "@/lib/api/api";
 import { queryKeys } from "@/lib/query/keys";
 
+export const useMe = () => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.me(userId), queryFn: async () => api.getMe(await getToken()), enabled: isLoaded && isSignedIn });
+};
+
+export const useWorkspaces = () => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.workspaces(userId), queryFn: async () => api.getWorkspaces(await getToken()), enabled: isLoaded && isSignedIn });
+};
+
+export const useInvitations = (slug: string, isOwner: boolean) => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.invitations(userId, slug), queryFn: async () => api.getInvitations(slug, await getToken()), enabled: isLoaded && isSignedIn && isOwner });
+};
+
 export const useWorkspace = (slug: string) => {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   return useQuery({

@@ -205,7 +205,7 @@ The next implementation phases are intentionally incremental:
 
 1. Add automated component and critical-journey browser tests.
 2. Define the versioned backend API from the existing frontend domain model.
-3. Add invitations and per-application sharing to the verified identity and workspace foundation.
+3. Verify the implemented invitation and per-application sharing flow with two Clerk accounts (see the invitation guide below).
 4. Implement the smallest deployment loop: repository, Docker build, container, proxy, and URL.
 5. Connect deployment state and log streaming to the existing UI.
 6. Add database provisioning, encrypted secrets, resource limits, and rollback.
@@ -218,6 +218,8 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 
 - [Frontend implementation plan](./frontend-implementation.md)
 - [Go backend development and learning plan](./backend-development-learning-plan.md)
+- [Authorization policy](./authorization-policy.md)
+- [Workspace invitations: learning and verification](./workspace-invitations-learning.md)
 - [Database design](./database-design.md)
 - [Local PostgreSQL setup](./local-postgres.md)
 - [Repository implementation guidance](./AGENTS.md)
