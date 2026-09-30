@@ -28,8 +28,9 @@ func run(ctx context.Context, args []string, out, diagnostics io.Writer) int {
 	flags.SetOutput(io.Discard) // Input paths and arbitrary arguments may be sensitive.
 	archive := flags.String("archive", "", "plain uncompressed source tar archive")
 	runtime := flags.String("runtime", "", "optional application contract: node")
-	if flags.Parse(args) != nil || *archive == "" || flags.NArg() != 0 || (*runtime != "" && *runtime != "node") {
-		fmt.Fprintln(diagnostics, "usage: sourcecheck -archive <local-source.tar> [-runtime node]")
+	buildNode := flags.Bool("build-node", false, "run the Node build scripts in the restricted local Docker smoke runner")
+	if flags.Parse(args) != nil || *archive == "" || flags.NArg() != 0 || (*runtime != "" && *runtime != "node") || (*buildNode && *runtime == "node") {
+		fmt.Fprintln(diagnostics, "usage: sourcecheck -archive <local-source.tar> [-runtime node | -build-node]")
 		return 2
 	}
 	info, err := os.Lstat(*archive)
@@ -49,11 +50,22 @@ func run(ctx context.Context, args []string, out, diagnostics io.Writer) int {
 		fmt.Fprintln(diagnostics, "source_input_invalid")
 		return 1
 	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	timeout := 10 * time.Second
+	if *buildNode {
+		timeout = 2*time.Minute + 15*time.Second
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	summary, err := source.WithArchive(ctx, file, func(ctx context.Context, files fs.FS) error {
 		if *runtime == "node" {
 			return nodeapp.Validate(ctx, files)
+		}
+		if *buildNode {
+			runner, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute)
+			if err != nil {
+				return err
+			}
+			return runner.RunFiles(ctx, files)
 		}
 		return nil
 	})

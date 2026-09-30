@@ -1,6 +1,6 @@
 # Node.js application contract — version 1
 
-This is the first supported application type for Sprout. The current implementation validates prepared source and provides a small reference app. **It does not yet install dependencies, execute builds, create images, or deploy applications.** Simulation endpoints stay unchanged.
+This is the first supported application type for Sprout. A local smoke runner executes the reference app's build command inside an offline, disposable Node container. It does not export a build image, start an application runtime, or connect to simulation endpoints. Simulation jobs remain simulations.
 
 ## Accepted source
 
@@ -23,31 +23,31 @@ The following are the agreed execution contract, **not commands currently run by
 
 | Phase | Command | Boundary |
 | --- | --- | --- |
-| Dependencies | `npm ci --ignore-scripts --no-audit --no-fund` | Restricted dependency-fetch environment; no credentials or general network access |
+| Dependencies | `npm ci --offline --ignore-scripts --no-audit --no-fund` | Local smoke runner: dependency-free lockfile, offline container |
 | Build | `npm --ignore-scripts run build` | No network; bounded disposable container |
 | Runtime | `npm --ignore-scripts start` | Separate runtime container with explicit routing and permissions |
 
-Node 24 and the bundled npm version will be pinned through a reviewed image digest before execution is enabled. A moving `node:24` tag is not sufficient for reproducible builds. The application cannot select the image, override container flags, mount host paths, or request a Docker socket.
+The smoke runner uses `node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6`, the official `node:24.21.0-bookworm-slim` image digest downloaded for this milestone. Docker identified it as Linux/arm64 on this host. The runner does not use a moving `node:24` tag. The application cannot select the image, override container flags, mount host paths, or request a Docker socket.
 
 The application must listen on `0.0.0.0` using `PORT` (initially `3000`), return HTTP 200 from `/health` when ready, and shut down on SIGTERM. These are runtime acceptance conditions; static JSON validation cannot prove them. No real URL is reported until readiness and routing succeed.
 
-## Build isolation requirements for the next implementation
+## Current local build isolation
 
-Use a disposable non-root container with a read-only root filesystem, all Linux capabilities dropped, no-new-privileges, and the default seccomp profile. Do not use privileged mode, host networking/PID namespaces, host bind mounts, the Docker socket, or inherited host environment variables. Docker control access belongs only to trusted Sprout platform code.
+The local smoke runner uses a disposable non-root container with a read-only root filesystem, all Linux capabilities dropped, no-new-privileges, Docker's default seccomp profile, no networking, and no host mounts. It does not use privileged mode, host namespaces, the Docker socket, or inherited host environment variables. Docker control access belongs only to trusted Sprout platform code. The command is local developer tooling and assumes the configured Docker context is a trusted local daemon.
 
-Initial build budgets: one CPU, 1 GiB memory with no additional swap, 128 processes, a size-limited 512 MiB writable temporary filesystem, and a two-minute wall-clock timeout. Treat these as proposed defaults to verify with the reference app, not implemented protections. Container output must be bounded and must not be persisted or printed as unrestricted raw logs.
+The local runner applies a two-minute timeout, one CPU, 1 GiB memory with no extra swap, 128 processes, a 512 MiB workspace tmpfs, and 64 MiB `/tmp`. It discards container logs and exports no build output. These are local smoke-build limits, not shared service capacity controls.
 
-Separate dependency acquisition from script execution. The first isolated smoke test will use the dependency-free reference app with networking disabled. Do not enable arbitrary dependency downloads until constrained egress, redirects, cache ownership, and registry policy are enforced. Do not weaken network isolation just to make an install pass.
+The local runner uses `npm ci --offline` and accepts only lockfiles with no third-party dependencies. The build runs `npm --ignore-scripts run build` with networking disabled. Arbitrary dependency downloads remain unsupported until constrained egress, redirects, cache ownership, and registry policy are enforced. Do not weaken network isolation just to make an install pass.
 
-Cancellation must stop and remove the owned container—not only terminate the Docker client. Use explicit ownership labels and identifiers for cleanup; never prune unrelated containers, volumes, images, or caches. Cleanup gets its own bounded context after a cancelled build. Crash recovery and storage accounting must be defined before public build submission.
+Cancellation interrupts the Docker client, then removes only this run's specifically named container with a separate bounded cleanup context. A short poll handles the race where the daemon creates the container as cancellation arrives. Normal completion and build failure also remove that container. The runner never prunes unrelated containers, volumes, images, or caches. Crash recovery and storage accounting must be defined before public build submission.
 
 Docker restrictions are defense in depth, not proof of safe hostile multi-tenant execution. Shared-kernel risks remain. Production use needs a dedicated, appropriately isolated build environment and security review; this local development milestone does not certify that boundary.
 
 ## Current request/resource trace
 
-`sourcecheck -runtime node` → bounded archive extraction → root-confined filesystem → bounded manifest/lock reads → contract checks → safe summary → temporary-tree cleanup.
+`sourcecheck -build-node` → bounded archive extraction → root-confined filesystem → Node contract and dependency-free checks → bounded tar input → trusted Docker CLI → pinned, network-disabled build container → safe summary/error → named-container cleanup → temporary-tree cleanup.
 
-No JavaScript is executed during this trace. No new tables, credentials, HTTP endpoints, or frontend changes are introduced.
+`sourcecheck -runtime node` remains validation-only. `-build-node` executes the submitted build script inside Docker; it does not export `dist`, create a deployment image, start the runtime, or introduce new tables, credentials, HTTP endpoints, or frontend changes.
 
 ## Verification
 
@@ -56,25 +56,27 @@ From `backend/`, create an archive of only the explicit example files in a direc
 ```sh
 tar --format=ustar -cf /tmp/sprout-node-example.tar -C dev/node-example package.json package-lock.json build.mjs server.mjs
 go run ./cmd/sourcecheck -archive /tmp/sprout-node-example.tar -runtime node
-go test -race ./internal/nodeapp ./internal/source ./cmd/sourcecheck
-go vet ./...
+go run ./cmd/sourcecheck -archive /tmp/sprout-node-example.tar -build-node
 ```
 
-The example has no dependencies. Its build copies the server into `dist`; its start command will launch that server when container execution is implemented. Avoid running submitted application scripts directly on your host, even when metadata validation succeeds.
+The example has no dependencies. Its build copies the server into `dist`; its start command is reserved for the separate runtime milestone. Avoid running submitted application scripts directly on your host, even when metadata validation succeeds.
 
 Tests cover required scripts, Node version, npm/workspace policy, root/lock mismatches, dependency URLs and integrity shape, linked packages, source-tree exclusions, malformed/oversized JSON, cancellation, and the committed example. The CLI reports only source counts or safe error codes, never script contents or package/provider error payloads.
 
-Verification for this milestone: full backend tests with race detection and local PostgreSQL integrations, `go vet`, and repository lint passed. Manual archive validation accepted the four-file example (`1,162` source bytes) and rejected an archive missing its manifest with `node_contract_invalid`. The example scripts were not executed; container build and runtime verification remain future work.
+The `-build-node` command requires Docker to be running and the pinned Node image to already be present locally; it does not pull images automatically. It reports success/failure without printing submitted build output. The earlier contract-validation milestone passed its backend race tests, database integrations, vet, lint, and manual archive checks. The new container runner has not yet been executed or runtime-verified; this milestone is limited to implementing the runner and wiring the command.
 
 ## Learning checkpoint
 
-Go is currently acting as an inspector: reading JSON and enforcing platform rules. Later it will act as a process/container supervisor. NestJS or Django could enforce the same contract; Go makes filesystem ownership, cancellation, and process cleanup explicit instead of supplying a deployment framework.
+The mental model is a trusted supervisor giving untrusted build code a small disposable workbench. The Go process validates and prepares the input, starts Docker with fixed permissions and limits, waits for the result, and cleans up the one container it created. It does not make the application code trustworthy.
+
+In NestJS or Django, the same product flow would usually be implemented by an API handler handing work to another process or job system. Here, the local Go command directly supervises the Docker CLI with a request context and an explicit cleanup path. That is useful for learning process and cancellation mechanics, but this local command is not yet the eventual asynchronous deployment worker.
 
 1. Why can a valid package manifest still contain a dangerous build script?
 2. Why does disabling install hooks not make `npm run build` harmless?
 3. Why must cancellation remove the container rather than merely stop the Docker CLI?
+4. Which part of this flow is the trusted supervisor, and which part is untrusted code?
 
-Commit boundary: `feat: validate Node application build contract`.
+Commit boundary: `feat: add restricted Node build smoke runner`.
 
 ## References
 
