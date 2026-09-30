@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
 	"github.com/priyanshjhaa/Sprout/backend/internal/source"
 )
 
@@ -26,8 +27,9 @@ func run(ctx context.Context, args []string, out, diagnostics io.Writer) int {
 	flags := flag.NewFlagSet("sourcecheck", flag.ContinueOnError)
 	flags.SetOutput(io.Discard) // Input paths and arbitrary arguments may be sensitive.
 	archive := flags.String("archive", "", "plain uncompressed source tar archive")
-	if flags.Parse(args) != nil || *archive == "" || flags.NArg() != 0 {
-		fmt.Fprintln(diagnostics, "usage: sourcecheck -archive <local-source.tar>")
+	runtime := flags.String("runtime", "", "optional application contract: node")
+	if flags.Parse(args) != nil || *archive == "" || flags.NArg() != 0 || (*runtime != "" && *runtime != "node") {
+		fmt.Fprintln(diagnostics, "usage: sourcecheck -archive <local-source.tar> [-runtime node]")
 		return 2
 	}
 	info, err := os.Lstat(*archive)
@@ -49,7 +51,12 @@ func run(ctx context.Context, args []string, out, diagnostics io.Writer) int {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	summary, err := source.WithArchive(ctx, file, func(context.Context, fs.FS) error { return nil })
+	summary, err := source.WithArchive(ctx, file, func(ctx context.Context, files fs.FS) error {
+		if *runtime == "node" {
+			return nodeapp.Validate(ctx, files)
+		}
+		return nil
+	})
 	if err != nil {
 		fmt.Fprintln(diagnostics, err)
 		return 1

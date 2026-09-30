@@ -53,3 +53,40 @@ func TestSourcecheckInvalidInput(t *testing.T) {
 		}
 	}
 }
+
+func TestSourcecheckNodeContract(t *testing.T) {
+	for _, valid := range []bool{true, false} {
+		var archive bytes.Buffer
+		writer := tar.NewWriter(&archive)
+		for _, name := range []string{"package.json", "package-lock.json", "build.mjs", "server.mjs"} {
+			data, err := os.ReadFile(filepath.Join("../../dev/node-example", name))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !valid && name == "package.json" {
+				data = []byte(`{"scripts":{"build":"secret-command"}}`)
+			}
+			if err := writer.WriteHeader(&tar.Header{Name: name, Typeflag: tar.TypeReg, Format: tar.FormatUSTAR, Size: int64(len(data))}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := writer.Write(data); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := writer.Close(); err != nil {
+			t.Fatal(err)
+		}
+		input := filepath.Join(t.TempDir(), "example.tar")
+		if err := os.WriteFile(input, archive.Bytes(), 0600); err != nil {
+			t.Fatal(err)
+		}
+		var out, diagnostics bytes.Buffer
+		code := run(context.Background(), []string{"-archive", input, "-runtime", "node"}, &out, &diagnostics)
+		if valid && (code != 0 || !strings.Contains(out.String(), `"files":4`)) {
+			t.Fatalf("code=%d error=%s", code, &diagnostics)
+		}
+		if !valid && (code != 1 || diagnostics.String() != "node_contract_invalid\n" || out.Len() != 0) {
+			t.Fatalf("unsafe failure: code=%d %s", code, &diagnostics)
+		}
+	}
+}
