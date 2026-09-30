@@ -55,7 +55,7 @@ interface MeResponse {
   workspace: Workspace;
 }
 
-const apiURL = process.env.NEXT_PUBLIC_SPROUT_API_URL ?? "http://127.0.0.1:8080";
+export const apiURL = process.env.NEXT_PUBLIC_SPROUT_API_URL ?? "http://127.0.0.1:8080";
 const accents = ["mint", "amber", "blue", "rose"] as const;
 
 export class APIError extends Error {
@@ -70,7 +70,7 @@ export class APIError extends Error {
   }
 }
 
-async function request<T>(path: string, token: string | null, options: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, token: string | null, options: RequestInit = {}): Promise<T> {
   if (!token) {
     throw new APIError("Sign in to continue.", 401, "authentication_required");
   }

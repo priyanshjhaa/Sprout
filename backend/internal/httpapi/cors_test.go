@@ -21,7 +21,7 @@ func TestCORSAllowsConfiguredWebOrigin(t *testing.T) {
 	if response.Header().Get("Access-Control-Allow-Origin") != "http://localhost:3000" {
 		t.Fatalf("allow origin = %q, want configured origin", response.Header().Get("Access-Control-Allow-Origin"))
 	}
-	if response.Header().Get("Access-Control-Allow-Headers") != "Content-Type, Authorization" {
+	if response.Header().Get("Access-Control-Allow-Headers") != "Content-Type, Authorization, Last-Event-ID" {
 		t.Fatalf("allow headers = %q, want bearer auth header", response.Header().Get("Access-Control-Allow-Headers"))
 	}
 	if response.Header().Get("Access-Control-Allow-Methods") != allowedRequestMethods {

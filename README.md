@@ -60,7 +60,7 @@ The dashboard deliberately keeps only **Agent** and **Apps** prominent. Operatio
 - Lucide icons
 - A typed HTTP adapter for application data, with focused mocks for unfinished capabilities
 
-The frontend uses an explicit API boundary. Components consume typed TanStack Query hooks rather than importing fixtures directly. The application list and detail views now read from the Go API; unfinished deployment, log, environment, access, and agent capabilities remain behind the same boundary as mocks.
+The frontend uses an explicit API boundary. Components consume typed TanStack Query hooks rather than importing fixtures directly. Application views, access controls, workspace teams, and deployment simulations now use the Go API. Simulation detail pages receive live SSE progress and support cancellation; they do not execute application code or produce a live URL. Logs, environment provisioning, and agent capabilities remain mock previews.
 
 ## Getting started
 
@@ -220,6 +220,9 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 - [Go backend development and learning plan](./backend-development-learning-plan.md)
 - [Authorization policy](./authorization-policy.md)
 - [Workspace invitations: learning and verification](./workspace-invitations-learning.md)
+- [Bounded deployment simulations: learning and verification](./deployment-worker-learning.md)
+- [Live simulation progress: streaming and learning](./deployment-streaming-learning.md)
+- [Source preparation: filesystem safety and learning](./source-preparation-learning.md)
 - [Database design](./database-design.md)
 - [Local PostgreSQL setup](./local-postgres.md)
 - [Repository implementation guidance](./AGENTS.md)

@@ -7,6 +7,8 @@ export const queryKeys = {
   app: (userId: string | null | undefined, slug: string, appId: string) => ["user", userId, "workspace", slug, "app", appId] as const,
   deployments: (userId: string | null | undefined, slug: string, appId: string) =>
     ["user", userId, "workspace", slug, "app", appId, "deployments"] as const,
+  simulation: (userId: string | null | undefined, slug: string, appId: string, id: string) =>
+    ["user", userId, "workspace", slug, "app", appId, "deployments", id] as const,
   logs: (userId: string | null | undefined, slug: string, appId: string) => ["user", userId, "workspace", slug, "app", appId, "logs"] as const,
   environment: (userId: string | null | undefined, slug: string, appId: string) =>
     ["user", userId, "workspace", slug, "app", appId, "environment"] as const,

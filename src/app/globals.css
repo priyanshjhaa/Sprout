@@ -3064,6 +3064,23 @@ body {
 .build-log-panel .log-error { color: var(--danger); }
 .build-log-panel footer { justify-content: flex-start; gap: 7px; border-top: 1px solid var(--line); border-bottom: 0; color: var(--faint); font-size: 8px; }
 .deployment-detail-loading { min-height: 400px; border-radius: 16px; background: rgba(255,255,255,.025); }
+.simulation-note { margin: 16px 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.simulation-notice { padding: 18px; margin: 16px 0; border: 1px solid var(--line); border-radius: 14px; color: var(--muted); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.simulation-notice > svg { display: inline; vertical-align: middle; margin-right: 6px; }
+.simulation-notice .button { margin-top: 12px; }
+.simulation-stages { grid-template-columns: repeat(3, minmax(90px, 1fr)); }
+.simulation-stages strong { text-transform: capitalize; }
+.simulation-refresh { text-decoration: underline; text-underline-offset: 3px; }
+.status-succeeded { color: var(--sprout); }
+.status-queued, .status-cancelled { color: var(--muted); }
+.simulation-view button:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 640px) {
+  .simulation-view .section-heading { align-items: flex-start; gap: 16px; flex-direction: column; }
+  .simulation-view .deployment-row { grid-template-columns: auto minmax(0, 1fr) auto; padding: 14px; }
+  .simulation-view .deployment-row .status-pill { display: inline-flex; }
+  .simulation-view .deployment-arrow { display: none; }
+  .simulation-view .deployment-stages { grid-template-columns: repeat(3, minmax(80px, 1fr)); }
+}
 
 @media (max-width: 720px) {
   .deployment-row { grid-template-columns: auto minmax(0, 1fr) auto; }
