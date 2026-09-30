@@ -60,7 +60,7 @@ The dashboard deliberately keeps only **Agent** and **Apps** prominent. Operatio
 - Lucide icons
 - A typed HTTP adapter for application data, with focused mocks for unfinished capabilities
 
-The frontend uses an explicit API boundary. Components consume typed TanStack Query hooks rather than importing fixtures directly. The application list and detail views now read from the Go API; unfinished deployment, log, environment, access, and agent capabilities remain behind the same boundary as mocks.
+The frontend uses an explicit API boundary. Components consume typed TanStack Query hooks rather than importing fixtures directly. Application views, access controls, workspace teams, and deployment simulations now use the Go API. Simulation detail pages receive live SSE progress and support cancellation; they do not execute application code or produce a live URL. Logs, environment provisioning, and agent capabilities remain mock previews.
 
 ## Getting started
 

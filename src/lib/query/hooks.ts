@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { api } from "@/lib/api/api";
 import { queryKeys } from "@/lib/query/keys";
+import { simulations } from "@/lib/api/simulations";
+import { isActiveSimulation } from "@/lib/api/simulation-stream";
 
 export const useMe = () => {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
@@ -48,8 +50,14 @@ export const useApplication = (slug: string, appId: string) => {
 };
 
 export const useDeployments = (slug: string, appId: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.deployments(userId, slug, appId), queryFn: () => api.getDeployments(appId) });
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({
+    queryKey: queryKeys.deployments(userId, slug, appId),
+    queryFn: async ({ signal }) => simulations.list(slug, appId, await getToken(), signal),
+    enabled: isLoaded && isSignedIn,
+    retry: false,
+    refetchInterval: (query) => !query.state.error && query.state.data?.some(isActiveSimulation) ? 5000 : false,
+  });
 };
 
 export const useLogs = (slug: string, appId: string) => {

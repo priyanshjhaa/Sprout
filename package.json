@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:stream": "node --test tests/simulation-stream.test.mjs",
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",

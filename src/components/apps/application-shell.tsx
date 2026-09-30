@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -33,13 +33,13 @@ export function ApplicationShell({ children }: { children: ReactNode }) {
           <div>
             <div className="application-title-row">
               <h1>{isLoading ? "Loading application" : application?.name}</h1>
-              {application && <StatusPill status={application.status} />}
+              {application && (application.status === "running" ? <span className="current-label">Not deployed</span> : <StatusPill status={application.status} />)}
             </div>
             <span>{application?.url ?? "Fetching address…"}</span>
           </div>
         </div>
         <div className="application-actions">
-          {application && <a className="button button-secondary" href={`https://${application.url}`} target="_blank" rel="noreferrer">Open app <ExternalLink size={14} /></a>}
+          {application && <span className="current-label">Simulation preview</span>}
           <button className="icon-button" type="button" aria-label="More application actions"><MoreHorizontal size={17} /></button>
         </div>
       </header>
@@ -55,4 +55,3 @@ export function ApplicationShell({ children }: { children: ReactNode }) {
     </main>
   );
 }
-
