@@ -1,6 +1,6 @@
 # Node.js application contract — version 1
 
-This is the first supported application type for Sprout. A local smoke runner executes the reference app's build command inside an offline, disposable Node container. It does not export a build image, start an application runtime, or connect to simulation endpoints. Simulation jobs remain simulations.
+This is the first supported application type for Sprout. A local smoke runner executes the reference app's build command inside an offline, disposable Node container. Its Go API can return a validated `dist/` tar to trusted callers; the `sourcecheck` command discards it. No build artifact is persisted, no application runtime starts, and simulation jobs remain simulations.
 
 ## Accepted source
 
@@ -11,6 +11,7 @@ This is the first supported application type for Sprout. A local smoke runner ex
 - Every direct dependency must have a corresponding lock entry. Locked packages must have a public `https://registry.npmjs.org` tarball URL and one SHA-512 integrity digest.
 - No Git/file/URL dependency specifiers, linked packages, workspaces, alternative package-manager lockfiles, uploaded `node_modules`, `.next`, or `dist` directories.
 - No submitted Dockerfile or `.dockerignore`. Sprout—not source code—will select the image and container settings.
+- The build must produce a nonempty `dist/` directory containing regular files. Symlinks, special files, sensitive paths, and output outside that directory are rejected or excluded.
 - Existing archive path, size, credential-file, and cleanup restrictions still apply. Manifest limit: 256 KiB; lockfile limit: 1 MiB; maximum 4,096 lock entries.
 
 This initial policy is intentionally narrower than npm. Native dependencies requiring install hooks, private registries, monorepos, and framework-specific runtimes are not supported yet. Extra npm lifecycle scripts may exist, but the controlled commands below disable automatic pre/post and install hooks.
@@ -35,9 +36,11 @@ The application must listen on `0.0.0.0` using `PORT` (initially `3000`), return
 
 The local smoke runner uses a disposable non-root container with a read-only root filesystem, all Linux capabilities dropped, no-new-privileges, Docker's default seccomp profile, no networking, and no host mounts. It does not use privileged mode, host namespaces, the Docker socket, or inherited host environment variables. Docker control access belongs only to trusted Sprout platform code. The command is local developer tooling and assumes the configured Docker context is a trusted local daemon.
 
-The local runner applies a two-minute timeout, one CPU, 1 GiB memory with no extra swap, 128 processes, a 512 MiB workspace tmpfs, and 64 MiB `/tmp`. It discards container logs and exports no build output. These are local smoke-build limits, not shared service capacity controls.
+The local runner applies a two-minute timeout, one CPU, 1 GiB memory with no extra swap, 128 processes, a 512 MiB workspace tmpfs, and 64 MiB `/tmp`. It discards script logs. Docker stdout is limited to a 16 MiB artifact tar, then validated and normalized with the source filesystem rules (at most 8 MiB file content). These are local smoke-build limits, not shared service capacity controls.
 
 The local runner uses `npm ci --offline` and accepts only lockfiles with no third-party dependencies. The build runs `npm --ignore-scripts run build` with networking disabled. Arbitrary dependency downloads remain unsupported until constrained egress, redirects, cache ownership, and registry policy are enforced. Do not weaken network isolation just to make an install pass.
+
+The container emits only a `dist/` tar after a successful build. Go checks the archive's paths, file types, and byte limits, then repacks it with platform-owned metadata. This does not inspect the application code for malicious behavior. The returned bytes remain process-local until an explicitly designed artifact store exists; they are never placed in PostgreSQL or written to an unreviewed host path.
 
 Cancellation interrupts the Docker client, then removes only this run's specifically named container with a separate bounded cleanup context. A short poll handles the race where the daemon creates the container as cancellation arrives. Normal completion and build failure also remove that container. The runner never prunes unrelated containers, volumes, images, or caches. Crash recovery and storage accounting must be defined before public build submission.
 
@@ -45,9 +48,9 @@ Docker restrictions are defense in depth, not proof of safe hostile multi-tenant
 
 ## Current request/resource trace
 
-`sourcecheck -build-node` → bounded archive extraction → root-confined filesystem → Node contract and dependency-free checks → bounded tar input → trusted Docker CLI → pinned, network-disabled build container → safe summary/error → named-container cleanup → temporary-tree cleanup.
+`sourcecheck -build-node` → bounded archive extraction → root-confined filesystem → Node contract and dependency-free checks → bounded tar input → trusted Docker CLI → pinned, network-disabled build container → bounded `dist/` tar → output validation and normalization → named-container cleanup → safe summary/error → temporary-tree cleanup.
 
-`sourcecheck -runtime node` remains validation-only. `-build-node` executes the submitted build script inside Docker; it does not export `dist`, create a deployment image, start the runtime, or introduce new tables, credentials, HTTP endpoints, or frontend changes.
+`sourcecheck -runtime node` remains validation-only. `-build-node` executes the submitted build script inside Docker but discards the returned artifact. It does not create a deployment image, start the runtime, or introduce new tables, credentials, HTTP endpoints, or frontend changes.
 
 ## Verification
 
@@ -64,11 +67,11 @@ The example has no dependencies. Its build copies the server into `dist`; its st
 
 Tests cover required scripts, Node version, npm/workspace policy, root/lock mismatches, dependency URLs and integrity shape, linked packages, source-tree exclusions, malformed/oversized JSON, cancellation, and the committed example. The CLI reports only source counts or safe error codes, never script contents or package/provider error payloads.
 
-The `-build-node` command requires Docker to be running and the pinned Node image to already be present locally; it does not pull images automatically. It reports success/failure without printing submitted build output. The four-file reference app completed the restricted build and reported `4` files and `1,162` source bytes. The opt-in Docker test passed success, build-failure, and cancellation paths; each left no labeled build container behind. Application runtime, build output export, and production isolation remain future work.
+The `-build-node` command requires Docker to be running and the pinned Node image to already be present locally; it does not pull images automatically. It reports success/failure without printing submitted build output. The four-file reference app completed the restricted build and reported `4` files and `1,162` source bytes. The opt-in Docker test covers returned artifact content, build failure, symlink output rejection, oversized output rejection, and cancellation; each path leaves no labeled build container behind. Persistent artifact storage, application runtime, and production isolation remain future work.
 
 ## Learning checkpoint
 
-The mental model is a trusted supervisor giving untrusted build code a small disposable workbench. The Go process validates and prepares the input, starts Docker with fixed permissions and limits, waits for the result, and cleans up the one container it created. It does not make the application code trustworthy.
+The mental model is a trusted supervisor giving untrusted build code a small disposable workbench. The Go process validates and prepares the input, starts Docker with fixed permissions and limits, checks the resulting output archive, and cleans up the one container it created. It does not make the application code trustworthy.
 
 In NestJS or Django, the same product flow would usually be implemented by an API handler handing work to another process or job system. Here, the local Go command directly supervises the Docker CLI with a request context and an explicit cleanup path. That is useful for learning process and cancellation mechanics, but this local command is not yet the eventual asynchronous deployment worker.
 
@@ -77,7 +80,7 @@ In NestJS or Django, the same product flow would usually be implemented by an AP
 3. Why must cancellation remove the container rather than merely stop the Docker CLI?
 4. Which part of this flow is the trusted supervisor, and which part is untrusted code?
 
-Commit boundary: `feat: add restricted Node build smoke runner`.
+Commit boundaries: `feat: add restricted Node build smoke runner`, then `feat: capture bounded Node build artifact`.
 
 ## References
 

@@ -20,6 +20,8 @@ var (
 	ErrImage        = errors.New("node_build_image_invalid")
 	ErrDependencies = errors.New("node_build_dependencies_unsupported")
 	ErrBuild        = errors.New("node_build_failed")
+	ErrArtifact     = errors.New("node_build_artifact_invalid")
+	ErrArtifactSize = errors.New("node_build_artifact_too_large")
 	ErrDocker       = errors.New("node_build_docker_unavailable")
 	ErrCleanup      = errors.New("node_build_cleanup_failed")
 )
@@ -30,7 +32,7 @@ var pinnedImage = regexp.MustCompile(`^node@sha256:[a-f0-9]{64}$`)
 // multi-platform registry digest pulled for this milestone.
 const DefaultImage = "node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
 
-const buildCommand = "tar -x --no-same-owner --no-same-permissions -C /workspace && cd /workspace && npm ci --offline --ignore-scripts --no-audit --no-fund && npm --ignore-scripts run build"
+const buildCommand = "tar -x --no-same-owner --no-same-permissions -C /workspace && cd /workspace && npm ci --offline --ignore-scripts --no-audit --no-fund >/dev/null 2>&1 && npm --ignore-scripts run build >/dev/null 2>&1 && tar --format=ustar -C /workspace -cf - dist"
 
 type Runner struct {
 	image   string
@@ -45,7 +47,7 @@ func NewRunner(image string, timeout time.Duration) (*Runner, error) {
 }
 
 // RunArchive extracts, validates, and builds a dependency-free Node app in a
-// disposable offline Docker container. No build output is exported.
+// disposable offline Docker container. The validated output is discarded.
 func (r *Runner) RunArchive(ctx context.Context, archive io.Reader) (summary source.Summary, err error) {
 	if r == nil {
 		return summary, ErrImage
@@ -57,25 +59,50 @@ func (r *Runner) RunArchive(ctx context.Context, archive io.Reader) (summary sou
 	})
 }
 
-// RunFiles validates and builds a prepared filesystem. The caller owns files
-// and must keep them available until this call returns.
+// RunFiles validates and builds a prepared filesystem, discarding the output.
 func (r *Runner) RunFiles(ctx context.Context, files fs.FS) error {
+	_, err := r.BuildFiles(ctx, files)
+	return err
+}
+
+// BuildFiles returns a bounded, normalized tar of dist/ from a prepared source
+// filesystem. The caller owns files and must keep them available until return.
+func (r *Runner) BuildFiles(ctx context.Context, files fs.FS) ([]byte, error) {
 	if r == nil {
-		return ErrImage
+		return nil, ErrImage
 	}
 	if err := Validate(ctx, files); err != nil {
-		return err
+		return nil, err
 	}
 	if err := offlineOnly(files); err != nil {
-		return err
+		return nil, err
 	}
 	payload, err := pack(ctx, files)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	runCtx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
-	return r.execute(runCtx, payload)
+	raw, err := r.execute(runCtx, payload)
+	if err != nil {
+		return nil, err
+	}
+	var artifact []byte
+	_, err = source.WithArchive(runCtx, bytes.NewReader(raw), func(ctx context.Context, built fs.FS) error {
+		info, statErr := fs.Stat(built, "dist")
+		if statErr != nil || !info.IsDir() {
+			return ErrArtifact
+		}
+		artifact, err = pack(ctx, built)
+		return err
+	})
+	if err != nil {
+		if runCtx.Err() != nil {
+			return nil, runCtx.Err()
+		}
+		return nil, ErrArtifact
+	}
+	return artifact, nil
 }
 
 func offlineOnly(files fs.FS) error {
@@ -139,15 +166,18 @@ func pack(ctx context.Context, files fs.FS) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func (r *Runner) execute(ctx context.Context, payload []byte) (err error) {
+func (r *Runner) execute(ctx context.Context, payload []byte) (artifact []byte, err error) {
 	var random [16]byte
 	if _, err = rand.Read(random[:]); err != nil {
-		return ErrDocker
+		return nil, ErrDocker
 	}
 	name := "sprout-local-build-" + hex.EncodeToString(random[:])
-	command := exec.CommandContext(ctx, "docker", dockerArgs(name, r.image)...)
+	commandCtx, stop := context.WithCancel(ctx)
+	defer stop()
+	output := &boundedOutput{limit: int(source.MaxArchiveBytes), cancel: stop}
+	command := exec.CommandContext(commandCtx, "docker", dockerArgs(name, r.image)...)
 	command.Stdin = bytes.NewReader(payload)
-	command.Stdout = io.Discard // Never return or persist untrusted build output.
+	command.Stdout = output
 	command.Stderr = io.Discard
 	command.WaitDelay = 5 * time.Second
 
@@ -156,23 +186,50 @@ func (r *Runner) execute(ctx context.Context, payload []byte) (err error) {
 	defer func() {
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		if cleanupContainer(cleanupCtx, name, ctx.Err() != nil) != nil {
+		if cleanupContainer(cleanupCtx, name, commandCtx.Err() != nil) != nil {
 			err = errors.Join(err, ErrCleanup)
 		}
 	}()
 
 	runErr := command.Run()
+	if output.exceeded {
+		return nil, ErrArtifactSize
+	}
 	if ctx.Err() != nil {
-		return ctx.Err()
+		return nil, ctx.Err()
 	}
 	if runErr == nil {
-		return nil
+		return output.buffer.Bytes(), nil
 	}
 	var exit *exec.ExitError
 	if errors.As(runErr, &exit) && exit.ExitCode() != 125 && exit.ExitCode() != 126 && exit.ExitCode() != 127 {
-		return ErrBuild
+		return nil, ErrBuild
 	}
-	return ErrDocker
+	return nil, ErrDocker
+}
+
+type boundedOutput struct {
+	buffer   bytes.Buffer
+	limit    int
+	cancel   context.CancelFunc
+	exceeded bool
+}
+
+func (b *boundedOutput) Write(p []byte) (int, error) {
+	if b.exceeded {
+		return len(p), nil
+	}
+	remaining := b.limit - b.buffer.Len()
+	if len(p) > remaining {
+		if remaining > 0 {
+			_, _ = b.buffer.Write(p[:remaining])
+		}
+		b.exceeded = true
+		b.cancel()
+		return len(p), nil
+	}
+	_, _ = b.buffer.Write(p)
+	return len(p), nil
 }
 
 func cleanupContainer(ctx context.Context, name string, waitForLateCreate bool) error {

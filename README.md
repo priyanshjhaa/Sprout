@@ -189,7 +189,7 @@ The following capabilities are mocked and are not connected to production infras
 
 - GitHub repository access
 - Coding-agent execution
-- Application builds and containers
+- Dashboard-triggered application builds and runtime containers (a local Node build smoke runner exists)
 - DNS and TLS provisioning
 - Live log streaming
 - Database and object-storage provisioning
