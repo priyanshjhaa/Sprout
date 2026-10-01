@@ -19,7 +19,7 @@ The Go validator is a preflight check, not a reimplementation of npm's dependenc
 
 ## Platform-owned commands
 
-The following are the agreed execution contract, **not commands currently run by sourcecheck**:
+The local smoke runner executes the dependency and build rows. The runtime row belongs to a later milestone:
 
 | Phase | Command | Boundary |
 | --- | --- | --- |
@@ -57,13 +57,14 @@ From `backend/`, create an archive of only the explicit example files in a direc
 tar --format=ustar -cf /tmp/sprout-node-example.tar -C dev/node-example package.json package-lock.json build.mjs server.mjs
 go run ./cmd/sourcecheck -archive /tmp/sprout-node-example.tar -runtime node
 go run ./cmd/sourcecheck -archive /tmp/sprout-node-example.tar -build-node
+SPROUT_DOCKER_TEST=1 go test ./internal/nodeapp -run '^TestDockerSmokeRunner$' -count=1 -v
 ```
 
 The example has no dependencies. Its build copies the server into `dist`; its start command is reserved for the separate runtime milestone. Avoid running submitted application scripts directly on your host, even when metadata validation succeeds.
 
 Tests cover required scripts, Node version, npm/workspace policy, root/lock mismatches, dependency URLs and integrity shape, linked packages, source-tree exclusions, malformed/oversized JSON, cancellation, and the committed example. The CLI reports only source counts or safe error codes, never script contents or package/provider error payloads.
 
-The `-build-node` command requires Docker to be running and the pinned Node image to already be present locally; it does not pull images automatically. It reports success/failure without printing submitted build output. The earlier contract-validation milestone passed its backend race tests, database integrations, vet, lint, and manual archive checks. The new container runner has not yet been executed or runtime-verified; this milestone is limited to implementing the runner and wiring the command.
+The `-build-node` command requires Docker to be running and the pinned Node image to already be present locally; it does not pull images automatically. It reports success/failure without printing submitted build output. The four-file reference app completed the restricted build and reported `4` files and `1,162` source bytes. The opt-in Docker test passed success, build-failure, and cancellation paths; each left no labeled build container behind. Application runtime, build output export, and production isolation remain future work.
 
 ## Learning checkpoint
 

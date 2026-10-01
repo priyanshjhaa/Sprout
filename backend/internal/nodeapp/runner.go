@@ -125,7 +125,7 @@ func pack(ctx context.Context, files fs.FS) ([]byte, error) {
 		if _, err := writer.Write(content); err != nil {
 			return ErrContract
 		}
-		if buffer.Len() > source.MaxSourceBytes+2*source.MaxEntries*512 {
+		if int64(buffer.Len()) > source.MaxSourceBytes+2*source.MaxEntries*512 {
 			return source.ErrLimit
 		}
 		return nil
