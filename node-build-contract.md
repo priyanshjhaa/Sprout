@@ -1,6 +1,6 @@
 # Node.js application contract — version 1
 
-This is the first supported application type for Sprout. A local smoke runner executes the reference app's build command inside an offline, disposable Node container. Its Go API can return a validated `dist/` tar to trusted callers; the `sourcecheck` command discards it. No build artifact is persisted, no application runtime starts, and simulation jobs remain simulations.
+This is the first supported application type for Sprout. A local smoke runner executes the reference app's build command inside an offline, disposable Node container. Its Go API returns a validated `dist/` tar to trusted callers. The local `sourcecheck` command can save that tar in a private artifact directory when explicitly requested. No application runtime starts, and simulation jobs remain simulations.
 
 ## Accepted source
 
@@ -40,7 +40,13 @@ The local runner applies a two-minute timeout, one CPU, 1 GiB memory with no ext
 
 The local runner uses `npm ci --offline` and accepts only lockfiles with no third-party dependencies. The build runs `npm --ignore-scripts run build` with networking disabled. Arbitrary dependency downloads remain unsupported until constrained egress, redirects, cache ownership, and registry policy are enforced. Do not weaken network isolation just to make an install pass.
 
-The container emits only a `dist/` tar after a successful build. Go checks the archive's paths, file types, and byte limits, then repacks it with platform-owned metadata. This does not inspect the application code for malicious behavior. The returned bytes remain process-local until an explicitly designed artifact store exists; they are never placed in PostgreSQL or written to an unreviewed host path.
+The container emits only a `dist/` tar after a successful build. Go checks the archive's paths, file types, and byte limits, then repacks it with platform-owned metadata. This does not inspect the application code for malicious behavior. The local artifact store can write these bytes atomically to an explicitly chosen private directory. It never puts build output in PostgreSQL.
+
+## Local artifact storage
+
+`internal/artifact` treats the validated tar as opaque data. It requires an existing absolute directory with mode `0700`, writes each artifact under a random internal ID with file mode `0600`, syncs the file, and publishes it by rename. A descriptor contains the ID, byte size, and SHA-256 digest. Loading checks the size and digest; deletion removes one exact ID. The descriptor is an internal storage reference, not a user permission or a shareable application URL.
+
+The store does not authorize access, map artifacts to deployments, enforce total disk quotas, or remove partial files left by a process crash. Those responsibilities must be defined before public build submission. The sourcecheck option is local developer tooling and requires an explicit `-artifact-dir`; without it, the validated output is discarded.
 
 Cancellation interrupts the Docker client, then removes only this run's specifically named container with a separate bounded cleanup context. A short poll handles the race where the daemon creates the container as cancellation arrives. Normal completion and build failure also remove that container. The runner never prunes unrelated containers, volumes, images, or caches. Crash recovery and storage accounting must be defined before public build submission.
 
@@ -48,9 +54,9 @@ Docker restrictions are defense in depth, not proof of safe hostile multi-tenant
 
 ## Current request/resource trace
 
-`sourcecheck -build-node` → bounded archive extraction → root-confined filesystem → Node contract and dependency-free checks → bounded tar input → trusted Docker CLI → pinned, network-disabled build container → bounded `dist/` tar → output validation and normalization → named-container cleanup → safe summary/error → temporary-tree cleanup.
+`sourcecheck -build-node -artifact-dir <directory>` → bounded archive extraction → root-confined filesystem → Node contract and dependency-free checks → bounded tar input → trusted Docker CLI → pinned, network-disabled build container → bounded `dist/` tar → output validation and normalization → named-container cleanup → temporary-tree cleanup → private atomic artifact save → ID, size, and digest in the local command response.
 
-`sourcecheck -runtime node` remains validation-only. `-build-node` executes the submitted build script inside Docker but discards the returned artifact. It does not create a deployment image, start the runtime, or introduce new tables, credentials, HTTP endpoints, or frontend changes.
+`sourcecheck -runtime node` remains validation-only. `-build-node` executes the submitted build script inside Docker and discards the returned artifact unless `-artifact-dir` is supplied. It does not create a deployment image, start the runtime, or introduce new tables, credentials, HTTP endpoints, or frontend changes.
 
 ## Verification
 
@@ -60,18 +66,21 @@ From `backend/`, create an archive of only the explicit example files in a direc
 tar --format=ustar -cf /tmp/sprout-node-example.tar -C dev/node-example package.json package-lock.json build.mjs server.mjs
 go run ./cmd/sourcecheck -archive /tmp/sprout-node-example.tar -runtime node
 go run ./cmd/sourcecheck -archive /tmp/sprout-node-example.tar -build-node
+artifact_dir=$(mktemp -d /private/tmp/sprout-artifacts.XXXXXX)
+go run ./cmd/sourcecheck -archive /tmp/sprout-node-example.tar -build-node -artifact-dir "$artifact_dir"
 SPROUT_DOCKER_TEST=1 go test ./internal/nodeapp -run '^TestDockerSmokeRunner$' -count=1 -v
+SPROUT_DOCKER_TEST=1 go test ./cmd/sourcecheck -run '^TestSourcecheckSavesLocalArtifact$' -count=1 -v
 ```
 
 The example has no dependencies. Its build copies the server into `dist`; its start command is reserved for the separate runtime milestone. Avoid running submitted application scripts directly on your host, even when metadata validation succeeds.
 
 Tests cover required scripts, Node version, npm/workspace policy, root/lock mismatches, dependency URLs and integrity shape, linked packages, source-tree exclusions, malformed/oversized JSON, cancellation, and the committed example. The CLI reports only source counts or safe error codes, never script contents or package/provider error payloads.
 
-The `-build-node` command requires Docker to be running and the pinned Node image to already be present locally; it does not pull images automatically. It reports success/failure without printing submitted build output. The four-file reference app completed the restricted build and reported `4` files and `1,162` source bytes. The opt-in Docker test covers returned artifact content, build failure, symlink output rejection, oversized output rejection, and cancellation; each path leaves no labeled build container behind. Persistent artifact storage, application runtime, and production isolation remain future work.
+The `-build-node` command requires Docker to be running and the pinned Node image to already be present locally; it does not pull images automatically. It reports success/failure without printing submitted build output. The four-file reference app completed the restricted build and reported `4` files and `1,162` source bytes. The opt-in Docker tests cover returned artifact content, build failure, symlink output rejection, oversized output rejection, cancellation, and local save/read-back. Each build path leaves no labeled build container behind. The store tests cover reopen, integrity failure, exact deletion, private-directory policy, and invalid references. Deployment ownership, runtime, and production isolation remain future work.
 
 ## Learning checkpoint
 
-The mental model is a trusted supervisor giving untrusted build code a small disposable workbench. The Go process validates and prepares the input, starts Docker with fixed permissions and limits, checks the resulting output archive, and cleans up the one container it created. It does not make the application code trustworthy.
+The mental model is a trusted supervisor giving untrusted build code a small disposable workbench. The Go process validates and prepares the input, starts Docker with fixed permissions and limits, checks the resulting output archive, and cleans up the one container it created. A separate store can then save the checked bytes under a random ID and verify them later by digest. It does not make the application code trustworthy.
 
 In NestJS or Django, the same product flow would usually be implemented by an API handler handing work to another process or job system. Here, the local Go command directly supervises the Docker CLI with a request context and an explicit cleanup path. That is useful for learning process and cancellation mechanics, but this local command is not yet the eventual asynchronous deployment worker.
 
@@ -79,8 +88,9 @@ In NestJS or Django, the same product flow would usually be implemented by an AP
 2. Why does disabling install hooks not make `npm run build` harmless?
 3. Why must cancellation remove the container rather than merely stop the Docker CLI?
 4. Which part of this flow is the trusted supervisor, and which part is untrusted code?
+5. Why does reading the stored file require both its random ID and a digest check?
 
-Commit boundaries: `feat: add restricted Node build smoke runner`, then `feat: capture bounded Node build artifact`.
+Commit boundaries: `feat: add restricted Node build smoke runner`, `feat: capture bounded Node build artifact`, and `feat: persist local Node build artifacts`.
 
 ## References
 
