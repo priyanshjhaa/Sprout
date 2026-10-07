@@ -64,6 +64,30 @@ export function LandingExperience() {
     let distance = 1;
     const lastScene = chapters.length - 1;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const copyStack = stage.querySelector<HTMLElement>(".story-copy-stack");
+    const copies = Array.from(stage.querySelectorAll<HTMLElement>(".story-copy"));
+
+    // Each chapter fades and drifts with scroll: fully readable near its centre,
+    // fading out as the next one fades in around the midpoint between them.
+    const scrubCopy = (progress: number) => {
+      if (reduceMotion.matches) {
+        copyStack?.removeAttribute("data-scrub");
+        for (const copy of copies) {
+          for (const property of ["opacity", "transform", "visibility"]) copy.style.removeProperty(property);
+        }
+        return;
+      }
+      copyStack?.setAttribute("data-scrub", "");
+      const position = progress * lastScene;
+      copies.forEach((copy, index) => {
+        const offset = position - index;
+        const fade = Math.min(1, Math.max(0, (Math.abs(offset) - 0.2) / 0.36));
+        const opacity = 1 - fade * fade * (3 - 2 * fade);
+        copy.style.opacity = opacity.toFixed(3);
+        copy.style.transform = `translate3d(0, ${(-offset * 36).toFixed(1)}px, 0)`;
+        copy.style.visibility = opacity < 0.01 ? "hidden" : "visible";
+      });
+    };
 
     const setProgress = (progress: number) => {
       const segment = (start: number, end: number) => {
@@ -85,6 +109,7 @@ export function LandingExperience() {
       set("--lower-leaf-growth", segment(0.5, 0.62));
       set("--upper-leaf-growth", segment(0.56, 0.7));
       set("--network-growth", segment(0.72, 0.92));
+      scrubCopy(progress);
 
       // Flip copy colour once as the soil passes behind it, with a gap to avoid flicker.
       const nextUnderground = underground ? depth > 0.45 : depth > 0.62;

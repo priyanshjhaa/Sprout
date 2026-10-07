@@ -1973,16 +1973,6 @@ body {
   background: #fffaf2;
 }
 
-@media (min-width: 901px) {
-  .story-chapters > section {
-    min-height: 68svh;
-  }
-
-  .story-chapters > section:last-child {
-    min-height: 100svh;
-  }
-}
-
 @media (max-width: 900px) {
   .story-chapters::before {
     background:
@@ -2290,6 +2280,11 @@ body {
     transform: translateY(16px);
   }
 
+  /* When scroll drives the copy directly, timed transitions would only add lag. */
+  .story-copy-stack[data-scrub] .story-copy {
+    transition: none;
+  }
+
   .story-copy h1 {
     max-width: 15ch;
     font-size: clamp(44px, 4.8vw, 68px);
@@ -2493,8 +2488,9 @@ body {
     opacity: 0.62;
   }
 
+  /* Scroll distance per chapter: short enough to feel continuous, long enough to read. */
   .story-chapters > section {
-    min-height: 62svh;
+    min-height: 44svh;
   }
 
   .story-chapters > section:last-child {
