@@ -872,11 +872,6 @@ a {
   opacity: 1;
 }
 
-.story-stage[data-scene="2"] .pipeline {
-  transform: translate(-50%, 0);
-  opacity: 1;
-}
-
 .story-stage[data-scene="3"] .source-card {
   transform: translate(-50%, -230%) scale(0.75);
   opacity: 0.25;
