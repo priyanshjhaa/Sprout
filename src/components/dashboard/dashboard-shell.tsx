@@ -2,7 +2,7 @@
 
 import {
   Activity,
-  Bot,
+  Rocket,
   Boxes,
   LogOut,
   Menu,
@@ -19,7 +19,7 @@ import { Brand } from "@/components/brand";
 import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
 
 const primaryNavigation = [
-  { label: "Agent", path: "agent", icon: Bot },
+  { label: "Deploy", path: "deploy", icon: Rocket },
   { label: "Apps", path: "apps", icon: Boxes },
 ];
 

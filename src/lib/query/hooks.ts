@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { api } from "@/lib/api/api";
 import { queryKeys } from "@/lib/query/keys";
@@ -37,6 +37,17 @@ export const useApplications = (slug: string) => {
     queryKey: queryKeys.apps(userId, slug),
     queryFn: async () => api.getApplications(slug, await getToken()),
     enabled: isLoaded && isSignedIn,
+  });
+};
+
+export const useCreateApplication = (slug: string) => {
+  const { getToken, userId } = useAuth();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; slug: string; description?: string }) =>
+      api.createApplication(slug, input, await getToken()),
+    retry: false, // A lost response may still have created the application.
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.apps(userId, slug) }),
   });
 };
 
@@ -86,9 +97,4 @@ export const useWorkspaceMembers = (slug: string) => {
     queryFn: async () => api.getWorkspaceMembers(slug, await getToken()),
     enabled: isLoaded && isSignedIn,
   });
-};
-
-export const useAgentEvents = (slug: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.agent(userId, slug), queryFn: api.getAgentEvents });
 };

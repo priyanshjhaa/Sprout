@@ -1,5 +1,4 @@
 import type {
-  AgentEvent,
   Deployment,
   EnvironmentVariable,
   LogEntry,
@@ -63,12 +62,6 @@ const members: Member[] = [
   { id: "3", name: "Bob Hart", email: "bob@acme.test", role: "Viewer", initials: "BH" },
 ];
 
-const agentEvents: AgentEvent[] = [
-  { id: "1", label: "Created application", detail: "invoice-approvals", state: "complete" },
-  { id: "2", label: "Connected database", detail: "PostgreSQL · shared-small", state: "complete" },
-  { id: "3", label: "Built deployment", detail: "Image built in 41 seconds", state: "complete" },
-  { id: "4", label: "Health check passed", detail: "Application is ready", state: "complete" },
-];
 
 export const mockApi = {
   async getDeployments(appId: string) {
@@ -86,9 +79,5 @@ export const mockApi = {
   async getMembers() {
     await wait();
     return members;
-  },
-  async getAgentEvents() {
-    await wait();
-    return agentEvents;
   },
 };

@@ -6,6 +6,6 @@ export default async function WorkspacePage({
   params: Promise<{ workspaceSlug: string }>;
 }) {
   const { workspaceSlug } = await params;
-  redirect(`/workspace/${workspaceSlug}/agent`);
+  redirect(`/workspace/${workspaceSlug}/deploy`);
 }
 

@@ -54,9 +54,3 @@ export interface Member {
   initials: string;
 }
 
-export interface AgentEvent {
-  id: string;
-  label: string;
-  detail: string;
-  state: "complete" | "active" | "pending";
-}

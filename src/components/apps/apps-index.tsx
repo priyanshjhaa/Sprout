@@ -18,7 +18,7 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
     <main className="dashboard-page apps-page">
       <header className="apps-heading">
         <div className="page-heading"><p className="eyebrow">Workspace</p><h1>Apps</h1><p>The small tools your team builds, runs, and shares through Sprout.</p></div>
-        <Link className="button button-primary" href={`/workspace/${workspaceSlug}/agent`}><Plus size={16} /> New app</Link>
+        <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}><Plus size={16} /> Deploy app</Link>
       </header>
 
       <div className="apps-toolbar">
@@ -41,8 +41,8 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
           <div className="workspace-welcome-copy">
             <p className="eyebrow">A space to begin</p>
             <h2>Your first useful thing belongs here.</h2>
-            <p>Apps you bring into Sprout will live in this workspace. For now, explore the agent preview to see how that journey could work.</p>
-            <Link className="button button-primary" href={`/workspace/${workspaceSlug}/agent`}>Explore the agent preview <ArrowRight size={16} /></Link>
+            <p>Bring application code from your editor, the CLI, or a coding agent. Sprout builds it in isolation, checks its health, and gives your team a place to use it.</p>
+            <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}>Deploy your first app <ArrowRight size={16} /></Link>
           </div>
           <div className="workspace-welcome-art" aria-hidden="true"><span className="seed-icon"><span /><span /></span><i /><i /></div>
         </section>

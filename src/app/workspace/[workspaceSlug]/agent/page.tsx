@@ -1,11 +1,11 @@
-import { AgentWorkspace } from "@/components/agent/agent-workspace";
+import { redirect } from "next/navigation";
 
+// The Agent page became Deploy; keep old links working.
 export default async function AgentPage({
   params,
 }: {
   params: Promise<{ workspaceSlug: string }>;
 }) {
   const { workspaceSlug } = await params;
-  return <AgentWorkspace workspaceSlug={workspaceSlug} />;
+  redirect(`/workspace/${workspaceSlug}/deploy`);
 }
-

@@ -183,6 +183,19 @@ const applicationAPI = {
     return response.applications.map(mapApplication);
   },
 
+  async createApplication(
+    workspaceSlug: string,
+    input: { name: string; slug: string; description?: string },
+    token: string | null,
+  ): Promise<Application> {
+    const response = await request<ApplicationResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications`,
+      token,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
+    );
+    return mapApplication(response);
+  },
+
   async getApplication(workspaceSlug: string, applicationID: string, token: string | null): Promise<Application> {
     const response = await request<ApplicationResponse>(
       `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}`,
