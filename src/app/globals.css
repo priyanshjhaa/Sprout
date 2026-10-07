@@ -228,6 +228,7 @@ a {
 .scroll-story {
   position: relative;
   --growth-progress: 0;
+  --camera-depth: 0;
   --root-growth: 0;
   --stem-growth: 0;
   --leaf-growth: 0;
@@ -1724,7 +1725,6 @@ a {
   }
 }
 
-/* Agent */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -2063,21 +2063,183 @@ body {
       linear-gradient(180deg, rgba(250, 246, 238, 0.2), transparent 54%),
       radial-gradient(ellipse at 50% 31%, rgba(255, 252, 244, 0.76) 0 24%, rgba(255, 252, 244, 0.18) 52%, transparent 70%);
     mask-image: none;
+    opacity: calc(1 - var(--camera-depth));
   }
 
-  .story-landscape {
+  /*
+   * The painting is split into layers that move at different rates as the
+   * camera sinks below the soil (build) and rises again (healthy app).
+   */
+  .story-world {
     position: absolute;
     z-index: -3;
-    inset: -2%;
-    background-image:
-      linear-gradient(180deg, rgba(249, 244, 234, 0.08), rgba(247, 240, 226, 0.02) 58%, rgba(49, 43, 26, 0.08)),
-      url("/images/sprout-growth-landscape.png");
+    inset: 0;
+    pointer-events: none;
+    transform: scale(calc(1.03 + var(--growth-progress) * 0.012));
+    transform-origin: 50% 70%;
+  }
+
+  .world-layer {
+    position: absolute;
+    inset: 0;
+    will-change: transform;
+  }
+
+  .world-sky {
+    background: url("/images/landscape/landscape-sky.webp") center 62% / cover;
+    filter: saturate(0.82) contrast(0.94);
+    transform: translate3d(0, calc(var(--camera-depth) * -16vh), 0);
+  }
+
+  /* Dawn warms the opening scenes; the light clears to day as the app grows. */
+  .world-light {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 72%, rgba(255, 214, 160, 0.42), transparent 58%),
+      linear-gradient(180deg, rgba(226, 168, 128, 0.26), rgba(242, 206, 160, 0.1) 52%, transparent 74%);
+    opacity: calc(1 - var(--growth-progress));
+  }
+
+  .world-veil {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(42, 33, 19, 0.78), rgba(34, 27, 11, 0.6));
+    opacity: var(--camera-depth);
+  }
+
+  .world-ground {
+    transform: translate3d(0, calc(var(--camera-depth) * -72vh), 0);
+  }
+
+  .ground-soil,
+  .ground-grass {
+    position: absolute;
+    inset: 0;
     background-position: center 62%;
     background-size: cover;
     filter: saturate(0.82) contrast(0.94);
-    transform: scale(calc(1.025 + var(--growth-progress) * 0.012));
-    transform-origin: center;
+  }
+
+  .ground-soil { background-image: url("/images/landscape/landscape-ground.webp"); }
+
+  /* Only the foreground grass moves in the breeze, around its roots. */
+  .ground-grass {
+    background-image: url("/images/landscape/landscape-grass.webp");
+    animation: meadow-breeze 9s ease-in-out infinite;
     will-change: transform;
+  }
+
+  .ground-grass-left {
+    mask-image: linear-gradient(to right, black 45%, transparent 55%);
+    transform-origin: 10% 72%;
+  }
+
+  .ground-grass-right {
+    mask-image: linear-gradient(to left, black 45%, transparent 55%);
+    transform-origin: 90% 72%;
+    animation-duration: 11s;
+    animation-delay: -3.5s;
+  }
+
+  @keyframes meadow-breeze {
+    0%, 100% { transform: skewX(-0.35deg) rotate(-0.12deg); }
+    35% { transform: skewX(0.65deg) rotate(0.18deg); }
+    62% { transform: skewX(0.15deg) rotate(0.04deg); }
+    80% { transform: skewX(0.4deg) rotate(0.1deg); }
+  }
+
+  /* The soil continues below the painting so the camera has somewhere to go. */
+  .ground-depth {
+    position: absolute;
+    top: calc(100% - 12vh);
+    right: -4%;
+    left: -4%;
+    height: 100vh;
+    mask-image: linear-gradient(to bottom, transparent, black 12vh);
+    background:
+      repeating-linear-gradient(178deg, transparent 0 46px, rgba(120, 92, 56, 0.07) 46px 48px, transparent 48px 110px),
+      radial-gradient(ellipse at 50% 30%, rgba(78, 60, 34, 0.5), transparent 62%),
+      linear-gradient(180deg, #221b0b, #1a1408 45%, #120e06);
+  }
+
+  .build-chamber {
+    position: absolute;
+    top: 38vh;
+    left: 50%;
+    display: grid;
+    width: min(460px, 80vw);
+    justify-items: center;
+    gap: 14px;
+    border: 1px solid rgba(214, 196, 160, 0.22);
+    border-radius: 22px;
+    padding: 20px 24px 22px;
+    background: rgba(28, 22, 12, 0.72);
+    box-shadow: inset 0 0 0 6px rgba(214, 196, 160, 0.04), 0 24px 60px rgba(0, 0, 0, 0.35);
+    color: #e9dfcc;
+    opacity: 0;
+    transform: translate(-50%, 16px) scale(0.97);
+    transition: opacity 520ms ease, transform 850ms var(--ease-out);
+  }
+
+  .story-stage[data-scene="2"] .build-chamber {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  .chamber-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    color: #cbbd9f;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  .build-chamber .pipeline {
+    position: static;
+    width: auto;
+    opacity: 1;
+    transform: none;
+  }
+
+  .build-chamber .pipeline span {
+    border-color: rgba(214, 196, 160, 0.26);
+    background: rgba(255, 248, 232, 0.08);
+    color: #f1e8d6;
+    font-size: 11px;
+  }
+
+  .chamber-limits {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .chamber-limits li {
+    border-radius: 99px;
+    padding: 4px 9px;
+    background: rgba(154, 174, 94, 0.16);
+    color: #d7dfb4;
+    font-size: 10px;
+  }
+
+  /* Copy switches from ink on sky to cream on soil while the soil line passes behind it. */
+  .story-copy-stack {
+    --copy-flip: clamp(0, (var(--camera-depth) - 0.4) * 2.5, 1);
+  }
+
+  .story-copy h1 {
+    color: color-mix(in srgb, var(--ink) calc(100% - var(--copy-flip) * 100%), #f7f0e3);
+  }
+
+  .story-copy .eyebrow {
+    color: color-mix(in srgb, var(--sprout-strong) calc(100% - var(--copy-flip) * 100%), #d7dfb4);
   }
 
   .story-copy-stack {
@@ -2089,40 +2251,6 @@ body {
     min-height: 390px;
     transform: translateX(-50%);
     text-align: center;
-  }
-
-  /* The painted foliage moves around its roots, with a softer trailing gust. */
-  .landscape-breeze {
-    position: absolute;
-    inset: 0;
-    background: url("/images/sprout-growth-landscape.png") center 62% / cover;
-    pointer-events: none;
-    transform-origin: 50% 76%;
-    animation: meadow-breeze 9s ease-in-out infinite;
-    will-change: transform;
-  }
-
-  .landscape-breeze-left {
-    mask-image: linear-gradient(to right, black 0%, black 13%, transparent 29%),
-      linear-gradient(to bottom, black 45%, transparent 77%);
-    mask-composite: intersect;
-    transform-origin: 10% 76%;
-  }
-
-  .landscape-breeze-right {
-    mask-image: linear-gradient(to left, black 0%, black 12%, transparent 28%),
-      linear-gradient(to bottom, black 45%, transparent 77%);
-    mask-composite: intersect;
-    transform-origin: 90% 76%;
-    animation-duration: 11s;
-    animation-delay: -3.5s;
-  }
-
-  @keyframes meadow-breeze {
-    0%, 100% { transform: skewX(-0.35deg) rotate(-0.12deg); }
-    35% { transform: skewX(0.65deg) rotate(0.18deg); }
-    62% { transform: skewX(0.15deg) rotate(0.04deg); }
-    80% { transform: skewX(0.4deg) rotate(0.1deg); }
   }
 
   .story-copy {
@@ -2157,14 +2285,14 @@ body {
   .story-copy h1 {
     max-width: 15ch;
     font-size: clamp(44px, 4.8vw, 68px);
-    text-shadow: 0 2px 30px rgba(255, 251, 242, 0.86);
+    text-shadow: 0 2px 30px color-mix(in srgb, rgba(255, 251, 242, 0.86) calc(100% - var(--copy-flip) * 100%), rgba(18, 13, 6, 0.75));
   }
 
   .story-body {
     max-width: 600px;
     margin-top: 20px;
-    color: #645b50;
-    text-shadow: 0 1px 18px rgba(255, 251, 242, 0.95);
+    color: color-mix(in srgb, #645b50 calc(100% - var(--copy-flip) * 100%), #ddd2bd);
+    text-shadow: 0 1px 18px color-mix(in srgb, rgba(255, 251, 242, 0.95) calc(100% - var(--copy-flip) * 100%), rgba(18, 13, 6, 0.8));
   }
 
   .story-actions {
@@ -2244,7 +2372,7 @@ body {
   }
 
   .root {
-    stroke: #8f7657;
+    stroke: color-mix(in srgb, #8f7657 calc(100% - var(--camera-depth) * 100%), #c9ad84);
     opacity: calc(0.28 + var(--root-growth) * 0.72);
   }
 
@@ -2282,10 +2410,6 @@ body {
     top: 73%;
   }
 
-  .pipeline {
-    top: 80%;
-  }
-
   .app-window {
     top: 72%;
     width: min(480px, 42vw);
@@ -2318,7 +2442,34 @@ body {
   .mini-two { top: 57%; right: 12%; }
   .mini-three { right: 17%; bottom: 8%; }
 
+  /* The garden shows the lifecycle: live, resting, and archived apps. */
+  .mini-app small {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 3px;
+    color: var(--faint);
+    font-size: 8px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .mini-app small::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sprout);
+    content: "";
+  }
+
+  .mini-app[data-state="paused"] { filter: saturate(0.4); }
+  .mini-app[data-state="paused"] small::before { background: transparent; box-shadow: inset 0 0 0 1.5px var(--warning); }
+  .mini-app[data-state="archived"] { border-style: dashed; filter: grayscale(0.7); }
+  .mini-app[data-state="archived"] small::before { border-radius: 1px; background: var(--faint); }
+  .story-stage[data-scene="6"] .mini-app[data-state="archived"] { opacity: 0.72; }
+
   .story-stage[data-scene="0"] .source-card,
+  .story-stage[data-scene="2"] .source-card,
   .story-stage[data-scene="3"] .source-card,
   .story-stage[data-scene="4"] .source-card,
   .story-stage[data-scene="5"] .source-card,
@@ -2349,7 +2500,7 @@ body {
   .story-chapters::before {
     background:
       linear-gradient(rgba(249, 244, 234, 0.42), rgba(245, 237, 223, 0.2)),
-      url("/images/sprout-growth-landscape.png") center / cover fixed;
+      url("/images/landscape/landscape-full.webp") center / cover fixed;
   }
 
   .story-chapters > section {
@@ -2372,13 +2523,22 @@ body {
   .growth-bud { opacity: 1; transform: none; }
   .seed-shell { transform: none; }
 
-  .landscape-breeze {
-    display: none;
+  /* No camera travel: the sealed build appears in place over the soil. */
+  .scroll-story {
+    --camera-depth: 0 !important;
   }
 
-  .story-landscape {
-    transform: none;
+  .ground-grass {
+    animation: none;
+  }
+
+  .world-layer {
     will-change: auto;
+  }
+
+  .build-chamber {
+    top: -24vh;
+    transition: opacity 300ms ease;
   }
 
   .growth-stage::after {
@@ -3264,7 +3424,7 @@ body {
   position: absolute;
   z-index: -2;
   inset: -28px;
-  background-image: url("/images/sprout-growth-landscape.png");
+  background-image: url("/images/landscape/landscape-full.webp");
   background-position: center 56%;
   background-size: cover;
   filter: blur(9px) saturate(0.76);
@@ -3490,7 +3650,7 @@ body {
   right: 0;
   left: 0;
   height: 340px;
-  background-image: url("/images/sprout-growth-landscape.png");
+  background-image: url("/images/landscape/landscape-full.webp");
   background-position: center 58%;
   background-size: cover;
   opacity: 0.14;
@@ -3567,7 +3727,7 @@ body {
   right: -10px;
   width: 42%;
   height: 240px;
-  background: url("/images/sprout-growth-landscape.png") center / cover;
+  background: url("/images/landscape/landscape-full.webp") center / cover;
   opacity: 0.12;
   filter: blur(8px);
   mask-image: linear-gradient(90deg, transparent, black);
@@ -3630,7 +3790,7 @@ body {
   position: absolute;
   z-index: -1;
   inset: -20px;
-  background: url("/images/sprout-growth-landscape.png") center 70% / cover;
+  background: url("/images/landscape/landscape-full.webp") center 70% / cover;
   opacity: 0.55;
   filter: blur(3px) saturate(0.8);
   content: "";

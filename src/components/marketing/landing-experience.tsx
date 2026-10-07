@@ -9,38 +9,38 @@ import { GrowthSystem } from "@/components/marketing/growth-system";
 const chapters = [
   {
     eyebrow: "Small software, finally at home",
-    title: "The useful app in your head should be live by lunch.",
-    body: "Sprout gives purpose-built software a safe place to run, without turning every idea into an infrastructure project.",
+    title: "Your app works. Now give it somewhere to live.",
+    body: "Sprout takes application code you already have, from your editor, a teammate, or a coding agent, and turns it into a running app your team can open.",
   },
   {
-    eyebrow: "Bring the code",
-    title: "Start with the application you already made.",
-    body: "Connect a repository or hand Sprout the result of an agent session. We begin where code generation ends.",
+    eyebrow: "Plant the code",
+    title: "Hand Sprout the code. Nothing else.",
+    body: "Upload it, push it from the CLI, or let a coding agent deploy it. No Dockerfile, no proxy, no cloud console.",
   },
   {
-    eyebrow: "A calm path to production",
-    title: "Build, isolate, check, and publish.",
-    body: "One clear deployment flow replaces the usual maze of container, proxy, certificate, and runtime configuration.",
+    eyebrow: "Sealed underground",
+    title: "Every build runs sealed off.",
+    body: "Untrusted code builds in a disposable container with no network, fixed CPU and memory, and a hard time limit, kept away from everything else you run.",
   },
   {
-    eyebrow: "Live",
-    title: "A real URL, ready for real work.",
-    body: "Sprout turns a local application into a healthy HTTPS service your team can open immediately.",
+    eyebrow: "Breaking the surface",
+    title: "Healthy first. Then it gets a URL.",
+    body: "Sprout starts the app, checks that it answers on /health, and only then routes your team to its address.",
   },
   {
     eyebrow: "Everything it needs",
-    title: "Infrastructure grows around the app.",
-    body: "Attach data, storage, secrets, and logs without leaving the application or learning a new cloud vocabulary.",
+    title: "Data, secrets, and logs grow around it.",
+    body: "Attach a database, keep secrets out of the code, and read its logs without leaving the app or learning a new cloud vocabulary.",
   },
   {
     eyebrow: "Share the useful thing",
-    title: "Invite coworkers like you would share a document.",
-    body: "Workspace identity and simple roles make internal applications useful without rebuilding authentication every time.",
+    title: "Share it like a document.",
+    body: "Invite coworkers as viewers or editors, or restrict an app to the few people who need it. Their access ends when they leave the workspace.",
   },
   {
-    eyebrow: "A cloud for the small things",
-    title: "Give every workflow exactly the software it needs.",
-    body: "One quiet workspace for experiments, internal tools, and agent-built applications that matter to a handful of people.",
+    eyebrow: "A garden, not a server farm",
+    title: "Many small apps, each with a clear life.",
+    body: "Live apps serve. Resting apps pause and release what they use. Finished apps are archived, and deleting one really deletes it.",
   },
 ];
 
@@ -61,19 +61,22 @@ export function LandingExperience() {
     const setProgress = (progress: number) => {
       const segment = (start: number, end: number) => {
         const value = Math.min(1, Math.max(0, (progress - start) / (end - start)));
-        return (value * value * (3 - 2 * value)).toFixed(4);
+        return value * value * (3 - 2 * value);
       };
-      story.style.setProperty("--growth-progress", progress.toFixed(4));
-      story.style.setProperty("--root-growth", segment(0.02, 0.28));
-      story.style.setProperty("--stem-growth", segment(0.16, 0.48));
-      story.style.setProperty("--leaf-growth", segment(0.38, 0.67));
-      story.style.setProperty("--network-growth", segment(0.62, 0.9));
-      story.style.setProperty("--seed-open", segment(0.01, 0.14));
-      story.style.setProperty("--root-fine-growth", segment(0.14, 0.36));
-      story.style.setProperty("--lower-branch-growth", segment(0.29, 0.43));
-      story.style.setProperty("--upper-branch-growth", segment(0.39, 0.54));
-      story.style.setProperty("--lower-leaf-growth", segment(0.4, 0.58));
-      story.style.setProperty("--upper-leaf-growth", segment(0.52, 0.7));
+      const set = (name: string, value: number) => story.style.setProperty(name, value.toFixed(4));
+      set("--growth-progress", progress);
+      // The camera sinks below the soil while the build runs, then rises with the healthy app.
+      set("--camera-depth", segment(0.12, 0.3) * (1 - segment(0.4, 0.52)));
+      set("--seed-open", segment(0.01, 0.14));
+      set("--root-growth", segment(0.1, 0.34));
+      set("--root-fine-growth", segment(0.2, 0.38));
+      set("--stem-growth", segment(0.36, 0.52));
+      set("--lower-branch-growth", segment(0.44, 0.54));
+      set("--upper-branch-growth", segment(0.48, 0.58));
+      set("--leaf-growth", segment(0.48, 0.7));
+      set("--lower-leaf-growth", segment(0.5, 0.62));
+      set("--upper-leaf-growth", segment(0.56, 0.7));
+      set("--network-growth", segment(0.72, 0.92));
     };
     const readTarget = () => {
       const bounds = story.getBoundingClientRect();
@@ -137,15 +140,32 @@ export function LandingExperience() {
 
       <section className="scroll-story" id="story" ref={storyRef} aria-label="How Sprout works">
         <div className="story-stage" data-scene={activeScene}>
-          <div className="story-landscape" aria-hidden="true">
-            <div className="landscape-breeze landscape-breeze-left" />
-            <div className="landscape-breeze landscape-breeze-right" />
+          <div className="story-world" aria-hidden="true">
+            <div className="world-layer world-sky" />
+            <div className="world-light" />
+            <div className="world-veil" />
+            <div className="world-layer world-ground">
+              <div className="ground-soil" />
+              <div className="growth-stage">
+                <GrowthSystem />
+              </div>
+              <div className="ground-grass ground-grass-left" />
+              <div className="ground-grass ground-grass-right" />
+              <div className="ground-depth">
+                <div className="build-chamber">
+                  <p className="chamber-label"><LockKeyhole size={13} /> Sealed build · invoice-approval</p>
+                  <div className="pipeline">
+                    <span>Build</span><i /><span>Isolate</span><i /><span>Check</span>
+                  </div>
+                  <ul className="chamber-limits">
+                    <li>No network</li><li>1 CPU</li><li>1 GiB memory</li><li>2 min limit</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
           <div className="growth-atmosphere" aria-hidden="true">
             {Array.from({ length: 8 }, (_, index) => <i key={index} />)}
-          </div>
-          <div className="growth-stage" aria-hidden="true">
-            <GrowthSystem />
           </div>
           <div className="ambient-orb ambient-orb-one" />
           <div className="ambient-orb ambient-orb-two" />
@@ -163,15 +183,15 @@ export function LandingExperience() {
                 {index === activeScene && index === 0 && (
                   <div className="story-actions">
                     <Link className="button button-primary" href="/start">
-                      Explore Sprout <ArrowRight size={16} />
+                      Deploy an app <ArrowRight size={16} />
                     </Link>
-                    <span className="scroll-note">Scroll to grow the app</span>
+                    <span className="scroll-note">Scroll to plant it</span>
                   </div>
                 )}
                 {index === activeScene && index === 6 && (
                   <div className="story-actions final-actions">
                     <Link className="button button-primary" href="/start">
-                      Build something small <ArrowRight size={16} />
+                      Deploy an app <ArrowRight size={16} />
                     </Link>
                     <Link className="button button-secondary" href="/start">
                       View the workspace
@@ -185,12 +205,8 @@ export function LandingExperience() {
           <div className="product-world" aria-hidden="true">
             <div className="source-card">
               <div className="source-icon"><FileCode2 size={18} /></div>
-              <div><strong>invoice-approval</strong><span>Next.js · ready</span></div>
+              <div><strong>invoice-approval</strong><span>Node.js · ready to deploy</span></div>
               <span className="source-ready"><Check size={13} /></span>
-            </div>
-
-            <div className="pipeline">
-              <span>Build</span><i /><span>Isolate</span><i /><span>Check</span>
             </div>
 
             <div className="app-window">
@@ -215,9 +231,9 @@ export function LandingExperience() {
             </div>
 
             <div className="app-constellation">
-              <span className="mini-app mini-one">Hiring</span>
-              <span className="mini-app mini-two">Research</span>
-              <span className="mini-app mini-three">Inventory</span>
+              <span className="mini-app mini-one" data-state="live">Hiring<small>Live</small></span>
+              <span className="mini-app mini-two" data-state="paused">Research<small>Paused</small></span>
+              <span className="mini-app mini-three" data-state="archived">Inventory<small>Archived</small></span>
             </div>
           </div>
 
