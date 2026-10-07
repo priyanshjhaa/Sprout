@@ -2,13 +2,24 @@
 
 ## 1. Purpose
 
-This document defines the first implementation phase of Sprout: a polished frontend prototype for an agent-native cloud for small, purpose-built applications.
+This document defines the first implementation phase of Sprout: a polished frontend prototype for a deployment platform for small, purpose-built applications.
 
 Sprout's product promise is:
 
 > Take an existing application from code to a secure, shareable URL with almost no infrastructure work, eventually making small software as easy to share as a document.
 
-This phase focuses only on the product experience. It should establish the visual identity, landing-page story, dashboard information architecture, reusable component system, responsive behavior, and realistic mocked application states. It does not include the real deployment platform, runtime orchestration, databases, secrets infrastructure, or agent backend.
+### 1.1 Product boundary and differentiation
+
+Deployment is Sprout's core scope and differentiator. Sprout is the runtime and control plane for small, potentially short-lived applications, many of them written by coding agents. Application code is the input; an isolated, observable, permissioned application with a healthy URL is the output.
+
+- Sprout starts where code generation ends. It does not generate code and is not a prompt-to-application builder.
+- The primary product is the application lifecycle: deploy, inspect health, configure, observe, recover, share, pause, archive, and delete.
+- Source code and running applications must be presented as crossing an explicit trust boundary through build, isolation, resource limits, and health checks.
+- The product should remain calm and understandable for people who do not want to operate traditional cloud infrastructure.
+- The Deploy page is the dashboard's entry path. Coding agents, the CLI, and MCP clients use the same deploy API rather than a built-in agent experience.
+- Agent-tool exposure, Slack operation, and similar integrations are not assumed consequences of deployment; each requires separate product validation.
+
+This phase focuses only on the product experience. It should establish the visual identity, landing-page story, dashboard information architecture, reusable component system, responsive behavior, and realistic mocked application states. It does not include the real deployment platform, runtime orchestration, databases, or secrets infrastructure.
 
 ## 2. Confirmed technology choices
 
@@ -74,7 +85,7 @@ Motion should explain creation, deployment, connection, and progress.
 - Public scroll-driven landing page
 - Authentication screens or authentication entry state
 - Workspace shell and navigation
-- Agent page
+- Deploy page
 - Apps index
 - Individual application workspace
 - Overview, deployments, logs, environment, access, and settings views
@@ -96,7 +107,7 @@ Motion should explain creation, deployment, connection, and progress.
 - Secret encryption
 - Billing
 - Kubernetes or multi-region infrastructure
-- A functioning coding agent
+- Code generation of any kind
 - A real REST API or MCP server
 
 Mocked experiences must be visibly credible, but the product must never imply that a mocked deployment is real.
@@ -110,8 +121,8 @@ Mocked experiences must be visibly credible, but the product must never imply th
 /sign-in
   Authentication entry screen
 
-/workspace/[workspaceSlug]/agent
-  Agent conversation and application creation experience
+/workspace/[workspaceSlug]/deploy
+  Deploy entry flow: name an application, choose its source, and run a deployment
 
 /workspace/[workspaceSlug]/apps
   Application collection
@@ -147,7 +158,7 @@ Mocked experiences must be visibly credible, but the product must never imply th
   Workspace settings
 ```
 
-Only Agent and Apps should receive strong emphasis in the global navigation. Activity, Team, and Settings are secondary destinations.
+Only Deploy and Apps should receive strong emphasis in the global navigation. Activity, Team, and Settings are secondary destinations.
 
 ## 6. Landing-page experience
 
@@ -241,7 +252,7 @@ Use a compact global sidebar and a wide, comfortable content area.
 Sprout
 
 Workspace
-  Agent
+  Deploy
   Apps
   Activity
 
@@ -254,32 +265,20 @@ The sidebar should include the current workspace switcher and compact user menu.
 
 The dashboard may retain the landing page's atmospheric background, but at much lower contrast. There should be no scroll-driven storytelling inside normal product workflows.
 
-### 7.2 Agent page
+### 7.2 Deploy page
 
-The Agent page is the simplest path from an idea to running software.
+The Deploy page is the shortest path from existing application code to a healthy, shareable URL.
 
 Required areas:
 
-- Clear prompt composer with suggested starting prompts
-- Conversation history
-- Compact agent activity timeline
-- Expandable technical details
-- Application artifact/preview when one exists
-- Approval or clarification state
-- Success state with live application URL
-- Recent agent-created applications
+- Name the application (creates it through the API)
+- Choose a source: archive upload, `sprout deploy` from the CLI, or a connected repository
+- A plain-language summary of the supported application contract (for example, Node.js 24 with an npm lockfile)
+- Start a deployment and follow it through Queued, Building, Isolated, Health Check, and Live
+- Clear failure states that name the failed stage and the next action
+- Recent deployments across the workspace
 
-Example compact activity:
-
-```text
-Created application
-Generated database schema
-Built deployment
-Health check passed
-Application is live
-```
-
-Do not expose raw chain-of-thought or overwhelming command output. Show user-relevant actions, decisions, results, and errors.
+Sources that are not implemented yet must be visibly marked as unavailable, never faked. Do not show raw build output by default; show stage results and errors that help the user act.
 
 ### 7.3 Apps index
 
@@ -376,9 +375,11 @@ Initially combine environment variables and attached resources.
 - Repository connection
 - Custom domain
 - Runtime configuration
-- Delete application
+- Pause and resume application
+- Archive application
+- Delete application permanently
 
-Destructive actions must be visually separated and require explicit confirmation.
+Lifecycle actions must explain their runtime and access effects. Destructive actions must be visually separated and require explicit confirmation.
 
 ## 8. Shared component system
 
@@ -425,8 +426,8 @@ Build components from reusable primitives rather than designing each page indepe
 - Environment-variable row
 - Resource connection card
 - Member/permission row
-- Agent composer
-- Agent activity item
+- Deploy source picker
+- Deployment stage item
 - Empty state
 - Attention banner
 - Browser preview frame
@@ -449,9 +450,6 @@ DeploymentStage
 LogEntry
 EnvironmentVariable
 ManagedResource
-AgentConversation
-AgentMessage
-AgentActivity
 ActivityEvent
 ```
 
@@ -486,7 +484,7 @@ src/
     apps/
     deployments/
     logs/
-    agent/
+    deploy/
   features/
     auth/
     workspaces/
@@ -494,7 +492,7 @@ src/
     deployments/
     environment/
     access/
-    agent/
+    deploy/
   lib/
     api/
     query/
@@ -561,14 +559,14 @@ Deliverable: a performant, accessible scroll-driven landing experience.
 
 Deliverable: navigable authenticated shell backed by replaceable mock services.
 
-### Phase 5: Agent and Apps experiences
+### Phase 5: Deploy and Apps experiences
 
-- Build Agent page states and mocked conversational flow
+- Build the Deploy entry flow
 - Build Apps empty state, app grid/list, search, and filters
 - Connect mock create-app and deployment-progress mutations
 - Ensure direct URLs and browser navigation restore the correct state
 
-Deliverable: users can simulate creating an application and find it in Apps.
+Deliverable: users can create an application, start a deployment, and find it in Apps.
 
 ### Phase 6: Application workspace
 
@@ -604,12 +602,12 @@ The frontend phase is complete when these mocked journeys work coherently:
 2. Scrolling explains code, deployment, infrastructure, and sharing.
 3. Visitor reaches a clear call to action.
 
-### Journey B: Create through the agent
+### Journey B: Deploy an application
 
-1. User enters the workspace.
-2. User describes an invoice approval tool.
-3. Agent activity progresses through creation and deployment states.
-4. User receives a working-looking application artifact and URL.
+1. User opens Deploy in the workspace.
+2. User names an invoice approval application and chooses its source.
+3. The deployment progresses through build, isolation, and health-check stages.
+4. User receives the application's URL, or a clear failure with its stage.
 5. The new application appears in Apps.
 
 ### Journey C: Investigate a failed deployment
@@ -633,8 +631,13 @@ The frontend phase is complete when these mocked journeys work coherently:
 ### Product clarity
 
 - A new visitor can explain Sprout's value after completing the landing story.
-- A signed-in user can locate Agent and Apps immediately.
+- A new visitor understands that application code is Sprout's input and that safe runtime operation and sharing are its primary value.
+- The landing story communicates that untrusted code passes through build, isolation, resource limits, and health checks before receiving a URL.
+- A signed-in user can locate Deploy and Apps immediately.
+- The product reads as a deployment platform, not a code-generation experience.
 - An application owner can determine app health without opening multiple pages.
+- An application owner can distinguish running, paused, archived, and failed states and understand the permanent effect of deletion.
+- Secure application sharing is presented as a first-class workflow rather than a secondary infrastructure setting.
 - Infrastructure terminology is introduced contextually and explained where necessary.
 
 ### Visual quality

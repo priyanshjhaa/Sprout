@@ -15,9 +15,21 @@ authenticated user
       -> create a deployment
       -> observe progress
       -> reach a healthy application URL
+      -> share with an authorized teammate
+      -> pause, archive, or retire the application safely
 ```
 
 The backend must remain useful to more than the web dashboard. Its HTTP API will eventually serve the Next.js frontend, CLI, coding agents, and MCP server.
+
+### Product boundary
+
+Sprout is the runtime and control plane for small, potentially short-lived, agent-generated applications. Application code is an untrusted input, not the product itself. The backend turns that input into an isolated, observable, permissioned workload with an explicit lifecycle.
+
+- Design for many small, low-traffic applications without assuming every application runs permanently.
+- Keep deploy, observe, recover, share, pause, archive, and delete behavior explicit in the domain and API.
+- Apply workspace and application authorization consistently across the dashboard, CLI, coding-agent, and MCP clients.
+- Do not couple the backend to an embedded code-generation harness or automatically expose deployed applications as agent tools.
+- Require separate validation and planning before adding agent interoperability, external connectors, or communication-channel integrations.
 
 ## 2. Working and teaching method
 
@@ -25,6 +37,7 @@ Every milestone follows the same sequence:
 
 ```text
 Mental model
+    -> systems story
     -> NestJS and Django comparison
     -> request or process trace
     -> smallest useful implementation
@@ -34,6 +47,16 @@ Mental model
 ```
 
 Before implementation begins, the concept should be explained in terms of the running system. Syntax is introduced only when it expresses that concept.
+
+The **systems story** explains why the design exists, not how to type it:
+
+1. **Problem:** what goes wrong without this piece, in a real running system.
+2. **History:** the incidents, products, or constraints that shaped the usual solution (for example Slowloris for server timeouts, Zip Slip for archive validation, Firecracker for multi-tenant isolation).
+3. **Decision in Sprout:** the choice made here, pointing at the actual file.
+4. **Trade-off:** what the decision costs and what it deliberately leaves unsolved.
+5. **Check:** one question that tests understanding of the system, not the syntax.
+
+The first lesson, covering milestones 0–8, is recorded in [`backend-systems-story.md`](./backend-systems-story.md).
 
 Each milestone is complete only when:
 
@@ -274,7 +297,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 ### Milestone 4: First vertical API slice
 
-**Build:** Define OpenAPI operations and implement authenticated-placeholder create, list, view, and update application flows. Replace only the corresponding frontend mock calls with HTTP requests.
+**Build:** Define OpenAPI operations and implement authenticated-placeholder create, list, view, update, and explicit lifecycle-state application flows. Replace only the corresponding frontend mock calls with HTTP requests.
 
 **Understand:** Transport DTOs, domain models, service boundaries, validation, repository errors, HTTP status translation, idempotency considerations, and contract ownership.
 
@@ -282,7 +305,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 **Trace:** TanStack Query -> HTTP client -> handler -> workspace guard -> service -> repository -> PostgreSQL -> response DTO -> query cache.
 
-**Verify:** Happy paths; invalid names/slugs; unknown workspace/application; duplicate slug conflict; cross-workspace lookup rejection; database failure; frontend loading/error/empty states; frontend typecheck, lint, and build.
+**Verify:** Happy paths; valid and invalid lifecycle transitions; invalid names/slugs; unknown workspace/application; duplicate slug conflict; cross-workspace lookup rejection; database failure; frontend loading/error/empty states; frontend typecheck, lint, and build.
 
 **Explain back:** Why should database structs not become API responses? Which layer owns business validation? How does a database uniqueness error become `409` safely?
 
@@ -290,7 +313,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 ### Milestone 5: Authentication and authorization
 
-**Build:** After choosing an identity provider and session model, replace the placeholder identity with verified authentication, external identity mapping, workspace membership checks, and application permissions.
+**Build:** After choosing an identity provider and session model, replace the placeholder identity with verified authentication, external identity mapping, workspace membership checks, application permissions, invitations, access grants, and access removal for secure sharing.
 
 **Understand:** Authentication versus authorization, cookies/tokens, trust boundaries, identity claims, tenant isolation, least privilege, and authorization close to resource access.
 
@@ -298,7 +321,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 **Trace:** Credential/session -> verification -> request identity -> membership lookup -> authorized service operation -> audit-safe result.
 
-**Verify:** Missing, expired, malformed, and wrong-user sessions; viewer/editor/owner permissions; cross-workspace access; deleted membership; and negative tests for every protected operation.
+**Verify:** Missing, expired, malformed, and wrong-user sessions; viewer/editor/owner permissions; invitation acceptance and expiry; inherited and application-specific access; access removal; cross-workspace access; deleted membership; and negative tests for every protected operation.
 
 **Explain back:** Why is successful authentication not enough? Why must application queries include the workspace boundary even after middleware runs?
 
@@ -306,7 +329,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 ### Milestone 6: Concurrency fundamentals
 
-**Build:** Model deployment work with an in-process, bounded worker pool and simulated jobs before invoking real build tools.
+**Build:** Model deployment work with an in-process, bounded worker pool and simulated jobs before invoking real build tools. Capacity must remain explicit when many small applications submit work concurrently.
 
 **Understand:** Goroutines, channels, mutexes, `select`, worker ownership, bounded queues, backpressure, cancellation, error propagation, concurrent versus parallel work, and the race detector.
 
@@ -314,7 +337,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 **Trace:** API request -> persisted queued deployment -> bounded channel -> worker -> lifecycle events -> completion or cancellation.
 
-**Verify:** Queue-full behavior, concurrency limits, ordered lifecycle changes, cancellation, worker panic containment, shutdown with work in flight, deterministic tests, and `go test -race ./...`.
+**Verify:** Queue-full behavior, concurrency limits, bounded per-application work, absence of starvation across applications, ordered lifecycle changes, cancellation, worker panic containment, shutdown with work in flight, deterministic tests, and `go test -race ./...`.
 
 **Explain back:** Why is an unbounded goroutine-per-job design unsafe? When is a mutex clearer than a channel? What applies backpressure?
 
@@ -338,7 +361,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 ### Milestone 8: Operating-system and Docker interaction
 
-**Build:** Replace simulated work incrementally with controlled source preparation, Docker build/container operations, health checks, cleanup, and stable deployment events.
+**Build:** Replace simulated work incrementally with controlled source preparation, Docker build/container operations, per-application resource budgets, health checks, cleanup, and stable deployment events. Treat every source tree, build step, artifact, and runtime process as untrusted.
 
 **Understand:** Processes, file descriptors, temporary directories, signals, subprocess cancellation, stdout/stderr pipes, Docker's API boundary, resource limits, isolation, and cleanup after partial failure.
 
@@ -346,7 +369,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 **Trace:** Deployment record -> isolated workspace -> build process/API -> bounded output -> container -> health check -> live or failed status -> cleanup.
 
-**Verify:** Invalid source, build failure, excessive output, timeout, cancellation, unhealthy container, process crash, orphan cleanup, resource limits, and secret redaction.
+**Verify:** Invalid and malicious source, build failure, excessive output, timeout, cancellation, unhealthy container, process crash, network and filesystem boundary violations, orphan cleanup, CPU/memory/process limits, and secret redaction.
 
 **Explain back:** What resources survive if the Go process crashes? Which boundary provides isolation? Why is command construction a security boundary?
 
@@ -354,7 +377,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 ### Milestone 9: Production hardening
 
-**Build:** Add metrics, tracing, profiling controls, graceful draining, deployment packaging, backup/recovery procedures, and production-facing security checks.
+**Build:** Add metrics, tracing, profiling controls, graceful draining, deployment packaging, backup/recovery procedures, production-facing security checks, and the operational application lifecycle: pause, resume, archive, restore, and permanent deletion. Define how idle applications release runtime capacity without losing their persisted configuration or access model.
 
 **Understand:** Service-level indicators, latency distributions, saturation, distributed traces, profiles, deployment health, failure recovery, and operational feedback loops.
 
@@ -362,7 +385,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 **Trace:** Release artifact -> startup -> readiness -> traffic -> saturation/failure signal -> drain -> shutdown or recovery.
 
-**Verify:** Load behavior, pool and worker saturation, shutdown during active requests/jobs, restoration from backup, safe diagnostics, container scanning, and documented rollback.
+**Verify:** Load behavior across many small applications, pool and worker saturation, shutdown during active requests/jobs, paused-runtime capacity release, archive and restore behavior, deletion cleanup, restoration from backup, safe diagnostics, container scanning, and documented rollback.
 
 **Explain back:** Which signals show user impact? What is drained during shutdown? What can be recovered automatically and what requires operator action?
 

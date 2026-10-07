@@ -1,6 +1,6 @@
 # Sprout
 
-Sprout is an agent-native cloud concept for small, purpose-built applications.
+Sprout is a deployment platform for small, purpose-built applications, including the many now written by coding agents.
 
 It explores a simple product question:
 
@@ -8,7 +8,7 @@ It explores a simple product question:
 
 The long-term goal is to make deploying and securely sharing a small application feel as straightforward as sharing a document. A developer or coding agent provides the application; Sprout handles the path from source code to a healthy URL, along with identity, configuration, logs, data, and access.
 
-This repository contains the frontend prototype, the PostgreSQL schema/local development setup, and a Go API for workspace applications. Clerk handles sign-in; Go verifies sessions, maps users to local identities, and enforces workspace membership. Infrastructure and agent operations are still demonstrations.
+This repository contains the frontend prototype, the PostgreSQL schema/local development setup, and a Go API for workspace applications. Clerk handles sign-in; Go verifies sessions, maps users to local identities, and enforces workspace membership. Deployments are still simulations; a restricted local Node.js build runner exists as developer tooling.
 
 ## Product direction
 
@@ -28,7 +28,7 @@ Database · Secrets · Storage · Logs
 Share with coworkers
 ```
 
-It is not intended to be another prompt-to-React generator. The interesting product and engineering work is creating a safe, calm environment where agent-built software can run and be shared with real people.
+Deployment is the core scope. Sprout does not generate code and is not a prompt-to-app builder: coding agents, the CLI, and the dashboard are all clients of the same deploy API. The interesting product and engineering work is turning untrusted code into a safe, calm, running application that can be shared with real people.
 
 ## Current frontend
 
@@ -38,7 +38,7 @@ The prototype includes:
 - A simplified semantic mobile landing experience
 - Clerk sign-in and a personal workspace created on first use
 - Responsive workspace shell and navigation
-- Agent workspace with a mocked application-creation journey
+- Deploy entry flow: create an application, choose its source, and run a deployment
 - Searchable application library
 - Application health overview
 - Deployment history and deployment-level build logs
@@ -48,7 +48,7 @@ The prototype includes:
 - Application settings and guarded destructive actions
 - Loading, empty, failure, and responsive states
 
-The dashboard deliberately keeps only **Agent** and **Apps** prominent. Operational concepts such as deployments, logs, environment, and permissions remain inside the selected application instead of becoming global cloud-console navigation.
+The dashboard deliberately keeps only **Deploy** and **Apps** prominent. Operational concepts such as deployments, logs, environment, and permissions remain inside the selected application instead of becoming global cloud-console navigation.
 
 ## Technology
 
@@ -60,7 +60,7 @@ The dashboard deliberately keeps only **Agent** and **Apps** prominent. Operatio
 - Lucide icons
 - A typed HTTP adapter for application data, with focused mocks for unfinished capabilities
 
-The frontend uses an explicit API boundary. Components consume typed TanStack Query hooks rather than importing fixtures directly. Application views, access controls, workspace teams, and deployment simulations now use the Go API. Simulation detail pages receive live SSE progress and support cancellation; they do not execute application code or produce a live URL. Logs, environment provisioning, and agent capabilities remain mock previews.
+The frontend uses an explicit API boundary. Components consume typed TanStack Query hooks rather than importing fixtures directly. Application views, access controls, workspace teams, and deployment simulations now use the Go API. Simulation detail pages receive live SSE progress and support cancellation; they do not execute application code or produce a live URL. Logs and environment provisioning remain mock previews.
 
 ## Getting started
 
@@ -128,7 +128,7 @@ Useful demo routes:
 /sign-in                               Clerk sign-in
 /sign-up                               Clerk sign-up
 /start                                 Open or create your personal workspace
-/workspace/{workspace-slug}/agent      Agent demo
+/workspace/{workspace-slug}/deploy     Deploy an application
 /workspace/{workspace-slug}/apps       Application library
 /workspace/{workspace-slug}/apps/{id}  Application overview
 ```
@@ -157,9 +157,9 @@ src/
 ├── app/                  Next.js routes and layouts
 ├── components/
 │   ├── access/           Sharing and roles
-│   ├── agent/            Agent workspace
 │   ├── apps/             App library, shell, and overview
 │   ├── dashboard/        Workspace navigation
+│   ├── deploy/           Deploy entry flow
 │   ├── deployments/      Deployment history and details
 │   ├── environment/      Variables and resources
 │   ├── logs/             Runtime log viewer
@@ -188,13 +188,11 @@ The Go backend lives in `backend/`. Its `cmd/api` package is the executable entr
 The following capabilities are mocked and are not connected to production infrastructure:
 
 - GitHub repository access
-- Coding-agent execution
 - Dashboard-triggered application builds and runtime containers (local Node build and artifact tooling exists)
 - DNS and TLS provisioning
 - Live log streaming
 - Database and object-storage provisioning
 - Secret encryption
-- Invitations and permissions persistence
 - Rollbacks and destructive operations
 
 The UI should be treated as a product and interaction prototype, not a hosting service.
@@ -218,6 +216,7 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 
 - [Frontend implementation plan](./frontend-implementation.md)
 - [Go backend development and learning plan](./backend-development-learning-plan.md)
+- [Backend systems story: why it is built this way](./backend-systems-story.md)
 - [Authorization policy](./authorization-policy.md)
 - [Workspace invitations: learning and verification](./workspace-invitations-learning.md)
 - [Bounded deployment simulations: learning and verification](./deployment-worker-learning.md)
