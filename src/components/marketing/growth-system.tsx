@@ -27,12 +27,6 @@ export function GrowthSystem() {
           <stop offset="0.7" stopColor="#88663f" />
           <stop offset="1" stopColor="#5c442d" />
         </radialGradient>
-        <filter id="seed-shadow" x="-80%" y="-80%" width="260%" height="260%">
-          <feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="#68553d" floodOpacity="0.2" />
-        </filter>
-        <filter id="leaf-shadow" x="-80%" y="-80%" width="260%" height="260%">
-          <feDropShadow dx="0" dy="5" stdDeviation="7" floodColor="#536039" floodOpacity="0.14" />
-        </filter>
       </defs>
 
       <g className="growth-soil">
@@ -60,19 +54,19 @@ export function GrowthSystem() {
         <path className="growth-path stem branch-wide-left" pathLength="1" d="M348 314 C303 311 264 315 222 300" />
         <path className="growth-path stem branch-wide-right" pathLength="1" d="M351 302 C405 301 450 314 494 301" />
 
-        <g className="growth-leaf leaf-one" filter="url(#leaf-shadow)">
+        <g className="growth-leaf leaf-one">
           <path d="M257 215 C223 204 218 171 225 156 C258 155 281 179 257 215Z" />
           <path d="M258 213 C249 192 240 178 227 162" />
         </g>
-        <g className="growth-leaf leaf-two" filter="url(#leaf-shadow)">
+        <g className="growth-leaf leaf-two">
           <path d="M446 188 C456 151 489 143 506 151 C505 184 480 207 446 188Z" />
           <path d="M449 187 C470 175 486 164 500 154" />
         </g>
-        <g className="growth-leaf leaf-three" filter="url(#leaf-shadow)">
+        <g className="growth-leaf leaf-three">
           <path d="M222 300 C190 296 179 272 184 255 C214 251 236 269 222 300Z" />
           <path d="M221 298 C207 280 197 269 187 258" />
         </g>
-        <g className="growth-leaf leaf-four" filter="url(#leaf-shadow)">
+        <g className="growth-leaf leaf-four">
           <path d="M494 301 C514 272 542 272 557 282 C548 312 522 324 494 301Z" />
           <path d="M497 300 C519 295 535 289 551 284" />
         </g>
@@ -82,7 +76,7 @@ export function GrowthSystem() {
         <circle cx="350" cy="350" r="54" />
         <circle cx="350" cy="350" r="32" />
       </g>
-      <g className="seed" filter="url(#seed-shadow)">
+      <g className="seed">
         <path className="seed-shell seed-shell-left" d="M351 328 C329 325 325 351 337 368 Q343 375 348 369 L347 358 L351 350 L348 341Z" />
         <path className="seed-shell seed-shell-right" d="M351 328 C374 330 372 358 348 369 L347 358 L351 350 L348 341Z" />
       </g>

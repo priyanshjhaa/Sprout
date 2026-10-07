@@ -47,26 +47,34 @@ const chapters = [
 export function LandingExperience() {
   const [activeScene, setActiveScene] = useState(0);
   const storyRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const story = storyRef.current;
-    if (!story) return;
+    const stage = stageRef.current;
+    if (!story || !stage) return;
 
     let frame = 0;
     let currentProgress = 0;
     let targetProgress = 0;
     let currentScene = 0;
+    let underground = false;
     let lastFrameTime = performance.now();
+    let storyTop = 0;
+    let distance = 1;
+    const lastScene = chapters.length - 1;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
     const setProgress = (progress: number) => {
       const segment = (start: number, end: number) => {
         const value = Math.min(1, Math.max(0, (progress - start) / (end - start)));
         return value * value * (3 - 2 * value);
       };
       const set = (name: string, value: number) => story.style.setProperty(name, value.toFixed(4));
-      set("--growth-progress", progress);
       // The camera sinks below the soil while the build runs, then rises with the healthy app.
-      set("--camera-depth", segment(0.12, 0.3) * (1 - segment(0.4, 0.52)));
+      const depth = reduceMotion.matches ? 0 : segment(0.12, 0.3) * (1 - segment(0.4, 0.52));
+      set("--growth-progress", progress);
+      set("--camera-depth", depth);
       set("--seed-open", segment(0.01, 0.14));
       set("--root-growth", segment(0.1, 0.34));
       set("--root-fine-growth", segment(0.2, 0.38));
@@ -77,24 +85,35 @@ export function LandingExperience() {
       set("--lower-leaf-growth", segment(0.5, 0.62));
       set("--upper-leaf-growth", segment(0.56, 0.7));
       set("--network-growth", segment(0.72, 0.92));
+
+      // Flip copy colour once as the soil passes behind it, with a gap to avoid flicker.
+      const nextUnderground = underground ? depth > 0.45 : depth > 0.62;
+      if (nextUnderground !== underground) {
+        underground = nextUnderground;
+        stage.toggleAttribute("data-underground", underground);
+      }
+    };
+
+    // Measure layout only on resize; scrolling reads the cached values.
+    const measure = () => {
+      storyTop = story.getBoundingClientRect().top + window.scrollY;
+      distance = Math.max(1, story.offsetHeight - window.innerHeight);
     };
     const readTarget = () => {
-      const bounds = story.getBoundingClientRect();
-      const distance = Math.max(1, story.offsetHeight - window.innerHeight);
-      targetProgress = Math.min(1, Math.max(0, -bounds.top / distance));
-      const nextScene = Math.min(chapters.length - 1, Math.round(targetProgress * (chapters.length - 1)));
-      if (nextScene !== currentScene) {
-        currentScene = nextScene;
-        setActiveScene(nextScene);
+      targetProgress = Math.min(1, Math.max(0, (window.scrollY - storyTop) / distance));
+      // Change chapter only once progress clearly passes the midpoint between scenes.
+      const position = targetProgress * lastScene;
+      if (Math.abs(position - currentScene) > 0.58) {
+        currentScene = Math.min(lastScene, Math.max(0, Math.round(position)));
+        setActiveScene(currentScene);
       }
     };
     const animate = (time: number) => {
       const elapsed = Math.min(64, time - lastFrameTime);
       lastFrameTime = time;
       const difference = targetProgress - currentProgress;
-      const easing = 1 - Math.exp(-elapsed / 82);
-      currentProgress += difference * easing;
-      if (Math.abs(difference) < 0.0005) currentProgress = targetProgress;
+      currentProgress += difference * (1 - Math.exp(-elapsed / 90));
+      if (Math.abs(difference) < 0.0004) currentProgress = targetProgress;
       setProgress(currentProgress);
       frame = currentProgress === targetProgress ? 0 : window.requestAnimationFrame(animate);
     };
@@ -108,16 +127,21 @@ export function LandingExperience() {
         frame = window.requestAnimationFrame(animate);
       }
     };
+    const onResize = () => {
+      measure();
+      requestUpdate();
+    };
 
+    measure();
     readTarget();
     currentProgress = targetProgress;
     setProgress(currentProgress);
     window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
+    window.addEventListener("resize", onResize);
     reduceMotion.addEventListener("change", requestUpdate);
     return () => {
       window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
+      window.removeEventListener("resize", onResize);
       reduceMotion.removeEventListener("change", requestUpdate);
       if (frame) window.cancelAnimationFrame(frame);
     };
@@ -139,7 +163,7 @@ export function LandingExperience() {
       </header>
 
       <section className="scroll-story" id="story" ref={storyRef} aria-label="How Sprout works">
-        <div className="story-stage" data-scene={activeScene}>
+        <div className="story-stage" data-scene={activeScene} ref={stageRef}>
           <div className="story-world" aria-hidden="true">
             <div className="world-layer world-sky" />
             <div className="world-light" />

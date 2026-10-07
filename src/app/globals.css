@@ -525,7 +525,6 @@ a {
 
 .sap {
   fill: currentColor;
-  filter: drop-shadow(0 0 4px rgba(104, 118, 66, 0.35));
   animation: sap-pulse 1.8s ease-in-out infinite;
 }
 
@@ -2064,6 +2063,7 @@ body {
       radial-gradient(ellipse at 50% 31%, rgba(255, 252, 244, 0.76) 0 24%, rgba(255, 252, 244, 0.18) 52%, transparent 70%);
     mask-image: none;
     opacity: calc(1 - var(--camera-depth));
+    will-change: opacity;
   }
 
   /*
@@ -2075,7 +2075,7 @@ body {
     z-index: -3;
     inset: 0;
     pointer-events: none;
-    transform: scale(calc(1.03 + var(--growth-progress) * 0.012));
+    transform: scale(1.03);
     transform-origin: 50% 70%;
   }
 
@@ -2087,7 +2087,6 @@ body {
 
   .world-sky {
     background: url("/images/landscape/landscape-sky.webp") center 62% / cover;
-    filter: saturate(0.82) contrast(0.94);
     transform: translate3d(0, calc(var(--camera-depth) * -16vh), 0);
   }
 
@@ -2099,6 +2098,7 @@ body {
       radial-gradient(ellipse at 50% 72%, rgba(255, 214, 160, 0.42), transparent 58%),
       linear-gradient(180deg, rgba(226, 168, 128, 0.26), rgba(242, 206, 160, 0.1) 52%, transparent 74%);
     opacity: calc(1 - var(--growth-progress));
+    will-change: opacity;
   }
 
   .world-veil {
@@ -2106,6 +2106,7 @@ body {
     inset: 0;
     background: linear-gradient(180deg, rgba(42, 33, 19, 0.78), rgba(34, 27, 11, 0.6));
     opacity: var(--camera-depth);
+    will-change: opacity;
   }
 
   .world-ground {
@@ -2118,7 +2119,6 @@ body {
     inset: 0;
     background-position: center 62%;
     background-size: cover;
-    filter: saturate(0.82) contrast(0.94);
   }
 
   .ground-soil { background-image: url("/images/landscape/landscape-ground.webp"); }
@@ -2229,17 +2229,23 @@ body {
     font-size: 10px;
   }
 
-  /* Copy switches from ink on sky to cream on soil while the soil line passes behind it. */
-  .story-copy-stack {
-    --copy-flip: clamp(0, (var(--camera-depth) - 0.4) * 2.5, 1);
+  /* Underground, the copy turns cream; the class flips once with a short transition. */
+  .story-copy h1,
+  .story-copy .eyebrow,
+  .story-body {
+    transition: color 420ms ease, text-shadow 420ms ease;
   }
 
-  .story-copy h1 {
-    color: color-mix(in srgb, var(--ink) calc(100% - var(--copy-flip) * 100%), #f7f0e3);
+  .story-stage[data-underground] .story-copy h1 {
+    color: #f7f0e3;
+    text-shadow: 0 2px 30px rgba(18, 13, 6, 0.75);
   }
 
-  .story-copy .eyebrow {
-    color: color-mix(in srgb, var(--sprout-strong) calc(100% - var(--copy-flip) * 100%), #d7dfb4);
+  .story-stage[data-underground] .story-copy .eyebrow { color: #d7dfb4; }
+
+  .story-stage[data-underground] .story-body {
+    color: #ddd2bd;
+    text-shadow: 0 1px 18px rgba(18, 13, 6, 0.8);
   }
 
   .story-copy-stack {
@@ -2261,38 +2267,45 @@ body {
     align-items: center;
     flex-direction: column;
     opacity: 0;
-    transform: translateY(16px) scale(0.985);
+    transform: translateY(-12px);
     visibility: hidden;
     pointer-events: none;
+    /* Outgoing copy drifts up and fades while the next chapter rises in. */
     transition:
-      opacity 110ms ease-out,
-      transform 360ms cubic-bezier(0.16, 1, 0.3, 1),
-      visibility 0s linear 360ms;
+      opacity 280ms ease-in,
+      transform 420ms cubic-bezier(0.4, 0, 1, 1),
+      visibility 0s linear 420ms;
     animation: none;
+    will-change: opacity, transform;
   }
 
   .story-copy.is-active {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
     visibility: visible;
     pointer-events: auto;
     transition:
-      opacity 480ms ease,
-      transform 680ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 520ms ease-out 140ms,
+      transform 760ms cubic-bezier(0.16, 1, 0.3, 1) 100ms,
       visibility 0s;
+  }
+
+  /* Copy that has not been reached yet waits below, so scrolling back reverses the motion. */
+  .story-copy.is-active ~ .story-copy {
+    transform: translateY(16px);
   }
 
   .story-copy h1 {
     max-width: 15ch;
     font-size: clamp(44px, 4.8vw, 68px);
-    text-shadow: 0 2px 30px color-mix(in srgb, rgba(255, 251, 242, 0.86) calc(100% - var(--copy-flip) * 100%), rgba(18, 13, 6, 0.75));
+    text-shadow: 0 2px 30px rgba(255, 251, 242, 0.86);
   }
 
   .story-body {
     max-width: 600px;
     margin-top: 20px;
-    color: color-mix(in srgb, #645b50 calc(100% - var(--copy-flip) * 100%), #ddd2bd);
-    text-shadow: 0 1px 18px color-mix(in srgb, rgba(255, 251, 242, 0.95) calc(100% - var(--copy-flip) * 100%), rgba(18, 13, 6, 0.8));
+    color: #645b50;
+    text-shadow: 0 1px 18px rgba(255, 251, 242, 0.95);
   }
 
   .story-actions {
@@ -2319,7 +2332,6 @@ body {
     content: "";
     opacity: calc(0.08 + var(--leaf-growth) * 0.34);
     transform: translate(-50%, -50%) scale(calc(0.78 + var(--leaf-growth) * 0.36));
-    filter: blur(12px);
     will-change: opacity, transform;
   }
 
@@ -2364,7 +2376,6 @@ body {
     width: min(620px, 58vw, 64vh);
     height: auto;
     transform: translate(-50%, -54%);
-    filter: drop-shadow(0 16px 28px rgba(49, 44, 27, 0.1));
   }
 
   .growth-soil {
