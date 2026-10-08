@@ -14,21 +14,24 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
     [applications, search],
   );
 
+  // With no apps, search and the header button only repeat the empty state's single action.
+  const hasApplications = (applications?.length ?? 0) > 0;
+
   return (
     <main className="dashboard-page apps-page">
       <header className="apps-heading">
         <div className="page-heading"><h1>Apps</h1><p>Everything deployed in this workspace.</p></div>
-        <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}><Plus size={16} /> Deploy app</Link>
+        {hasApplications && <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}><Plus size={16} /> Deploy app</Link>}
       </header>
 
-      <div className="apps-toolbar">
+      {hasApplications && <div className="apps-toolbar">
         <label className="search-field">
           <Search size={15} />
           <span className="sr-only">Search applications</span>
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search apps" />
         </label>
-        <span>{applications?.length ?? 0} applications</span>
-      </div>
+        <span>{applications?.length} {applications?.length === 1 ? "application" : "applications"}</span>
+      </div>}
 
       {isLoading ? (
         <div className="apps-grid" aria-label="Loading applications">
@@ -37,14 +40,10 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
       ) : isError ? (
         <section className="soft-empty"><Boxes size={20} /><h2>Applications could not be loaded</h2><p>Sprout could not reach your applications. You can safely try again.</p><button className="button button-secondary" onClick={() => refetch()}>Try again</button></section>
       ) : applications?.length === 0 ? (
-        <section className="workspace-welcome">
-          <div className="workspace-welcome-copy">
-            <p className="eyebrow">A space to begin</p>
-            <h2>Your first useful thing belongs here.</h2>
-            <p>Bring application code from your editor, the CLI, or a coding agent. Sprout builds it in isolation, checks its health, and gives your team a place to use it.</p>
-            <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}>Deploy your first app <ArrowRight size={16} /></Link>
-          </div>
-          <div className="workspace-welcome-art" aria-hidden="true"><span className="seed-icon"><span /><span /></span><i /><i /></div>
+        <section className="apps-empty">
+          <h2>No apps yet</h2>
+          <p>Deploy one and it will appear here, ready to share with your team.</p>
+          <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}>Deploy your first app <ArrowRight size={16} /></Link>
         </section>
       ) : visibleApplications.length === 0 ? (
         <section className="soft-empty"><Search size={20} /><h2>No applications match “{search}”</h2><p>Try a different name or clear your search.</p><button className="button button-secondary" onClick={() => setSearch("")}>Clear search</button></section>

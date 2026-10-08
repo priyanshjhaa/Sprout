@@ -3831,3 +3831,12 @@ body {
 .app-card-top { gap: 12px; }
 .app-card-top h2 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .app-monogram { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 10px; color: #4b4034; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+
+/* Apps empty state: one sentence and one action, in the landing's serif voice. */
+.apps-empty { display: grid; justify-items: start; gap: 12px; padding: 36px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.apps-empty h2 { margin: 0; font-family: var(--font-hero), Georgia, "Times New Roman", serif; font-size: 30px; font-weight: 400; letter-spacing: -0.03em; }
+.apps-empty p { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
+
+/* Team: secondary text stays secondary. */
+.team-invite-panel > p { font-size: 14px; }
+.team-panel-note { margin: 0; padding: 16px; color: var(--muted); font-size: 13px; }
