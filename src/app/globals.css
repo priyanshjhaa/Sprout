@@ -190,6 +190,16 @@ a {
 }
 
 /* Landing */
+/*
+ * The landing is one continuous scene, so overscroll must not reveal the page
+ * canvas: stop the bounce, and where a browser still bounces, extend the sky
+ * above and the soil below.
+ */
+html:has(.landing-shell) {
+  overscroll-behavior-y: none;
+  background: linear-gradient(180deg, #e2d0b4 0 50%, #1d170b 50% 100%);
+}
+
 .landing-shell {
   position: relative;
   min-height: 100vh;
