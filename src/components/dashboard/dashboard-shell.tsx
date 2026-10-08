@@ -8,12 +8,9 @@ import { useState, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
 import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
 
-const primaryNavigation = [
+const navigationItems = [
   { label: "Deploy", path: "deploy", icon: Rocket },
   { label: "Apps", path: "apps", icon: Boxes },
-];
-
-const secondaryNavigation = [
   { label: "Team", path: "team", icon: Users },
 ];
 
@@ -27,7 +24,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navigation = (items: typeof primaryNavigation) =>
+  const navigation = (items: typeof navigationItems) =>
     items.map(({ label, path, icon: Icon }) => {
       const href = `/workspace/${workspaceSlug}/${path}`;
       const active = pathname === href || (path === "apps" && pathname.startsWith(`${href}/`));
@@ -77,12 +74,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
         <nav className="sidebar-navigation" aria-label="Workspace navigation">
           <div className="sidebar-group">
-            <p>Workspace</p>
-            {navigation(primaryNavigation)}
-          </div>
-          <div className="sidebar-group sidebar-group-secondary">
-            <p>People</p>
-            {navigation(secondaryNavigation)}
+            {navigation(navigationItems)}
           </div>
         </nav>
 

@@ -3781,42 +3781,41 @@ body {
   .workspace-welcome-copy h2 { font-size: 30px; }
 }
 
-/* Deploy entry flow */
-.deploy-steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
-.deploy-step { padding: 22px 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
-.deploy-step:not(.is-current):not(.is-done) { opacity: 0.72; }
-.deploy-step-heading { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; font-size: 18px; font-weight: 560; }
-.deploy-step-heading > span:first-child { display: inline-grid; width: 26px; height: 26px; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; font-size: 12px; }
-.deploy-step.is-current .deploy-step-heading > span:first-child { border-color: var(--sprout); color: var(--sprout-strong); }
-.deploy-step.is-done .deploy-step-heading > span:first-child { border-color: var(--sprout); background: var(--sprout); color: var(--surface-solid); }
-.deploy-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 12px; }
-.deploy-form label { display: grid; min-width: 0; gap: 8px; font-size: 12px; }
+/* Deploy entry flow: one card that creates the app, then runs it. */
+.deploy-card { padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+.deploy-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px 12px; }
+.deploy-name { display: grid; min-width: 0; gap: 8px; font-size: 12px; }
 .deploy-form input { min-width: 0; width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: #fffaf2; color: var(--ink); }
 .deploy-form input:focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; }
+.deploy-slug { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-height: 30px; color: var(--muted); font-size: 12px; }
+.deploy-slug strong { color: var(--ink); font-weight: 600; }
+.deploy-slug label { flex: 1; max-width: 340px; }
 .deploy-error { grid-column: 1 / -1; margin: 4px 0 0; color: var(--danger); font-size: 13px; }
-.deploy-summary, .deploy-muted { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
-.deploy-summary strong, .deploy-muted strong { color: var(--ink); font-weight: 600; }
-.deploy-sources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.deploy-source { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; padding: 14px; border: 1px dashed var(--line-strong); border-radius: 12px; color: var(--muted); }
-.deploy-source > div { display: grid; gap: 3px; min-width: 0; }
-.deploy-source strong { color: var(--ink); font-size: 13px; font-weight: 600; }
-.deploy-source span, .deploy-source small { font-size: 12px; }
-.deploy-source small { grid-column: 2; color: var(--faint); }
-.deploy-contract { margin-top: 14px; font-size: 13px; color: var(--muted); }
-.deploy-contract summary { cursor: pointer; color: var(--ink); }
+.text-button { border: 0; padding: 0; background: none; color: var(--sprout-strong); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.text-button:hover { text-decoration: underline; }
+.text-button:focus-visible { outline: 2px solid var(--sprout); outline-offset: 3px; border-radius: 3px; }
+.deploy-run { display: grid; gap: 16px; }
+.deploy-created { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 14px; }
+.deploy-created svg { color: var(--sprout); }
+.deploy-created strong { color: var(--ink); font-weight: 600; }
+.deploy-run-actions { display: flex; align-items: center; gap: 18px; }
+.deploy-note { margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.deploy-note p { margin: 0; }
+.deploy-note code { font-size: 12px; }
+.deploy-contract { margin-top: 6px; }
+.deploy-contract summary { width: fit-content; cursor: pointer; color: var(--ink); }
 .deploy-contract summary:focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; border-radius: 4px; }
-.deploy-contract ul { margin: 10px 0 0; padding-left: 18px; line-height: 1.7; }
-.deploy-run { display: grid; justify-items: start; gap: 14px; }
-.deploy-recent { margin-top: 28px; }
-.deploy-recent h2 { margin: 0 0 10px; font-size: 14px; font-weight: 560; color: var(--muted); }
+.deploy-contract ul { margin: 8px 0 0; padding-left: 18px; }
+.deploy-recent { margin-top: 32px; }
+.deploy-recent h2 { margin: 0 0 10px; color: var(--muted); font-size: 13px; font-weight: 560; }
 .deploy-recent ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .deploy-recent a { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); text-decoration: none; font-size: 14px; }
 .deploy-recent a:hover { background: rgba(110, 91, 68, 0.055); }
 .deploy-recent a:focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; }
 
 @media (max-width: 720px) {
-  .deploy-form, .deploy-sources { grid-template-columns: 1fr; }
-  .deploy-step { padding: 18px; }
+  .deploy-form { grid-template-columns: 1fr; }
+  .deploy-card { padding: 18px; }
 }
 
 /* Application settings: real fields and lifecycle transitions */
@@ -3827,3 +3826,8 @@ body {
 .lifecycle-actions strong { font-size: 13px; font-weight: 600; }
 .lifecycle-actions small { color: var(--muted); font-size: 12px; line-height: 1.5; }
 .settings-panel + .settings-panel { margin-top: 14px; }
+
+/* App cards identify an app with a monogram, not a pretend screenshot. */
+.app-card-top { gap: 12px; }
+.app-card-top h2 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-monogram { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 10px; color: #4b4034; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }

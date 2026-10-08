@@ -47,12 +47,12 @@ export function TeamView({ workspaceSlug }: { workspaceSlug: string }) {
   });
 
   return <main className="dashboard-page compact-page">
-    <header className="page-heading"><p className="eyebrow">Workspace</p><h1>Team</h1><p>A little room for the people you build with.</p></header>
+    <header className="page-heading"><h1>Team</h1><p>People in this workspace and what they can do.</p></header>
     {me.isError && <p role="alert">{me.error.message}</p>}
     {change.isError && <p role="alert">{change.error.message}</p>}
     {notice && <p role="status">{notice}</p>}
     {isOwner && <section className="team-invite-panel">
-      <h2>Invite someone in</h2><p>Editors can build. Viewers can explore. Only owners manage the team.</p>
+      <h2>Invite a teammate</h2><p>Editors can create and deploy apps. Viewers can open them. Only owners manage the team.</p>
       <form className="team-invite-form" onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -86,7 +86,7 @@ export function TeamView({ workspaceSlug }: { workspaceSlug: string }) {
       <header><span>Pending invitations</span><small>Valid for 7 days</small></header>
       {invitations.isLoading && <p className="variable-loading" role="status">Loading invitations…</p>}
       {invitations.isError && <p className="variable-loading" role="alert">{invitations.error.message}</p>}
-      {invitations.data?.length === 0 && <p className="variable-loading">No pending invitations. There is room for someone new.</p>}
+      {invitations.data?.length === 0 && <p className="variable-loading">No pending invitations.</p>}
       {invitations.data?.map((invite) => <div className="team-invitation-row" key={invite.id}><div><strong>{invite.email}</strong><small>{invite.role} · Expires {new Date(invite.expiresAt).toLocaleDateString()}</small></div><button className="button button-secondary" disabled={change.isPending} onClick={() => change.mutate({ kind: "revoke", id: invite.id })}>Revoke<span className="sr-only"> invitation for {invite.email}</span></button></div>)}
     </section>}
     {!isOwner && members.data && <p className="muted">Your workspace owner can invite people and manage membership.</p>}

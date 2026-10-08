@@ -17,7 +17,7 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
   return (
     <main className="dashboard-page apps-page">
       <header className="apps-heading">
-        <div className="page-heading"><p className="eyebrow">Workspace</p><h1>Apps</h1><p>The small tools your team builds, runs, and shares through Sprout.</p></div>
+        <div className="page-heading"><h1>Apps</h1><p>Everything deployed in this workspace.</p></div>
         <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}><Plus size={16} /> Deploy app</Link>
       </header>
 
@@ -52,16 +52,13 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
         <section className="apps-grid" aria-label="Applications">
           {visibleApplications.map((app) => (
             <Link className="app-card" href={`/workspace/${workspaceSlug}/apps/${app.id}`} key={app.id}>
-              <div className={`app-preview accent-${app.accent}`}>
-                <span className="preview-title">{app.name}</span>
-                <div className="preview-content"><i /><i /><i /></div>
-                <span className="preview-glow" />
-              </div>
               <div className="app-card-body">
-                <div className="app-card-top"><h2>{app.name}</h2><ArrowRight size={15} /></div>
+                <div className="app-card-top">
+                  <span className={`app-monogram accent-${app.accent}`} aria-hidden="true">{app.name.slice(0, 2).toUpperCase()}</span>
+                  <h2>{app.name}</h2><ArrowRight size={15} />
+                </div>
                 {app.description && <p>{app.description}</p>}
-                <div className="app-card-meta"><StatusPill status={app.status} /><span>{app.updatedAt}</span></div>
-                <span className="app-url">{app.url}</span>
+                <div className="app-card-meta"><StatusPill status={app.status} /><span>Updated {app.updatedAt.toLowerCase()}</span></div>
               </div>
             </Link>
           ))}

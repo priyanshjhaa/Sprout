@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArrowRight, Check, GitBranch, Play, TerminalSquare } from "lucide-react";
+import { ArrowRight, Check, Play } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -13,13 +13,7 @@ const contract = [
   "One npm application with package.json and package-lock.json at the root",
   "Node.js 24 (engines.node: \"24.x\") with build and start scripts",
   "Builds into a dist/ folder; serves /health on PORT",
-  "No Dockerfile, node_modules, .env files, or credentials in the upload",
-];
-
-const sources = [
-  { label: "Upload an archive", detail: "A plain .tar of your application files", icon: Archive },
-  { label: "sprout deploy", detail: "From your terminal or a coding agent", icon: TerminalSquare },
-  { label: "Connect a repository", detail: "Deploy from a branch", icon: GitBranch },
+  "No Dockerfile, node_modules, .env files, or credentials",
 ];
 
 function slugify(value: string): string {
@@ -32,56 +26,26 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
   return (
     <main className="dashboard-page compact-page deploy-page">
       <header className="page-heading">
-        <p className="eyebrow">Deploy</p>
-        <h1>From code to a healthy URL.</h1>
-        <p>Sprout builds your application in a sealed, resource-limited container, checks its health, and only then gives it an address your team can open.</p>
+        <h1>Deploy an app</h1>
+        <p>Sprout builds it sealed off, checks its health, and only then gives your team an address.</p>
       </header>
 
-      <ol className="deploy-steps">
-        <li className={`deploy-step ${application ? "is-done" : "is-current"}`}>
-          <StepHeading number={1} title="Name the application" done={!!application} />
-          {application
-            ? <p className="deploy-summary"><strong>{application.name}</strong> · {application.slug}</p>
-            : <CreateApplicationForm workspaceSlug={workspaceSlug} onCreated={setApplication} />}
-        </li>
+      <section className="deploy-card" aria-live="polite">
+        {application
+          ? <RunDeployment workspaceSlug={workspaceSlug} application={application} onReset={() => setApplication(null)} />
+          : <CreateApplicationForm workspaceSlug={workspaceSlug} onCreated={setApplication} />}
+      </section>
 
-        <li className={`deploy-step ${application ? "is-current" : ""}`}>
-          <StepHeading number={2} title="Bring the code" />
-          <div className="deploy-sources" role="list">
-            {sources.map(({ label, detail, icon: Icon }) => (
-              <div className="deploy-source" role="listitem" key={label}>
-                <Icon size={17} aria-hidden="true" />
-                <div><strong>{label}</strong><span>{detail}</span></div>
-                <small>Not available yet</small>
-              </div>
-            ))}
-          </div>
-          <details className="deploy-contract">
-            <summary>What Sprout accepts today</summary>
-            <ul>{contract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
-          </details>
-        </li>
-
-        <li className={`deploy-step ${application ? "is-current" : ""}`}>
-          <StepHeading number={3} title="Run the deployment" />
-          {application
-            ? <RunDeployment workspaceSlug={workspaceSlug} application={application} />
-            : <p className="deploy-muted">Name the application first.</p>}
-        </li>
-      </ol>
+      <div className="deploy-note">
+        <p>Code upload, <code>sprout deploy</code>, and repository deploys are on the way. Until then, a run is a simulation: no code executes.</p>
+        <details className="deploy-contract">
+          <summary>What Sprout will accept</summary>
+          <ul>{contract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+        </details>
+      </div>
 
       <RecentApplications workspaceSlug={workspaceSlug} />
     </main>
-  );
-}
-
-function StepHeading({ number, title, done = false }: { number: number; title: string; done?: boolean }) {
-  return (
-    <h2 className="deploy-step-heading">
-      <span aria-hidden="true">{done ? <Check size={14} /> : number}</span>
-      {title}
-      {done && <span className="sr-only"> (complete)</span>}
-    </h2>
   );
 }
 
@@ -89,8 +53,8 @@ function CreateApplicationForm({ workspaceSlug, onCreated }: { workspaceSlug: st
   const create = useCreateApplication(workspaceSlug);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [slugEdited, setSlugEdited] = useState(false);
-  const effectiveSlug = slugEdited ? slug : slugify(name);
+  const [editingSlug, setEditingSlug] = useState(false);
+  const effectiveSlug = editingSlug ? slug : slugify(name);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -99,40 +63,48 @@ function CreateApplicationForm({ workspaceSlug, onCreated }: { workspaceSlug: st
 
   return (
     <form className="deploy-form" onSubmit={submit}>
-      <label>
+      <label className="deploy-name">
         Application name
         <input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120}
-          placeholder="Invoice approvals" disabled={create.isPending} />
-      </label>
-      <label>
-        URL name
-        <input value={effectiveSlug} required maxLength={63} pattern="[a-z0-9]+(-[a-z0-9]+)*"
-          title="Lowercase letters, numbers, and single hyphens"
-          onChange={(event) => { setSlugEdited(true); setSlug(event.target.value); }} disabled={create.isPending} />
+          placeholder="Invoice approvals" disabled={create.isPending} autoFocus />
       </label>
       <button className="button button-primary" disabled={create.isPending || !name.trim() || !effectiveSlug}>
         {create.isPending ? "Creating…" : "Create application"}
       </button>
+      <div className="deploy-slug">
+        {editingSlug ? (
+          <label>
+            <span className="sr-only">URL name</span>
+            <input value={slug} onChange={(event) => setSlug(event.target.value)} required maxLength={63}
+              pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Lowercase letters, numbers, and single hyphens" disabled={create.isPending} />
+          </label>
+        ) : (
+          <>
+            <span>URL name: <strong>{effectiveSlug || "set from the name"}</strong></span>
+            <button type="button" className="text-button" onClick={() => { setSlug(effectiveSlug); setEditingSlug(true); }}>Edit</button>
+          </>
+        )}
+      </div>
       {create.isError && <p className="deploy-error" role="alert">{create.error.message}</p>}
     </form>
   );
 }
 
-function RunDeployment({ workspaceSlug, application }: { workspaceSlug: string; application: Application }) {
+function RunDeployment({ workspaceSlug, application, onReset }: { workspaceSlug: string; application: Application; onReset: () => void }) {
   const action = useSimulationActions(workspaceSlug, application.id);
   const router = useRouter();
   const base = `/workspace/${workspaceSlug}/apps/${application.id}/deployments`;
 
   return (
     <div className="deploy-run">
-      <p className="deploy-muted">
-        Until code upload is available, this runs a <strong>deployment simulation</strong>: the real worker moves through
-        source, build, and package steps, but no application code runs and no live URL is created.
-      </p>
-      <button className="button button-primary" type="button" disabled={action.isPending}
-        onClick={() => action.mutate(undefined, { onSuccess: (job) => router.push(`${base}/${job.id}`) })}>
-        <Play size={14} /> {action.isPending ? "Starting…" : "Run simulation"}
-      </button>
+      <p className="deploy-created"><Check size={15} aria-hidden="true" /> <strong>{application.name}</strong> is ready to deploy.</p>
+      <div className="deploy-run-actions">
+        <button className="button button-primary" type="button" disabled={action.isPending}
+          onClick={() => action.mutate(undefined, { onSuccess: (job) => router.push(`${base}/${job.id}`) })}>
+          <Play size={14} /> {action.isPending ? "Starting…" : "Run simulation"}
+        </button>
+        <button className="text-button" type="button" onClick={onReset}>Create another</button>
+      </div>
       {action.isError && (
         <p className="deploy-error" role="alert">
           {action.error.message} <Link href={base}>Check its deployments</Link> before trying again.
@@ -149,7 +121,7 @@ function RecentApplications({ workspaceSlug }: { workspaceSlug: string }) {
 
   return (
     <section className="deploy-recent" aria-labelledby="deploy-recent-heading">
-      <h2 id="deploy-recent-heading">Deploy an existing application</h2>
+      <h2 id="deploy-recent-heading">Or deploy an existing app</h2>
       <ul>
         {recent.map((app) => (
           <li key={app.id}>
