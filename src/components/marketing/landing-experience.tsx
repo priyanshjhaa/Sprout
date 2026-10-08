@@ -25,7 +25,7 @@ const chapters = [
   {
     eyebrow: "Breaking the surface",
     title: "Healthy first. Then it gets a URL.",
-    body: "Sprout starts the app, checks that it answers on /health, and only then routes your team to its address.",
+    body: "Sprout starts the app, checks that it answers on /health, and only then sends visitors to its public address.",
   },
   {
     eyebrow: "Everything it needs",
@@ -33,9 +33,9 @@ const chapters = [
     body: "Attach a database, keep secrets out of the code, and read its logs without leaving the app or learning a new cloud vocabulary.",
   },
   {
-    eyebrow: "Share the useful thing",
-    title: "Share it like a document.",
-    body: "Invite coworkers as viewers or editors, or restrict an app to the few people who need it. Their access ends when they leave the workspace.",
+    eyebrow: "Online, in good hands",
+    title: "Anyone can open it. Your team runs it.",
+    body: "Send the link to whoever needs it. Invite teammates as editors or viewers to deploy, pause, or retire it, and their control ends when they leave the workspace.",
   },
   {
     eyebrow: "A garden, not a server farm",
@@ -273,7 +273,7 @@ export function LandingExperience() {
             <div className="resource resource-logs"><ScrollText size={16} /><span>Live logs</span></div>
 
             <div className="team-cluster">
-              <div className="team-label"><Users size={15} /> Shared with your team</div>
+              <div className="team-label"><Users size={15} /> Looked after by your team</div>
               <div className="person person-one">PJ</div>
               <div className="person person-two">AC</div>
               <div className="person person-three">BH</div>

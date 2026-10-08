@@ -6,14 +6,14 @@ This document defines the first implementation phase of Sprout: a polished front
 
 Sprout's product promise is:
 
-> Take an existing application from code to a secure, shareable URL with almost no infrastructure work, eventually making small software as easy to share as a document.
+> Take an existing application from code to a healthy public URL with almost no infrastructure work, and make small software as easy to put online as sharing a link.
 
 ### 1.1 Product boundary and differentiation
 
 Deployment is Sprout's core scope and differentiator. Sprout is the runtime and control plane for small, potentially short-lived applications, many of them written by coding agents. Application code is the input; an isolated, observable, permissioned application with a healthy URL is the output.
 
 - Sprout starts where code generation ends. It does not generate code and is not a prompt-to-application builder.
-- The primary product is the application lifecycle: deploy, inspect health, configure, observe, recover, share, pause, archive, and delete.
+- The primary product is the application lifecycle: deploy, inspect health, configure, observe, recover, pause, archive, and delete. Live apps are public by default; the team that operates an app is managed in Sprout. See `deployment-strategy.md`.
 - Source code and running applications must be presented as crossing an explicit trust boundary through build, isolation, resource limits, and health checks.
 - The product should remain calm and understandable for people who do not want to operate traditional cloud infrastructure.
 - The Deploy page is the dashboard's entry path. Coding agents, the CLI, and MCP clients use the same deploy API rather than a built-in agent experience.
@@ -208,11 +208,11 @@ The background is a persistent Sprout cloud environment: a subtle grid or spatia
 - Grow Database, Secrets, Storage, and Logs around the running application.
 - Keep the application as the visual center rather than making infrastructure the product.
 
-#### Scene 6: Sharing
+#### Scene 6: Online and in good hands
 
-- Connect workspace members to the application.
-- Introduce Owner, Editor, and Viewer roles.
-- Communicate document-like sharing.
+- Show the app reachable at a public URL.
+- Connect workspace members who operate it, with Owner, Editor, and Viewer roles.
+- Communicate that anyone can open it while the team stays in control.
 
 #### Scene 7: The workspace
 
@@ -618,7 +618,7 @@ The frontend phase is complete when these mocked journeys work coherently:
 4. User can retry the mocked deployment.
 5. The status updates consistently across the app.
 
-### Journey D: Configure and share an application
+### Journey D: Configure an application and bring in the team
 
 1. User adds an environment variable.
 2. User sees whether redeployment is required.
@@ -631,13 +631,13 @@ The frontend phase is complete when these mocked journeys work coherently:
 ### Product clarity
 
 - A new visitor can explain Sprout's value after completing the landing story.
-- A new visitor understands that application code is Sprout's input and that safe runtime operation and sharing are its primary value.
+- A new visitor understands that application code is Sprout's input and that a safe, public, running app is its primary value.
 - The landing story communicates that untrusted code passes through build, isolation, resource limits, and health checks before receiving a URL.
 - A signed-in user can locate Deploy and Apps immediately.
 - The product reads as a deployment platform, not a code-generation experience.
 - An application owner can determine app health without opening multiple pages.
 - An application owner can distinguish running, paused, archived, and failed states and understand the permanent effect of deletion.
-- Secure application sharing is presented as a first-class workflow rather than a secondary infrastructure setting.
+- The team that operates an app (roles, invitations) is presented as a first-class workflow rather than a secondary infrastructure setting.
 - Infrastructure terminology is introduced contextually and explained where necessary.
 
 ### Visual quality

@@ -8,12 +8,14 @@
 
 ## Product boundary
 
-Sprout deploys untrusted small applications safely, then lets teams share, operate, and retire them. Deployment is the product's core scope: it accepts application code as input and turns it into an isolated, observable, permissioned application with a healthy URL. Sprout does not generate code, and it is not a general-purpose cloud console.
+Sprout deploys untrusted small applications safely to a public URL, then lets teams operate and retire them. Deployment is the product's core scope: it accepts application code as input and turns it into an isolated, observable application with a healthy URL. Decisions and their reasons live in `deployment-strategy.md`. Sprout does not generate code, and it is not a general-purpose cloud console.
 
 - Treat source code, build input, build output, and running applications as untrusted.
 - Optimize product and infrastructure decisions for many small, low-traffic applications rather than a few permanently provisioned services.
 - Keep the complete application lifecycle visible and understandable: deploy, observe, recover, pause, archive, and delete.
-- Make application access and document-like sharing first-class product behavior.
+- Live applications are public by default. Workspace roles control who can deploy, change, or delete an app, not who can visit it. Private app URLs are a later option.
+- Every deployment starts from a source archive sent to one deploy API; the CLI, the MCP tool (folder or GitHub repo), and the dashboard are its front doors.
+- Applications run behind a runtime driver boundary. Untrusted code, builds or running apps, never runs on the machine that holds Sprout's database and secrets.
 - Preserve one typed API for the dashboard, CLI, coding agents, and MCP clients.
 - Coding agents, the CLI, and the dashboard are clients of the same deploy API. Do not build an embedded code-generation or app-builder experience.
 - Do not automatically expose deployed applications as agent tools unless that capability is separately validated and added to the product plan.

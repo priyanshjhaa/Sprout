@@ -23,10 +23,11 @@ The backend must remain useful to more than the web dashboard. Its HTTP API will
 
 ### Product boundary
 
-Sprout is the runtime and control plane for small, potentially short-lived, agent-generated applications. Application code is an untrusted input, not the product itself. The backend turns that input into an isolated, observable, permissioned workload with an explicit lifecycle.
+Sprout is the runtime and control plane for small, potentially short-lived applications, many of them agent-generated. Application code is an untrusted input, not the product itself. The backend turns that input into an isolated, observable workload with a public URL and an explicit lifecycle. Product decisions are recorded in `deployment-strategy.md`.
 
 - Design for many small, low-traffic applications without assuming every application runs permanently.
-- Keep deploy, observe, recover, share, pause, archive, and delete behavior explicit in the domain and API.
+- Keep deploy, observe, recover, pause, archive, and delete behavior explicit in the domain and API. Live apps are public by default; workspace authorization governs who may operate them.
+- Run applications through a runtime driver interface. Untrusted builds and apps never run on the machine that holds Sprout's database and secrets.
 - Apply workspace and application authorization consistently across the dashboard, CLI, coding-agent, and MCP clients.
 - Do not couple the backend to an embedded code-generation harness or automatically expose deployed applications as agent tools.
 - Require separate validation and planning before adding agent interoperability, external connectors, or communication-channel integrations.
@@ -374,6 +375,8 @@ Authentication is delegated to an external identity provider. Provider selection
 **Explain back:** What resources survive if the Go process crashes? Which boundary provides isolation? Why is command construction a security boundary?
 
 **Commit:** Use one commit per independently working system capability; never combine build, runtime, proxy, and cleanup into one unreviewable change.
+
+**Progress and order:** source preparation, the Node build contract, the sealed build runner, artifact storage, and real build jobs on the worker are done (see `real-build-jobs-learning.md`). Next, in order: the local runtime (driver interface, local Docker driver, release and health-check stages, public routing proxy on `*.localhost`, real pause/resume/archive and idle sleep), then static sites, then the CLI and MCP front doors, then controlled `npm` installs and Python buildpacks. The cloud runtime driver follows a hands-on hosting trial. See `deployment-strategy.md`.
 
 ### Milestone 9: Production hardening
 

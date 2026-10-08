@@ -6,9 +6,9 @@ It explores a simple product question:
 
 > What should the cloud look like when software is small, temporary, highly customized, and increasingly written by coding agents?
 
-The long-term goal is to make deploying and securely sharing a small application feel as straightforward as sharing a document. A developer or coding agent provides the application; Sprout handles the path from source code to a healthy URL, along with identity, configuration, logs, data, and access.
+The goal is to make putting a small application online feel as simple as sharing a link. A developer or coding agent provides the application; Sprout handles the path from source code to a healthy public URL, along with configuration, logs, data, and the team that looks after it. See the [deployment strategy](./deployment-strategy.md) for the decisions behind this.
 
-This repository contains the frontend prototype, the PostgreSQL schema/local development setup, and a Go API for workspace applications. Clerk handles sign-in; Go verifies sessions, maps users to local identities, and enforces workspace membership. Deployments are still simulations; a restricted local Node.js build runner exists as developer tooling.
+This repository contains the dashboard, the PostgreSQL schema and local setup, and a Go API. Clerk handles sign-in; Go verifies sessions, maps users to local identities, and enforces workspace membership. With local builds enabled, an uploaded Node.js app is built in a sealed Docker container and its output stored; running it at a URL is the next milestone.
 
 ## Product direction
 
@@ -25,10 +25,10 @@ Managed URL
       ↓
 Database · Secrets · Storage · Logs
       ↓
-Share with coworkers
+Public URL · your team operates it
 ```
 
-Deployment is the core scope. Sprout does not generate code and is not a prompt-to-app builder: coding agents, the CLI, and the dashboard are all clients of the same deploy API. The interesting product and engineering work is turning untrusted code into a safe, calm, running application that can be shared with real people.
+Deployment is the core scope. Sprout does not generate code and is not a prompt-to-app builder: coding agents, the CLI, and the dashboard are all clients of the same deploy API. The interesting product and engineering work is turning untrusted code into a safe, calm, running application anyone can open, while a team keeps control of it.
 
 ## Current frontend
 
@@ -201,19 +201,21 @@ The UI should be treated as a product and interaction prototype, not a hosting s
 
 The next implementation phases are intentionally incremental:
 
-1. Add automated component and critical-journey browser tests.
-2. Define the versioned backend API from the existing frontend domain model.
-3. Verify the implemented invitation and per-application sharing flow with two Clerk accounts (see the invitation guide below).
-4. Implement the smallest deployment loop: repository, Docker build, container, proxy, and URL.
-5. Connect deployment state and log streaming to the existing UI.
-6. Add database provisioning, encrypted secrets, resource limits, and rollback.
-7. Expose the same operations through a CLI and agent-facing API.
-8. Add an MCP server after the underlying API is stable.
+1. **Local runtime:** run a built app in a locked-down container, health-check it, and serve it publicly at `{app}.{workspace}.localhost`, with real pause, resume, archive and idle sleep.
+2. Static sites.
+3. CLI `sprout deploy`, then an MCP `deploy` tool that takes a folder or a GitHub repository.
+4. `npm` installs through a controlled registry proxy.
+5. Python apps through buildpacks.
+6. A hands-on hosting trial (Fly Machines vs Cloud Run), then the cloud runtime driver.
+7. Later: private apps, private repositories, Postgres, encrypted secrets, artifact retention.
+
+The full reasoning is in the [deployment strategy](./deployment-strategy.md).
 
 Sprout should remain deployable on a deliberately small initial architecture—one server, PostgreSQL, Docker, a reverse proxy, and only the supporting services justified by real product needs.
 
 ## Project documentation
 
+- [Deployment strategy: scope, inputs, and hosting](./deployment-strategy.md)
 - [Frontend implementation plan](./frontend-implementation.md)
 - [Go backend development and learning plan](./backend-development-learning-plan.md)
 - [Backend systems story: why it is built this way](./backend-systems-story.md)
