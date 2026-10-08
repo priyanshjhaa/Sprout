@@ -6,13 +6,13 @@ import { Brand } from "@/components/brand";
 const copy = {
   "sign-in": {
     eyebrow: "Welcome back",
-    title: "Your small software has a place to grow.",
-    description: "Return to a quiet workspace for the useful applications you build, run, and share.",
+    title: "Your apps are where you left them.",
+    description: "Deploy small apps to a public URL and look after them with your team.",
   },
   "sign-up": {
-    eyebrow: "A place to begin",
-    title: "Make room for the next useful thing.",
-    description: "Give purpose-built software a home from the first idea to the moment you share it.",
+    eyebrow: "Start deploying",
+    title: "Give your app somewhere to live.",
+    description: "Bring code you already have. Sprout builds it sealed off, checks its health, and gives it a public URL.",
   },
 } as const;
 
@@ -21,7 +21,11 @@ export const authAppearance = {
   variables: {
     colorPrimary: "#687642",
     colorForeground: "#302b25",
+    colorMutedForeground: "#70675d",
     colorBackground: "#fffaf2",
+    colorInput: "#fffaf2",
+    fontFamily: "inherit",
+    borderRadius: "10px",
   },
   elements: {
     rootBox: { width: "100%" },
@@ -38,7 +42,7 @@ export function AuthExperience({ mode, children }: { mode: keyof typeof copy; ch
       <div className="auth-landscape" aria-hidden="true" />
       <header className="auth-header">
         <Brand />
-        <Link href="/"><ArrowLeft size={15} /> Back to the story</Link>
+        <Link href="/"><ArrowLeft size={15} /> Back to Sprout</Link>
       </header>
 
       <div className="auth-layout">
@@ -46,19 +50,12 @@ export function AuthExperience({ mode, children }: { mode: keyof typeof copy; ch
           <p className="eyebrow">{content.eyebrow}</p>
           <h1>{content.title}</h1>
           <p className="auth-story-description">{content.description}</p>
-          <div className="auth-story-detail">
-            <span className="seed-icon" aria-hidden="true"><span /><span /></span>
-            <span>Small software, finally at home.</span>
-          </div>
         </section>
 
         <section className="auth-form-panel" aria-label={mode === "sign-in" ? "Sign in" : "Sign up"}>
-          <p className="auth-form-kicker">SPROUT / YOUR WORKSPACE</p>
-          <div className="auth-clerk-form">{children}</div>
+          {children}
         </section>
       </div>
-
-      <footer className="auth-footer">A calm place for every useful little app.</footer>
     </main>
   );
 }

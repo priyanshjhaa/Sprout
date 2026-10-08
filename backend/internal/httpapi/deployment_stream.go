@@ -26,16 +26,25 @@ type simulationStream struct {
 	logger                            *slog.Logger
 	shutdown                          context.Context
 	heartbeat, lifetime, writeTimeout time.Duration
+	simulated                         bool
 }
 
 var progressCursor = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 func RegisterDeploymentStreamRoutes(router chi.Router, service SimulationProgress, logger *slog.Logger, shutdown context.Context) {
-	h := &simulationStream{service: service, logger: logger, shutdown: shutdown, heartbeat: 10 * time.Second, lifetime: 25 * time.Second, writeTimeout: 5 * time.Second}
+	h := &simulationStream{service: service, logger: logger, shutdown: shutdown, heartbeat: 10 * time.Second, lifetime: 25 * time.Second, writeTimeout: 5 * time.Second, simulated: true}
 	router.Get("/workspaces/{workspaceSlug}/applications/{applicationId}/deployment-simulations/{deploymentId}/events", h.serve)
 }
+
+// RegisterBuildStreamRoutes streams progress for real builds; registered only
+// when local builds are enabled.
+func RegisterBuildStreamRoutes(router chi.Router, service SimulationProgress, logger *slog.Logger, shutdown context.Context) {
+	h := &simulationStream{service: service, logger: logger, shutdown: shutdown, heartbeat: 10 * time.Second, lifetime: 25 * time.Second, writeTimeout: 5 * time.Second}
+	router.Get("/workspaces/{workspaceSlug}/applications/{applicationId}/deployments/{deploymentId}/events", h.serve)
+}
 func (h *simulationStream) serve(w http.ResponseWriter, r *http.Request) {
-	fail := func(err error) { (&simulationHandler{logger: h.logger}).respond(w, r, nil, err, 0) }
+	kind := &simulationHandler{logger: h.logger, simulated: h.simulated}
+	fail := func(err error) { kind.respond(w, r, nil, err, 0) }
 	cursor := r.Header.Get("Last-Event-ID")
 	if cursor != "" && !progressCursor.MatchString(cursor) {
 		fail(deployment.ErrInvalid)
@@ -52,7 +61,7 @@ func (h *simulationStream) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithDeadline(r.Context(), deadline)
 	defer cancel()
-	scope, id := simulationScope(r), chi.URLParam(r, "deploymentId")
+	scope, id := kind.scope(r), chi.URLParam(r, "deploymentId")
 	lookup, stop := context.WithTimeout(ctx, 5*time.Second)
 	updates, release, err := h.service.Subscribe(lookup, scope, id)
 	stop()

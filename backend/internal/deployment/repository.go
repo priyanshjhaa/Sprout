@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 	"github.com/priyanshjhaa/Sprout/backend/internal/authorization"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
 )
@@ -86,7 +87,7 @@ func (r *SQLRepository) Create(ctx context.Context, scope Scope) (Job, error) {
 	if err != nil {
 		return Job{}, err
 	}
-	row, err := q.CreateDeploymentSimulation(ctx, dbgen.CreateDeploymentSimulationParams{ApplicationID: app, UserID: user, WorkspaceSlug: scope.WorkspaceSlug})
+	row, err := q.CreateDeployment(ctx, dbgen.CreateDeploymentParams{ApplicationID: app, UserID: user, WorkspaceSlug: scope.WorkspaceSlug, Simulated: scope.Simulated})
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 		return Job{}, ErrConflict
@@ -97,7 +98,7 @@ func (r *SQLRepository) Create(ctx context.Context, scope Scope) (Job, error) {
 	if err != nil {
 		return Job{}, err
 	}
-	if err = q.InitializeSimulationStages(ctx, row.ID); err != nil {
+	if err = q.InitializeDeploymentStages(ctx, row.ID); err != nil {
 		return Job{}, err
 	}
 	job, err := mapJob(ctx, q, row)
@@ -117,7 +118,7 @@ func (r *SQLRepository) List(ctx context.Context, scope Scope) ([]Job, error) {
 		return nil, err
 	}
 	app, user, _ := scopeIDs(scope)
-	rows, err := q.ListDeploymentSimulations(ctx, dbgen.ListDeploymentSimulationsParams{ApplicationID: app, UserID: user, WorkspaceSlug: scope.WorkspaceSlug})
+	rows, err := q.ListDeployments(ctx, dbgen.ListDeploymentsParams{ApplicationID: app, UserID: user, WorkspaceSlug: scope.WorkspaceSlug, Simulated: scope.Simulated})
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,7 @@ func get(ctx context.Context, q *dbgen.Queries, scope Scope, id string) (dbgen.D
 	if err != nil {
 		return dbgen.Deployment{}, err
 	}
-	row, err := q.GetDeploymentSimulation(ctx, dbgen.GetDeploymentSimulationParams{ApplicationID: app, UserID: user, WorkspaceSlug: scope.WorkspaceSlug, DeploymentID: jobID})
+	row, err := q.GetDeployment(ctx, dbgen.GetDeploymentParams{ApplicationID: app, UserID: user, WorkspaceSlug: scope.WorkspaceSlug, DeploymentID: jobID, Simulated: scope.Simulated})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return row, ErrNotFound
 	}
@@ -174,13 +175,13 @@ func (r *SQLRepository) Cancel(ctx context.Context, scope Scope, id string) (Job
 	if err != nil {
 		return Job{}, err
 	}
-	if _, err = q.LockDeploymentSimulation(ctx, row.ID); err != nil {
+	if _, err = q.LockDeployment(ctx, row.ID); err != nil {
 		return Job{}, err
 	}
 	if err = permission(ctx, q, scope, true); err != nil {
 		return Job{}, err
 	}
-	count, err := finish(ctx, q, row.ID, "cancelled", "job_cancelled")
+	count, err := finish(ctx, q, row.ID, "cancelled", "job_cancelled", nil)
 	if err != nil {
 		return Job{}, err
 	}
@@ -211,7 +212,7 @@ func (r *SQLRepository) Start(ctx context.Context, scope Scope, id string) error
 	if err != nil {
 		return err
 	}
-	row, err := q.LockDeploymentSimulation(ctx, jobID)
+	row, err := q.LockDeployment(ctx, jobID)
 	if err != nil {
 		return err
 	}
@@ -229,7 +230,7 @@ func (r *SQLRepository) Start(ctx context.Context, scope Scope, id string) error
 	if application.Lifecycle != "active" {
 		return ErrConflict
 	}
-	count, err := q.StartSimulation(ctx, jobID)
+	count, err := q.StartDeployment(ctx, jobID)
 	if err != nil {
 		return err
 	}
@@ -252,7 +253,7 @@ func (r *SQLRepository) Advance(ctx context.Context, id, stage, status string) e
 	if err != nil {
 		return err
 	}
-	row, err := q.LockDeploymentSimulation(ctx, jobID)
+	row, err := q.LockDeployment(ctx, jobID)
 	if err != nil {
 		return err
 	}
@@ -260,7 +261,7 @@ func (r *SQLRepository) Advance(ctx context.Context, id, stage, status string) e
 		return ErrConflict
 	}
 	// Protect ordering in persistence, not just in the worker's loop.
-	events, err := q.ListSimulationStages(ctx, jobID)
+	events, err := q.ListDeploymentStages(ctx, jobID)
 	if err != nil {
 		return err
 	}
@@ -277,7 +278,7 @@ func (r *SQLRepository) Advance(ctx context.Context, id, stage, status string) e
 	if !found {
 		return ErrInvalid
 	}
-	count, err := q.AdvanceSimulationStage(ctx, dbgen.AdvanceSimulationStageParams{DeploymentID: jobID, Stage: dbgen.DeploymentStage(stage), Status: dbgen.OperationStatus(status)})
+	count, err := q.AdvanceDeploymentStage(ctx, dbgen.AdvanceDeploymentStageParams{DeploymentID: jobID, Stage: dbgen.DeploymentStage(stage), Status: dbgen.OperationStatus(status)})
 	if err != nil {
 		return err
 	}
@@ -286,57 +287,67 @@ func (r *SQLRepository) Advance(ctx context.Context, id, stage, status string) e
 	}
 	return tx.Commit(ctx)
 }
-func (r *SQLRepository) Finish(ctx context.Context, id, status, code string) error {
+func (r *SQLRepository) Finish(ctx context.Context, id, status, code string, output *artifact.Descriptor) (bool, error) {
 	if err := r.CheckOwnership(ctx); err != nil {
-		return err
+		return false, err
 	}
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer rollback(tx)
 	q := dbgen.New(tx)
 	jobID, err := parseID(id)
 	if err != nil {
-		return err
+		return false, err
 	}
-	row, err := q.LockDeploymentSimulation(ctx, jobID)
+	row, err := q.LockDeployment(ctx, jobID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if row.Status != "queued" && row.Status != "building" {
-		return nil
+		return false, nil
 	} // cancellation wins over late completion
+	// Only a succeeded real build may reference an artifact; the schema enforces
+	// this too, but rejecting here keeps the error a stable domain error.
+	if output != nil && (status != "succeeded" || row.Simulated) {
+		return false, ErrInvalid
+	}
 	if status == "succeeded" {
-		events, err := q.ListSimulationStages(ctx, jobID)
+		events, err := q.ListDeploymentStages(ctx, jobID)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if len(events) != len(stages) {
-			return ErrConflict
+			return false, ErrConflict
 		}
 		for _, event := range events {
 			if event.Status != "succeeded" {
-				return ErrConflict
+				return false, ErrConflict
 			}
 		}
 	}
-	if _, err = finish(ctx, q, jobID, status, code); err != nil {
-		return err
+	if _, err = finish(ctx, q, jobID, status, code, output); err != nil {
+		return false, err
 	}
-	return tx.Commit(ctx)
+	return true, tx.Commit(ctx)
 }
-func finish(ctx context.Context, q *dbgen.Queries, id pgtype.UUID, status, code string) (int64, error) {
+func finish(ctx context.Context, q *dbgen.Queries, id pgtype.UUID, status, code string, output *artifact.Descriptor) (int64, error) {
 	if status != "succeeded" && status != "failed" && status != "cancelled" {
 		return 0, ErrInvalid
 	}
-	failure := pgtype.Text{String: code, Valid: code != ""}
-	count, err := q.FinishSimulation(ctx, dbgen.FinishSimulationParams{ID: id, Status: dbgen.DeploymentStatus(status), FailureCode: failure})
+	params := dbgen.FinishDeploymentParams{ID: id, Status: dbgen.DeploymentStatus(status), FailureCode: pgtype.Text{String: code, Valid: code != ""}}
+	if output != nil {
+		params.ArtifactID = pgtype.Text{String: output.ID, Valid: true}
+		params.ArtifactSha256 = pgtype.Text{String: output.SHA256, Valid: true}
+		params.ArtifactBytes = pgtype.Int4{Int32: int32(output.Size), Valid: true}
+	}
+	count, err := q.FinishDeployment(ctx, params)
 	if err != nil || count == 0 {
 		return count, err
 	}
 	if status != "succeeded" {
-		err = q.FinishSimulationStages(ctx, dbgen.FinishSimulationStagesParams{DeploymentID: id, FailureCode: failure})
+		err = q.FinishDeploymentStages(ctx, dbgen.FinishDeploymentStagesParams{DeploymentID: id, FailureCode: params.FailureCode})
 	}
 	return count, err
 }
@@ -351,7 +362,7 @@ func mapJob(ctx context.Context, q *dbgen.Queries, row dbgen.Deployment) (Job, e
 	if row.FinishedAt.Valid {
 		job.FinishedAt = &row.FinishedAt.Time
 	}
-	events, err := q.ListSimulationStages(ctx, row.ID)
+	events, err := q.ListDeploymentStages(ctx, row.ID)
 	if err != nil {
 		return Job{}, err
 	}
@@ -365,7 +376,21 @@ func mapJob(ctx context.Context, q *dbgen.Queries, row dbgen.Deployment) (Job, e
 	return job, nil
 }
 
-// AcquireProcessLock deliberately supports one simulation-owning API process.
+// ReferencedArtifacts lists artifact IDs that deployments still point at. Any
+// other file in the artifact store is an orphan from an interrupted build.
+func (r *SQLRepository) ReferencedArtifacts(ctx context.Context) (map[string]bool, error) {
+	ids, err := dbgen.New(r.pool).ListReferencedArtifacts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	referenced := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		referenced[id] = true
+	}
+	return referenced, nil
+}
+
+// AcquireProcessLock deliberately supports one worker-owning API process.
 // A dedicated DB connection holds a session lock; startup fails if already held.
 // Recovery happens only after ownership is acquired, never across live replicas.
 func (r *SQLRepository) AcquireProcessLock(ctx context.Context) (func(), error) {
@@ -404,10 +429,10 @@ func (r *SQLRepository) AcquireProcessLock(ctx context.Context) (func(), error) 
 		return nil, err
 	}
 	q := dbgen.New(tx)
-	ids, err := q.RecoverInterruptedSimulations(ctx)
+	ids, err := q.RecoverInterruptedDeployments(ctx)
 	if err == nil {
 		for _, id := range ids {
-			err = q.FinishSimulationStages(ctx, dbgen.FinishSimulationStagesParams{DeploymentID: id, FailureCode: pgtype.Text{String: "process_interrupted", Valid: true}})
+			err = q.FinishDeploymentStages(ctx, dbgen.FinishDeploymentStagesParams{DeploymentID: id, FailureCode: pgtype.Text{String: "process_interrupted", Valid: true}})
 			if err != nil {
 				break
 			}

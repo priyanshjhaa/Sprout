@@ -50,7 +50,7 @@ The simulated runner honours context cancellation. Any future runner must do the
 - Failure to persist a terminal result marks the manager unhealthy, cancels its jobs and rejects new submissions. Read/list endpoints remain useful for diagnosis. Restart is required after resolving the database problem.
 - An unexpected persistence failure during admission also stops new work: a lost commit acknowledgement may have left a queued row without an in-memory task. Restart recovery resolves that ambiguity rather than silently leaving the row stuck.
 - During graceful shutdown the HTTP server stops/drains requests first. The manager then stops admission, cancels active work, drains waiting jobs into cancelled states and joins its workers. The database remains open during cleanup.
-- After an abrupt process exit the channel is lost. On next startup, **after acquiring exclusive process ownership**, unfinished simulations become failed with `process_interrupted`. They are not replayed automatically. Real deployments (`simulated=false`) are untouched.
+- After an abrupt process exit the channel is lost. On next startup, **after acquiring exclusive process ownership**, unfinished jobs become failed with `process_interrupted`. They are not replayed automatically. Since the real-build milestone, the worker owns real deployments (`simulated=false`) as well, so they are recovered the same way; see [real build jobs](./real-build-jobs-learning.md).
 
 ## API
 
@@ -100,7 +100,7 @@ Do not run a second API process alongside one already owning the simulation lock
 
 Tests cover capacity, bounded parallelism, FIFO order, one-job-per-app admission, detached request lifetime, queued/active cancellation, timeouts, panic containment, shutdown, terminal persistence failure and startup ownership. Repository tests use a uniquely named temporary PostgreSQL schema with copies of the migrated table definitions and indexes; it is removed afterward. They do not recover or alter your real deployment records. The test copies do not reproduce foreign keys; existing migrated database tests cover the shared schema separately.
 
-Repository tests also cover viewer/outsider rejection, restricted-app grants, revoked membership before execution, inactive applications, atomic stage transitions, cancellation winning over completion, and recovery leaving non-simulated deployments unchanged. HTTP tests trace authenticated scope into submission and verify the error envelope, rejection of arbitrary input, authentication requirements and queue backpressure responses. Integration tests explicitly skip if `DATABASE_URL` is absent.
+Repository tests also cover viewer/outsider rejection, restricted-app grants, revoked membership before execution, inactive applications, atomic stage transitions, cancellation winning over completion, and recovery of every unfinished worker job, real or simulated. HTTP tests trace authenticated scope into submission and verify the error envelope, rejection of arbitrary input, authentication requirements and queue backpressure responses. Integration tests explicitly skip if `DATABASE_URL` is absent.
 
 ### Manual API check
 

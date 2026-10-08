@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/nextjs";
 import { api } from "@/lib/api/api";
 import { queryKeys } from "@/lib/query/keys";
@@ -40,6 +40,17 @@ export const useApplications = (slug: string) => {
   });
 };
 
+export const useCreateApplication = (slug: string) => {
+  const { getToken, userId } = useAuth();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; slug: string; description?: string }) =>
+      api.createApplication(slug, input, await getToken()),
+    retry: false, // A lost response may still have created the application.
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.apps(userId, slug) }),
+  });
+};
+
 export const useApplication = (slug: string, appId: string) => {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   return useQuery({
@@ -60,14 +71,15 @@ export const useDeployments = (slug: string, appId: string) => {
   });
 };
 
-export const useLogs = (slug: string, appId: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.logs(userId, slug, appId), queryFn: api.getLogs });
-};
-
-export const useEnvironment = (slug: string, appId: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.environment(userId, slug, appId), queryFn: api.getEnvironment });
+export const useUpdateApplication = (slug: string, appId: string) => {
+  const { getToken, userId } = useAuth();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name?: string; description?: string; lifecycle?: "active" | "paused" | "archived" }) =>
+      api.updateApplication(slug, appId, input, await getToken()),
+    onSuccess: (application) => client.setQueryData(queryKeys.app(userId, slug, appId), application),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.apps(userId, slug) }),
+  });
 };
 
 export const useAccess = (slug: string, appId: string) => {
@@ -86,9 +98,4 @@ export const useWorkspaceMembers = (slug: string) => {
     queryFn: async () => api.getWorkspaceMembers(slug, await getToken()),
     enabled: isLoaded && isSignedIn,
   });
-};
-
-export const useAgentEvents = (slug: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.agent(userId, slug), queryFn: api.getAgentEvents });
 };

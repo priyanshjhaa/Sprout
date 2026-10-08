@@ -6,6 +6,20 @@
 - Follow `backend-development-learning-plan.md` for Go backend architecture, teaching cadence, security rules, verification requirements, and milestone order.
 - Keep the product promise focused: Sprout helps people create, deploy, operate, and share small applications without exposing unnecessary infrastructure complexity.
 
+## Product boundary
+
+Sprout deploys untrusted small applications safely to a public URL, then lets teams operate and retire them. Deployment is the product's core scope: it accepts application code as input and turns it into an isolated, observable application with a healthy URL. Decisions and their reasons live in `deployment-strategy.md`. Sprout does not generate code, and it is not a general-purpose cloud console.
+
+- Treat source code, build input, build output, and running applications as untrusted.
+- Optimize product and infrastructure decisions for many small, low-traffic applications rather than a few permanently provisioned services.
+- Keep the complete application lifecycle visible and understandable: deploy, observe, recover, pause, archive, and delete.
+- Live applications are public by default. Workspace roles control who can deploy, change, or delete an app, not who can visit it. Private app URLs are a later option.
+- Every deployment starts from a source archive sent to one deploy API; the CLI, the MCP tool (folder or GitHub repo), and the dashboard are its front doors.
+- Applications run behind a runtime driver boundary. Untrusted code, builds or running apps, never runs on the machine that holds Sprout's database and secrets.
+- Preserve one typed API for the dashboard, CLI, coding agents, and MCP clients.
+- Coding agents, the CLI, and the dashboard are clients of the same deploy API. Do not build an embedded code-generation or app-builder experience.
+- Do not automatically expose deployed applications as agent tools unless that capability is separately validated and added to the product plan.
+
 ## Implementation principles
 
 - Do not over-engineer features or introduce infrastructure before the current product flow requires it.
@@ -26,10 +40,16 @@
 - Keep the application runnable after each implementation phase.
 - Avoid speculative abstractions, premature optimization, and backend simulations that pretend to be production infrastructure.
 
+## Git and pull requests
+
+- Do not add AI co-author trailers (for example `Co-Authored-By: Claude …`) to commit messages. Commits are authored by the repository owner only.
+- Do not add AI attribution lines (for example "Generated with Claude Code") to pull request descriptions.
+
 ## Go backend learning workflow
 
 - Teach backend mechanics through the Sprout capability being implemented; do not turn milestones into standalone syntax lessons.
-- Use the sequence: mental model, NestJS/Django comparison, request trace, implementation, verification, explain-back checkpoint, and commit.
+- Teach each concept as a systems story: the problem, the history that shaped the usual solution, the decision in Sprout (pointing at the real code), and its trade-off. See `backend-systems-story.md`.
+- Use the sequence: mental model, systems story, NestJS/Django comparison, request trace, implementation, verification, explain-back checkpoint, and commit.
 - Keep Drizzle as the only schema and migration owner. The Go service may use `pgx` and `sqlc` against the migrated schema but must not duplicate migrations.
 - Do not start concurrent work without defined ownership, cancellation, capacity, error propagation, and shutdown behavior.
 - Keep each backend milestone independently runnable, verified, and committed.

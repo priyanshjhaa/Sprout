@@ -30,6 +30,23 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "503":
           description: Identity provider or database unavailable
+  /api/v1/capabilities:
+    get:
+      summary: Optional features this API process offers
+      description: Clients ask here rather than inferring features from 404s. localBuilds is true only when SPROUT_ENABLE_LOCAL_BUILDS=1.
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Feature flags for this process
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [localBuilds]
+                properties:
+                  localBuilds: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/workspaces/{workspaceSlug}:
     parameters:
       - $ref: "#/components/parameters/WorkspaceSlug"
@@ -564,6 +581,152 @@ paths:
         Reconnect with a fresh token and the last snapshot id; retry hint is 1000ms.
         Limits are 4 streams per user and 128 per process. Disconnecting does not
         cancel a job. No raw build logs or durable event history are retained here.
+      responses:
+        "200":
+          description: SSE progress, complete, unavailable events and heartbeat comments
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: Stream capacity reached (Retry-After 3 seconds) or streaming unavailable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/deployments:
+    description: |
+      Real builds. These paths exist only when the API runs with
+      SPROUT_ENABLE_LOCAL_BUILDS=1 on a loopback address; otherwise they return 404.
+      Uploaded code runs in a sealed Docker container on the API's own machine, so
+      this is local developer tooling, not a hosted service. A succeeded build
+      means the output was built and stored; nothing is started and no URL is live.
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+    post:
+      summary: Upload a source archive and queue a real build of it
+      description: |
+        Requires application edit permission, an active application, and a free
+        queue slot; these are checked before the body is read. The body is a plain,
+        uncompressed tar of at most 16 MiB that follows the Node.js application
+        contract (node-build-contract.md). Stages: source (extract and validate),
+        build (sealed Docker build), package (store the output). The uploaded
+        archive is deleted when the job ends, whatever its outcome. Failures use
+        stable codes such as node_contract_invalid or source_sensitive_path.
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/x-tar:
+            schema: { type: string, format: binary, maxLength: 16777216 }
+      responses:
+        "201":
+          description: Persisted queued build; Location identifies the job
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Application inactive or already has an accepted deployment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "413":
+          description: Archive larger than 16 MiB (code source_too_large)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "415":
+          description: Content-Type is not application/x-tar (code unsupported_media_type)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "503": { $ref: "#/components/responses/SimulationUnavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    get:
+      summary: List the latest 50 real builds for an application the actor can view
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Newest-first builds with typed stages; never simulations
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deployments]
+                properties:
+                  deployments:
+                    type: array
+                    maxItems: 50
+                    items: { $ref: "#/components/schemas/DeploymentSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/deployments/{deploymentId}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+      - $ref: "#/components/parameters/SimulationId"
+    get:
+      summary: Inspect a real build through current application permissions
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Build state and ordered source/build/package stages
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/deployments/{deploymentId}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+      - $ref: "#/components/parameters/SimulationId"
+    post:
+      summary: Cancel a queued or running build (application editors only)
+      description: Cancellation is persisted first; the build container is then stopped and removed, and any output is deleted.
+      security: [{ clerkSession: [] }]
+      requestBody: { $ref: "#/components/requestBodies/EmptySimulationInput" }
+      responses:
+        "200":
+          description: Cancelled build
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Build already terminal
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/workspaces/{workspaceSlug}/applications/{applicationId}/deployments/{deploymentId}/events:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceSlug"
+      - $ref: "#/components/parameters/ApplicationID"
+      - $ref: "#/components/parameters/SimulationId"
+      - in: header
+        name: Last-Event-ID
+        schema: { type: string, pattern: '^[a-f0-9]{64}$' }
+    get:
+      summary: Stream authorized build snapshots with server-sent events
+      description: Same contract as the simulation events stream, for real builds.
+      security: [{ clerkSession: [] }]
       responses:
         "200":
           description: SSE progress, complete, unavailable events and heartbeat comments

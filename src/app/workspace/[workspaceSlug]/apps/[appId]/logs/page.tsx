@@ -1,7 +1,7 @@
-import { LogViewer } from "@/components/logs/log-viewer";
+import { redirect } from "next/navigation";
 
-export default async function LogsPage({ params }: { params: Promise<{ workspaceSlug: string; appId: string }> }) {
+// Not part of the current scope (see deployment-strategy.md); keep old links useful.
+export default async function RemovedApplicationPage({ params }: { params: Promise<{ workspaceSlug: string; appId: string }> }) {
   const { workspaceSlug, appId } = await params;
-  return <LogViewer workspaceSlug={workspaceSlug} appId={appId} />;
+  redirect(`/workspace/${workspaceSlug}/apps/${appId}`);
 }
-

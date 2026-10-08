@@ -47,12 +47,12 @@ export function TeamView({ workspaceSlug }: { workspaceSlug: string }) {
   });
 
   return <main className="dashboard-page compact-page">
-    <header className="page-heading"><p className="eyebrow">Workspace</p><h1>Team</h1><p>A little room for the people you build with.</p></header>
+    <header className="page-heading"><h1>Team</h1><p>People in this workspace and what they can do.</p></header>
     {me.isError && <p role="alert">{me.error.message}</p>}
     {change.isError && <p role="alert">{change.error.message}</p>}
     {notice && <p role="status">{notice}</p>}
     {isOwner && <section className="team-invite-panel">
-      <h2>Invite someone in</h2><p>Editors can build. Viewers can explore. Only owners manage the team.</p>
+      <h2>Invite a teammate</h2><p>Editors can create, deploy, and pause apps. Viewers can see them in Sprout. Only owners manage the team.</p>
       <form className="team-invite-form" onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -69,9 +69,9 @@ export function TeamView({ workspaceSlug }: { workspaceSlug: string }) {
       }}>Copy link</button></div>}
     </section>}
     <section className="members-panel">
-      <header><span>Workspace members</span><small>{members.data?.length ?? 0} people</small></header>
-      {members.isLoading && <p className="variable-loading" role="status">Loading team…</p>}
-      {members.isError && <p className="variable-loading" role="alert">{members.error.message}</p>}
+      <header><span>Workspace members</span><small>{members.data?.length === 1 ? "1 person" : `${members.data?.length ?? 0} people`}</small></header>
+      {members.isLoading && <p className="team-panel-note" role="status">Loading team…</p>}
+      {members.isError && <p className="team-panel-note" role="alert">{members.error.message}</p>}
       {members.data?.map((member) => <div className="member-row team-member-row" key={member.id}>
         <span className="member-avatar">{member.displayName.split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase()}</span>
         <div><strong>{member.displayName}</strong><small>{member.email}</small></div>
@@ -79,14 +79,13 @@ export function TeamView({ workspaceSlug }: { workspaceSlug: string }) {
           <select aria-label={`Role for ${member.displayName}`} value={member.role} disabled={change.isPending} onChange={(event) => change.mutate({ kind: "role", id: member.id, role: event.target.value as "editor" | "viewer" })}><option value="editor">Editor</option><option value="viewer">Viewer</option></select>
           <button className="button button-secondary" disabled={change.isPending} onClick={() => setRemoving(member.id)}>Remove<span className="sr-only"> {member.displayName}</span></button>
           {removing === member.id && <div className="team-remove-confirm" role="group" aria-label={`Confirm removal of ${member.displayName}`}><p>Remove {member.displayName}? They will lose workspace access and their application grants.</p><button className="button button-secondary" disabled={change.isPending} onClick={() => setRemoving(null)}>Cancel</button><button className="button button-primary" disabled={change.isPending} onClick={() => change.mutate({ kind: "remove", id: member.id })}>Confirm removal</button></div>}
-        </> : <span className="member-inherited">{member.role}</span>}
+        </> : <span className="member-inherited">{member.role.charAt(0).toUpperCase() + member.role.slice(1)}</span>}
       </div>)}
     </section>
-    {isOwner && <section className="members-panel">
-      <header><span>Pending invitations</span><small>Valid for 7 days</small></header>
-      {invitations.isLoading && <p className="variable-loading" role="status">Loading invitations…</p>}
-      {invitations.isError && <p className="variable-loading" role="alert">{invitations.error.message}</p>}
-      {invitations.data?.length === 0 && <p className="variable-loading">No pending invitations. There is room for someone new.</p>}
+    {/* Pending invitations only take space when there is something to act on. */}
+    {isOwner && (invitations.isError || (invitations.data?.length ?? 0) > 0) && <section className="members-panel">
+      <header><span>Pending invitations</span><small>Links expire after 7 days</small></header>
+      {invitations.isError && <p className="team-panel-note" role="alert">{invitations.error.message}</p>}
       {invitations.data?.map((invite) => <div className="team-invitation-row" key={invite.id}><div><strong>{invite.email}</strong><small>{invite.role} · Expires {new Date(invite.expiresAt).toLocaleDateString()}</small></div><button className="button button-secondary" disabled={change.isPending} onClick={() => change.mutate({ kind: "revoke", id: invite.id })}>Revoke<span className="sr-only"> invitation for {invite.email}</span></button></div>)}
     </section>}
     {!isOwner && members.data && <p className="muted">Your workspace owner can invite people and manage membership.</p>}

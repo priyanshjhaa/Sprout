@@ -1,7 +1,7 @@
-import { EnvironmentView } from "@/components/environment/environment-view";
+import { redirect } from "next/navigation";
 
-export default async function EnvironmentPage({ params }: { params: Promise<{ workspaceSlug: string; appId: string }> }) {
+// Not part of the current scope (see deployment-strategy.md); keep old links useful.
+export default async function RemovedApplicationPage({ params }: { params: Promise<{ workspaceSlug: string; appId: string }> }) {
   const { workspaceSlug, appId } = await params;
-  return <EnvironmentView workspaceSlug={workspaceSlug} appId={appId} />;
+  redirect(`/workspace/${workspaceSlug}/apps/${appId}`);
 }
-

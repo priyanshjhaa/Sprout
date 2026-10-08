@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, MoreHorizontal } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -10,8 +10,6 @@ import { useApplication } from "@/lib/query/hooks";
 const tabs = [
   { label: "Overview", path: "" },
   { label: "Deployments", path: "/deployments" },
-  { label: "Logs", path: "/logs" },
-  { label: "Environment", path: "/environment" },
   { label: "Access", path: "/access" },
   { label: "Settings", path: "/settings" },
 ];
@@ -33,14 +31,10 @@ export function ApplicationShell({ children }: { children: ReactNode }) {
           <div>
             <div className="application-title-row">
               <h1>{isLoading ? "Loading application" : application?.name}</h1>
-              {application && (application.status === "running" ? <span className="current-label">Not deployed</span> : <StatusPill status={application.status} />)}
+              {application && <StatusPill status={application.status} />}
             </div>
-            <span>{application?.url ?? "Fetching address…"}</span>
+            {application && <span>Reserved address · {application.url}</span>}
           </div>
-        </div>
-        <div className="application-actions">
-          {application && <span className="current-label">Simulation preview</span>}
-          <button className="icon-button" type="button" aria-label="More application actions"><MoreHorizontal size={17} /></button>
         </div>
       </header>
 

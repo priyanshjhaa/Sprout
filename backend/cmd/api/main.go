@@ -13,12 +13,15 @@ import (
 	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/priyanshjhaa/Sprout/backend/internal/application"
+	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
+	"github.com/priyanshjhaa/Sprout/backend/internal/buildjob"
 	"github.com/priyanshjhaa/Sprout/backend/internal/config"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
 	"github.com/priyanshjhaa/Sprout/backend/internal/deployment"
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
 	"github.com/priyanshjhaa/Sprout/backend/internal/identity"
+	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
 	"github.com/priyanshjhaa/Sprout/backend/internal/sharing"
 	"github.com/priyanshjhaa/Sprout/backend/internal/team"
 )
@@ -53,18 +56,58 @@ func realMain() int {
 	releaseWorkerLock, err := deploymentRepository.AcquireProcessLock(startupCtx)
 	startupCancel()
 	if err != nil {
-		logger.Error("simulation worker ownership or recovery failed; only one API process is supported")
+		logger.Error("deployment worker ownership or recovery failed; only one API process is supported")
 		return 1
 	}
 	defer releaseWorkerLock()
-	worker, err := deployment.NewManager(deploymentRepository, deployment.Simulate, logger, 2, 8, 15*time.Second)
+
+	// Simulations always run. Real builds run untrusted code in Docker, so they
+	// exist only when explicitly enabled for local development.
+	var runner deployment.Runner = deployment.Staged(deployment.Simulate)
+	jobTimeout := 15 * time.Second
+	var sources, artifacts *artifact.Store
+	if builds := appConfig.LocalBuilds; builds.Enabled {
+		if sources, err = artifact.Open(builds.SourceDirectory); err != nil {
+			logger.Error("SPROUT_SOURCE_DIR must be an existing private (0700) directory")
+			return 1
+		}
+		defer sources.Close()
+		if artifacts, err = artifact.Open(builds.ArtifactDirectory); err != nil {
+			logger.Error("SPROUT_ARTIFACT_DIR must be an existing private (0700) directory")
+			return 1
+		}
+		defer artifacts.Close()
+		builder, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute)
+		if err != nil {
+			logger.Error("node build runner configuration invalid")
+			return 1
+		}
+		// The worker lock is held and interrupted jobs are recovered, so nothing
+		// in flight can own a stored file: reclaim what a crash left behind.
+		sweepCtx, sweepCancel := context.WithTimeout(ctx, 30*time.Second)
+		referenced, err := deploymentRepository.ReferencedArtifacts(sweepCtx)
+		if err == nil {
+			var removed int
+			removed, err = buildjob.Sweep(sweepCtx, sources, artifacts, referenced)
+			logger.Info("build storage swept", "removed", removed)
+		}
+		sweepCancel()
+		if err != nil {
+			logger.Error("build storage sweep failed")
+			return 1
+		}
+		runner = buildjob.NewRunner(sources, artifacts, builder, runner, logger)
+		jobTimeout = 3 * time.Minute
+		logger.Warn("local builds enabled: uploaded code runs in Docker on this machine")
+	}
+	worker, err := deployment.NewManager(deploymentRepository, runner, logger, 2, 8, jobTimeout)
 	if err != nil {
-		logger.Error("simulation worker configuration invalid")
+		logger.Error("deployment worker configuration invalid")
 		return 1
 	}
 	defer func() {
 		if err := worker.Close(); err != nil {
-			logger.Error("simulation shutdown incomplete; persisted jobs will be recovered on restart")
+			logger.Error("deployment worker shutdown incomplete; persisted jobs will be recovered on restart")
 		}
 	}()
 
@@ -89,11 +132,16 @@ func realMain() int {
 	router.Route("/api/v1", func(api chi.Router) {
 		api.Use(httpapi.AuthenticationMiddleware(identityService, logger, appConfig.WebOrigin))
 		httpapi.RegisterIdentityRoutes(api, identityService, logger)
+		httpapi.RegisterCapabilityRoutes(api, httpapi.Capabilities{LocalBuilds: appConfig.LocalBuilds.Enabled})
 		httpapi.RegisterApplicationRoutes(api, service, logger)
 		httpapi.RegisterSharingRoutes(api, sharingService, logger)
 		httpapi.RegisterTeamRoutes(api, teamService, logger)
 		httpapi.RegisterDeploymentSimulationRoutes(api, worker, logger)
 		httpapi.RegisterDeploymentStreamRoutes(api, worker, logger, ctx)
+		if appConfig.LocalBuilds.Enabled {
+			httpapi.RegisterDeploymentRoutes(api, worker, buildjob.NewIntake(sources, worker), logger)
+			httpapi.RegisterBuildStreamRoutes(api, worker, logger, ctx)
+		}
 	})
 
 	return run(ctx, appConfig, logger, router)

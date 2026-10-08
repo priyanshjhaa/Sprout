@@ -9,10 +9,11 @@ export const queryKeys = {
     ["user", userId, "workspace", slug, "app", appId, "deployments"] as const,
   simulation: (userId: string | null | undefined, slug: string, appId: string, id: string) =>
     ["user", userId, "workspace", slug, "app", appId, "deployments", id] as const,
-  logs: (userId: string | null | undefined, slug: string, appId: string) => ["user", userId, "workspace", slug, "app", appId, "logs"] as const,
-  environment: (userId: string | null | undefined, slug: string, appId: string) =>
-    ["user", userId, "workspace", slug, "app", appId, "environment"] as const,
+  builds: (userId: string | null | undefined, slug: string, appId: string) =>
+    ["user", userId, "workspace", slug, "app", appId, "builds"] as const,
+  build: (userId: string | null | undefined, slug: string, appId: string, id: string) =>
+    ["user", userId, "workspace", slug, "app", appId, "builds", id] as const,
+  capabilities: (userId: string | null | undefined) => ["user", userId, "capabilities"] as const,
   access: (userId: string | null | undefined, slug: string, appId: string) => ["user", userId, "workspace", slug, "app", appId, "access"] as const,
   members: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "members"] as const,
-  agent: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "agent"] as const,
 };

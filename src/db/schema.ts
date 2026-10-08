@@ -167,6 +167,11 @@ export const deployments = pgTable(
     commitSha: varchar("commit_sha", { length: 64 }),
     failureCode: varchar("failure_code", { length: 80 }),
     durationMs: integer("duration_ms"),
+    // Reference to a real build's output in the local artifact store. The bytes
+    // never enter PostgreSQL; the digest lets a later step verify what it loads.
+    artifactId: varchar("artifact_id", { length: 32 }),
+    artifactSha256: varchar("artifact_sha256", { length: 64 }),
+    artifactBytes: integer("artifact_bytes"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -174,10 +179,20 @@ export const deployments = pgTable(
   (table) => [
     index("deployments_application_created_idx").on(table.applicationId, table.createdAt),
     index("deployments_status_idx").on(table.status),
-    uniqueIndex("deployments_one_active_simulation_per_app").on(table.applicationId)
-      .where(sql`${table.simulated} = true and ${table.status} in ('queued', 'building')`),
+    // Real and simulated jobs share the worker, so at most one may be active per application.
+    uniqueIndex("deployments_one_active_per_app").on(table.applicationId)
+      .where(sql`${table.status} in ('queued', 'building')`),
     check("deployments_simulation_not_live", sql`not ${table.simulated} or ${table.status} <> 'live'`),
     check("deployments_duration_nonnegative", sql`${table.durationMs} is null or ${table.durationMs} >= 0`),
+    // NULL satisfies a CHECK, so each artifact column is tested for presence explicitly.
+    check(
+      "deployments_artifact_reference",
+      sql`(${table.artifactId} is null and ${table.artifactSha256} is null and ${table.artifactBytes} is null)
+        or (not ${table.simulated} and ${table.status} = 'succeeded'
+          and ${table.artifactId} is not null and ${table.artifactId} ~ '^[0-9a-f]{32}$'
+          and ${table.artifactSha256} is not null and ${table.artifactSha256} ~ '^[0-9a-f]{64}$'
+          and ${table.artifactBytes} is not null and ${table.artifactBytes} between 1 and 16777216)`,
+    ),
   ],
 );
 

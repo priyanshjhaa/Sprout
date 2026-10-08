@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
 )
 
@@ -85,7 +87,11 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	scope := Scope{WorkspaceSlug: "simulation", ApplicationID: app.String(), UserID: owner.String()}
+	scope := Scope{WorkspaceSlug: "simulation", ApplicationID: app.String(), UserID: owner.String(), Simulated: true}
+	finish := func(id, status, code string) error {
+		_, err := repo.Finish(ctx, id, status, code, nil)
+		return err
+	}
 	expect := func(err, want error) {
 		t.Helper()
 		if !errors.Is(err, want) {
@@ -127,12 +133,12 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 	expect(err, ErrForbidden)
 	expect(repo.Start(ctx, scope, job.ID), nil)
 	expect(repo.Advance(ctx, job.ID, "build", "running"), ErrConflict)
-	expect(repo.Finish(ctx, job.ID, "succeeded", ""), ErrConflict)
+	expect(finish(job.ID, "succeeded", ""), ErrConflict)
 	for _, stage := range stages {
 		expect(repo.Advance(ctx, job.ID, stage, "running"), nil)
 		expect(repo.Advance(ctx, job.ID, stage, "succeeded"), nil)
 	}
-	expect(repo.Finish(ctx, job.ID, "succeeded", ""), nil)
+	expect(finish(job.ID, "succeeded", ""), nil)
 	done, err := repo.Get(ctx, scope, job.ID)
 	if err != nil || done.Status != "succeeded" || done.FinishedAt == nil {
 		t.Fatalf("completed: %+v %v", done, err)
@@ -144,6 +150,48 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 		t.Fatal("simulation marked live")
 	}
 
+	// A real build records its artifact reference; each kind is invisible to the other.
+	realScope := scope
+	realScope.Simulated = false
+	built, err := repo.Create(ctx, realScope)
+	if err != nil || built.Simulated {
+		t.Fatalf("real build: %+v %v", built, err)
+	}
+	_, err = repo.Get(ctx, scope, built.ID)
+	expect(err, ErrNotFound)
+	expect(repo.Start(ctx, realScope, built.ID), nil)
+	for _, stage := range stages {
+		expect(repo.Advance(ctx, built.ID, stage, "running"), nil)
+		expect(repo.Advance(ctx, built.ID, stage, "succeeded"), nil)
+	}
+	output := &artifact.Descriptor{ID: strings.Repeat("a", 32), SHA256: strings.Repeat("b", 64), Size: 42}
+	_, err = repo.Finish(ctx, built.ID, "failed", "build_failed", output)
+	expect(err, ErrInvalid)
+	recorded, err := repo.Finish(ctx, built.ID, "succeeded", "", output)
+	if err != nil || !recorded {
+		t.Fatalf("artifact not recorded: %v %v", recorded, err)
+	}
+	referenced, err := repo.ReferencedArtifacts(ctx)
+	if err != nil || !referenced[output.ID] {
+		t.Fatalf("artifact reference missing: %v %v", referenced, err)
+	}
+	if recorded, err = repo.Finish(ctx, built.ID, "succeeded", "", output); err != nil || recorded {
+		t.Fatalf("terminal job re-recorded: %v %v", recorded, err)
+	}
+	// A simulation can never claim an artifact.
+	simulated, err := repo.Create(ctx, scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect(repo.Start(ctx, scope, simulated.ID), nil)
+	for _, stage := range stages {
+		expect(repo.Advance(ctx, simulated.ID, stage, "running"), nil)
+		expect(repo.Advance(ctx, simulated.ID, stage, "succeeded"), nil)
+	}
+	_, err = repo.Finish(ctx, simulated.ID, "succeeded", "", output)
+	expect(err, ErrInvalid)
+	expect(finish(simulated.ID, "succeeded", ""), nil)
+
 	cancelled, err := repo.Create(ctx, scope)
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +200,7 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 	expect(repo.Advance(ctx, cancelled.ID, "source", "running"), nil)
 	_, err = repo.Cancel(ctx, scope, cancelled.ID)
 	expect(err, nil)
-	expect(repo.Finish(ctx, cancelled.ID, "succeeded", ""), nil)
+	expect(finish(cancelled.ID, "succeeded", ""), nil)
 	done, err = repo.Get(ctx, scope, cancelled.ID)
 	if err != nil || done.Status != "cancelled" {
 		t.Fatalf("cancellation lost: %+v %v", done, err)
@@ -186,7 +234,7 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 		t.Fatal(err)
 	}
 	expect(repo.Start(ctx, editorScope, revokedJob.ID), ErrNotFound)
-	expect(repo.Finish(ctx, revokedJob.ID, "failed", "start_rejected"), nil)
+	expect(finish(revokedJob.ID, "failed", "start_rejected"), nil)
 	_, err = repo.List(ctx, editorScope)
 	expect(err, ErrNotFound)
 
@@ -205,7 +253,7 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 	}
 	expect(repo.Start(ctx, scope, interrupted.ID), nil)
 	expect(repo.Advance(ctx, interrupted.ID, "source", "running"), nil)
-	// A real (non-simulation) row must remain untouched by simulation recovery.
+	// The worker owns real builds too, so an unfinished real row is also recovered.
 	var realID pgtype.UUID
 	if err = pool.QueryRow(ctx, "INSERT INTO deployments(application_id) VALUES($1) RETURNING id", otherApp).Scan(&realID); err != nil {
 		t.Fatal(err)
@@ -221,16 +269,16 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 	if err != nil || recovered.Status != "failed" || recovered.FailureCode == nil || *recovered.FailureCode != "process_interrupted" {
 		t.Fatalf("recovery: %+v %v", recovered, err)
 	}
-	var realStatus string
-	if err = pool.QueryRow(ctx, "SELECT status FROM deployments WHERE id=$1", realID).Scan(&realStatus); err != nil || realStatus != "queued" {
-		t.Fatalf("real deployment affected: %s %v", realStatus, err)
+	var realStatus, realCode string
+	if err = pool.QueryRow(ctx, "SELECT status, failure_code FROM deployments WHERE id=$1", realID).Scan(&realStatus, &realCode); err != nil || realStatus != "failed" || realCode != "process_interrupted" {
+		t.Fatalf("real deployment not recovered: %s %s %v", realStatus, realCode, err)
 	}
 	// Recovery released the per-app slot.
 	if _, err = repo.Create(ctx, scope); err != nil {
 		t.Fatal(err)
 	}
 	// Generated query also rejects a viewer, independently of service checks.
-	_, err = dbgen.New(pool).CreateDeploymentSimulation(ctx, dbgen.CreateDeploymentSimulationParams{ApplicationID: app, WorkspaceSlug: "simulation", UserID: viewer})
+	_, err = dbgen.New(pool).CreateDeployment(ctx, dbgen.CreateDeploymentParams{ApplicationID: app, WorkspaceSlug: "simulation", UserID: viewer, Simulated: true})
 	expect(err, pgx.ErrNoRows)
 	release()
 	expect(repo.CheckOwnership(ctx), ErrUnavailable)

@@ -1,7 +1,8 @@
-import type { AppStatus, DeploymentStatus } from "@/types/domain";
+import type { AppStatus } from "@/types/domain";
 import type { Simulation } from "@/lib/api/simulation-stream";
 
-const labels: Record<AppStatus | DeploymentStatus | Simulation["status"], string> = {
+const labels: Record<AppStatus | Simulation["status"], string> = {
+  undeployed: "Not deployed",
   queued: "Queued",
   succeeded: "Succeeded",
   cancelled: "Cancelled",
@@ -10,10 +11,9 @@ const labels: Record<AppStatus | DeploymentStatus | Simulation["status"], string
   failed: "Needs attention",
   paused: "Paused",
   archived: "Archived",
-  live: "Live",
 };
 
-export function StatusPill({ status }: { status: AppStatus | DeploymentStatus | Simulation["status"] }) {
+export function StatusPill({ status }: { status: AppStatus | Simulation["status"] }) {
   return (
     <span className={`status-pill status-${status}`}>
       <span className="status-dot" aria-hidden="true" />

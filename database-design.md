@@ -73,7 +73,8 @@ erDiagram
 - An application slug is unique within its workspace.
 - Each application has at most one active source connection in the MVP.
 - Deployment status is the source of truth for build/runtime presentation. Application lifecycle only records active, paused, or archived.
-- Deployment-worker exercises use `simulated=true` and finish as `succeeded`, never `live`. A check constraint prevents simulated rows from becoming live. A partial unique index allows only one queued/building simulation per application; runtime deployments are unaffected. Source/build/package stage summaries contain no application code or raw output.
+- Deployment-worker exercises use `simulated=true` and finish as `succeeded`, never `live`. A check constraint prevents simulated rows from becoming live. Real and simulated jobs share one worker, so a partial unique index allows only one queued/building deployment of either kind per application. Source/build/package stage summaries contain no application code or raw output.
+- A real build that succeeds records a reference to its output in the local artifact store: a random 32-hex-character ID, the SHA-256 digest, and the byte size. The bytes stay outside PostgreSQL. A check constraint allows the reference only as a complete set on a non-simulated `succeeded` row, so a simulation, a failed build, or a half-written reference can never point at an artifact. Uploaded source is never referenced from the database: it is disposable and deleted when its job ends.
 - Failure fields contain stable machine-readable codes, not raw provider responses that may contain credentials.
 - Deleting a workspace cascades through its applications and operational records. Identity records are not deleted through workspace removal.
 - Membership and access checks must scope every application query through its workspace.

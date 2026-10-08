@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
+	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
 	"github.com/priyanshjhaa/Sprout/backend/internal/source"
 )
 
@@ -26,8 +28,11 @@ func run(ctx context.Context, args []string, out, diagnostics io.Writer) int {
 	flags := flag.NewFlagSet("sourcecheck", flag.ContinueOnError)
 	flags.SetOutput(io.Discard) // Input paths and arbitrary arguments may be sensitive.
 	archive := flags.String("archive", "", "plain uncompressed source tar archive")
-	if flags.Parse(args) != nil || *archive == "" || flags.NArg() != 0 {
-		fmt.Fprintln(diagnostics, "usage: sourcecheck -archive <local-source.tar>")
+	runtime := flags.String("runtime", "", "optional application contract: node")
+	buildNode := flags.Bool("build-node", false, "run the Node build scripts in the restricted local Docker smoke runner")
+	artifactDirectory := flags.String("artifact-dir", "", "existing private directory for the local build artifact")
+	if flags.Parse(args) != nil || *archive == "" || flags.NArg() != 0 || (*runtime != "" && *runtime != "node") || (*buildNode && *runtime == "node") || (*artifactDirectory != "" && !*buildNode) {
+		fmt.Fprintln(diagnostics, "usage: sourcecheck -archive <local-source.tar> [-runtime node | -build-node [-artifact-dir <artifact-directory>]]")
 		return 2
 	}
 	info, err := os.Lstat(*archive)
@@ -47,14 +52,57 @@ func run(ctx context.Context, args []string, out, diagnostics io.Writer) int {
 		fmt.Fprintln(diagnostics, "source_input_invalid")
 		return 1
 	}
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	var store *artifact.Store
+	if *artifactDirectory != "" {
+		store, err = artifact.Open(*artifactDirectory)
+		if err != nil {
+			fmt.Fprintln(diagnostics, err)
+			return 1
+		}
+		defer store.Close()
+	}
+	timeout := 10 * time.Second
+	if *buildNode {
+		timeout = 2*time.Minute + 15*time.Second
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	summary, err := source.WithArchive(ctx, file, func(context.Context, fs.FS) error { return nil })
+	var built []byte
+	summary, err := source.WithArchive(ctx, file, func(ctx context.Context, files fs.FS) error {
+		if *runtime == "node" {
+			return nodeapp.Validate(ctx, files)
+		}
+		if *buildNode {
+			runner, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute)
+			if err != nil {
+				return err
+			}
+			if store == nil {
+				return runner.RunFiles(ctx, files)
+			}
+			built, err = runner.BuildFiles(ctx, files)
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		fmt.Fprintln(diagnostics, err)
 		return 1
 	}
-	if json.NewEncoder(out).Encode(summary) != nil {
+	var saved *artifact.Descriptor
+	if store != nil {
+		descriptor, err := store.Save(ctx, built)
+		if err != nil {
+			fmt.Fprintln(diagnostics, err)
+			return 1
+		}
+		saved = &descriptor
+	}
+	response := struct {
+		source.Summary
+		Artifact *artifact.Descriptor `json:"artifact,omitempty"`
+	}{Summary: summary, Artifact: saved}
+	if json.NewEncoder(out).Encode(response) != nil {
 		return 1
 	}
 	return 0

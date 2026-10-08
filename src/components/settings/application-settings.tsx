@@ -1,50 +1,83 @@
 "use client";
 
-import { GitBranch, Globe2, Save, Server, Trash2, TriangleAlert, X } from "lucide-react";
-import { useState } from "react";
+import { Archive, Pause, Play, Save, Server, TriangleAlert } from "lucide-react";
+import { FormEvent } from "react";
+import { useApplication, useUpdateApplication } from "@/lib/query/hooks";
+import type { Application, ApplicationLifecycle } from "@/types/domain";
 
-export function ApplicationSettings() {
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [confirmation, setConfirmation] = useState("");
+// Each lifecycle state offers only the transitions the API accepts.
+const lifecycleActions: Record<ApplicationLifecycle, Array<{ to: ApplicationLifecycle; label: string; icon: typeof Play; effect: string }>> = {
+  active: [
+    { to: "paused", label: "Pause", icon: Pause, effect: "Stops new deployments. Access and configuration stay as they are." },
+    { to: "archived", label: "Archive", icon: Archive, effect: "Retires the app from everyday use. You can restore it later." },
+  ],
+  paused: [
+    { to: "active", label: "Resume", icon: Play, effect: "Allows deployments again." },
+    { to: "archived", label: "Archive", icon: Archive, effect: "Retires the app from everyday use. You can restore it later." },
+  ],
+  archived: [
+    { to: "active", label: "Restore", icon: Play, effect: "Brings the app back so it can be deployed again." },
+  ],
+};
+
+const lifecycleLabels: Record<ApplicationLifecycle, string> = { active: "Active", paused: "Paused", archived: "Archived" };
+
+export function ApplicationSettings({ workspaceSlug, appId }: { workspaceSlug: string; appId: string }) {
+  const { data: application, isLoading, isError } = useApplication(workspaceSlug, appId);
+
+  if (isLoading) return <div className="overview-loading"><span /><span /></div>;
+  if (isError || !application) {
+    return <section className="soft-empty"><TriangleAlert size={20} /><h2>Settings unavailable</h2><p>Sprout could not load this application with your current access.</p></section>;
+  }
+  // Re-mount the form when the saved values change so inputs show the latest data.
+  return <SettingsForm key={application.updatedAt + application.name} workspaceSlug={workspaceSlug} application={application} />;
+}
+
+function SettingsForm({ workspaceSlug, application }: { workspaceSlug: string; application: Application }) {
+  const update = useUpdateApplication(workspaceSlug, application.id);
+
+  function saveGeneral(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const name = String(data.get("name")).trim();
+    const description = String(data.get("description")).trim();
+    const changes = {
+      ...(name !== application.name ? { name } : {}),
+      ...(description !== application.description ? { description } : {}),
+    };
+    if (Object.keys(changes).length > 0) update.mutate(changes);
+  }
 
   return (
     <section className="app-section settings-view">
-      <header className="section-heading"><div><h2>Settings</h2><p>Infrequent application configuration, kept in one place.</p></div><button className="button button-primary" type="button"><Save size={14} /> Save changes</button></header>
+      <header className="section-heading"><div><h2>Settings</h2><p>Name, description, and lifecycle for this application.</p></div></header>
+      {update.isError && <p className="deploy-error" role="alert">{update.error.message}</p>}
 
-      <section className="settings-panel">
-        <div className="settings-panel-heading"><span className="panel-icon"><Server size={15} /></span><div><h3>General</h3><p>Application identity and runtime defaults.</p></div></div>
+      <form className="settings-panel" onSubmit={saveGeneral}>
+        <div className="settings-panel-heading"><span className="panel-icon"><Server size={15} /></span><div><h3>General</h3><p>How this application appears to your team.</p></div></div>
         <div className="settings-fields">
-          <label><span>Application name</span><input defaultValue="Invoice approvals" /></label>
-          <label><span>Runtime port</span><input defaultValue="3000" inputMode="numeric" /></label>
+          <label><span>Application name</span><input name="name" defaultValue={application.name} required maxLength={120} disabled={update.isPending} /></label>
+          <label><span>Description</span><input name="description" defaultValue={application.description} maxLength={2000} disabled={update.isPending} /></label>
         </div>
-      </section>
+        <div className="settings-actions">
+          <span>URL name: {application.slug}</span>
+          <button className="button button-primary" type="submit" disabled={update.isPending}><Save size={14} /> {update.isPending ? "Saving…" : "Save changes"}</button>
+        </div>
+      </form>
 
       <section className="settings-panel">
-        <div className="settings-panel-heading"><span className="panel-icon"><GitBranch size={15} /></span><div><h3>Source</h3><p>The repository and branch used for new deployments.</p></div></div>
-        <div className="connected-setting"><div><strong>sprout-demo/invoice-approvals</strong><small>Deploy from main · GitHub connection mocked</small></div><button className="button button-secondary" type="button">Change repository</button></div>
+        <div className="settings-panel-heading"><span className="panel-icon"><Archive size={15} /></span><div><h3>Lifecycle</h3><p>Currently <strong>{lifecycleLabels[application.lifecycle]}</strong>.</p></div></div>
+        <ul className="lifecycle-actions">
+          {lifecycleActions[application.lifecycle].map(({ to, label, icon: Icon, effect }) => (
+            <li key={to}>
+              <div><strong>{label}</strong><small>{effect}</small></div>
+              <button className="button button-secondary" type="button" disabled={update.isPending} onClick={() => update.mutate({ lifecycle: to })}>
+                <Icon size={14} /> {label}
+              </button>
+            </li>
+          ))}
+        </ul>
       </section>
-
-      <section className="settings-panel">
-        <div className="settings-panel-heading"><span className="panel-icon"><Globe2 size={15} /></span><div><h3>Domains</h3><p>The default address is already secured by Sprout.</p></div></div>
-        <div className="connected-setting"><div><strong>invoice-acme.sprout.run</strong><small>Default domain · HTTPS active</small></div><button className="button button-secondary" type="button">Add custom domain</button></div>
-      </section>
-
-      <section className="settings-panel danger-panel">
-        <div className="settings-panel-heading"><span className="panel-icon"><TriangleAlert size={15} /></span><div><h3>Delete application</h3><p>Remove the application and its deployment history from this workspace.</p></div></div>
-        <button className="button danger-button" type="button" onClick={() => setDeleteOpen(true)}><Trash2 size={14} /> Delete application</button>
-      </section>
-
-      {deleteOpen && <div className="dialog-backdrop" role="presentation">
-        <section className="confirmation-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-description">
-          <button className="dialog-close" type="button" onClick={() => setDeleteOpen(false)} aria-label="Close confirmation"><X size={16} /></button>
-          <span className="dialog-danger-icon"><Trash2 size={18} /></span>
-          <h2 id="delete-title">Delete Invoice approvals?</h2>
-          <p id="delete-description">This frontend preview will not delete data. In the real product this action will remove deployments and disconnect resources.</p>
-          <label><span>Type <strong>invoice-approvals</strong> to confirm</span><input autoFocus value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
-          <div><button className="button button-secondary" type="button" onClick={() => setDeleteOpen(false)}>Cancel</button><button className="button danger-button" type="button" disabled={confirmation !== "invoice-approvals"}>Delete application</button></div>
-        </section>
-      </div>}
     </section>
   );
 }
-

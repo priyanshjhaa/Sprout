@@ -149,3 +149,43 @@ func TestLoadRejectsInvalidDatabaseURLWithoutExposingIt(t *testing.T) {
 		t.Fatalf("Load() error exposes password: %v", err)
 	}
 }
+
+func TestLocalBuilds(t *testing.T) {
+	t.Parallel()
+	base := map[string]string{"DATABASE_URL": testDatabaseURL}
+	with := func(extra map[string]string) map[string]string {
+		values := map[string]string{}
+		for key, value := range base {
+			values[key] = value
+		}
+		for key, value := range extra {
+			values[key] = value
+		}
+		return values
+	}
+	enabled := map[string]string{"SPROUT_ENABLE_LOCAL_BUILDS": "1", "SPROUT_SOURCE_DIR": "/private/tmp/sprout-sources", "SPROUT_ARTIFACT_DIR": "/private/tmp/sprout-artifacts"}
+
+	off, err := Load(lookup(base))
+	if err != nil || off.LocalBuilds.Enabled {
+		t.Fatalf("builds enabled by default: %+v %v", off.LocalBuilds, err)
+	}
+	on, err := Load(lookup(with(enabled)))
+	if err != nil || !on.LocalBuilds.Enabled || on.LocalBuilds.SourceDirectory != "/private/tmp/sprout-sources" {
+		t.Fatalf("enabled builds: %+v %v", on.LocalBuilds, err)
+	}
+	for name, extra := range map[string]map[string]string{
+		"ambiguous flag":    {"SPROUT_ENABLE_LOCAL_BUILDS": "true"},
+		"public address":    with(map[string]string{"SPROUT_API_ADDRESS": "0.0.0.0:8080"}),
+		"relative source":   {"SPROUT_SOURCE_DIR": "sources"},
+		"missing artifacts": {"SPROUT_ARTIFACT_DIR": ""},
+		"same directory":    {"SPROUT_ARTIFACT_DIR": "/private/tmp/sprout-sources"},
+	} {
+		values := with(enabled)
+		for key, value := range extra {
+			values[key] = value
+		}
+		if _, err := Load(lookup(values)); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+}

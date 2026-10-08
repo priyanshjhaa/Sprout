@@ -14,8 +14,8 @@ const heroFont = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Sprout — small software, ready to share",
-  description: "Deploy and share purpose-built software without managing the cloud around it.",
+  title: "Sprout — small apps, live at a public URL",
+  description: "Deploy small, purpose-built apps to a public URL without managing the cloud around them.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

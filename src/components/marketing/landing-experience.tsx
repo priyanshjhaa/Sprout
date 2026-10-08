@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, Database, FileCode2, LockKeyhole, ScrollText, Users } from "lucide-react";
+import { ArrowRight, Check, FileCode2, Globe, LockKeyhole, Moon, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Brand } from "@/components/brand";
@@ -9,89 +9,136 @@ import { GrowthSystem } from "@/components/marketing/growth-system";
 const chapters = [
   {
     eyebrow: "Small software, finally at home",
-    title: "The useful app in your head should be live by lunch.",
-    body: "Sprout gives purpose-built software a safe place to run, without turning every idea into an infrastructure project.",
+    title: "Your app works. Now give it somewhere to live.",
+    body: "Sprout takes application code you already have, from your editor, a teammate, or a coding agent, and turns it into a running app anyone can open.",
   },
   {
-    eyebrow: "Bring the code",
-    title: "Start with the application you already made.",
-    body: "Connect a repository or hand Sprout the result of an agent session. We begin where code generation ends.",
+    eyebrow: "Plant the code",
+    title: "Hand Sprout the code. Nothing else.",
+    body: "Upload it, push it from the CLI, or let a coding agent deploy it. No Dockerfile, no proxy, no cloud console.",
   },
   {
-    eyebrow: "A calm path to production",
-    title: "Build, isolate, check, and publish.",
-    body: "One clear deployment flow replaces the usual maze of container, proxy, certificate, and runtime configuration.",
+    eyebrow: "Sealed underground",
+    title: "Every build runs sealed off.",
+    body: "Untrusted code builds in a disposable container with no network, fixed CPU and memory, and a hard time limit, kept away from everything else you run.",
   },
   {
-    eyebrow: "Live",
-    title: "A real URL, ready for real work.",
-    body: "Sprout turns a local application into a healthy HTTPS service your team can open immediately.",
+    eyebrow: "Breaking the surface",
+    title: "Healthy first. Then it gets a URL.",
+    body: "Sprout starts the app, checks that it answers on /health, and only then sends visitors to its public address.",
   },
   {
-    eyebrow: "Everything it needs",
-    title: "Infrastructure grows around the app.",
-    body: "Attach data, storage, secrets, and logs without leaving the application or learning a new cloud vocabulary.",
+    eyebrow: "Quiet when nobody is looking",
+    title: "Idle apps sleep. Visitors wake them.",
+    body: "An app nobody is using goes to sleep and starts again on the next visit, so dozens of small apps cost almost nothing to keep online.",
   },
   {
-    eyebrow: "Share the useful thing",
-    title: "Invite coworkers like you would share a document.",
-    body: "Workspace identity and simple roles make internal applications useful without rebuilding authentication every time.",
+    eyebrow: "Online, in good hands",
+    title: "Anyone can open it. Your team runs it.",
+    body: "Send the link to whoever needs it. Invite teammates as editors or viewers to deploy, pause, or retire it, and their control ends when they leave the workspace.",
   },
   {
-    eyebrow: "A cloud for the small things",
-    title: "Give every workflow exactly the software it needs.",
-    body: "One quiet workspace for experiments, internal tools, and agent-built applications that matter to a handful of people.",
+    eyebrow: "A garden, not a server farm",
+    title: "Many small apps, each with a clear life.",
+    body: "Live apps serve. Resting apps pause and release what they use. Finished apps are archived, and deleting one really deletes it.",
   },
 ];
 
 export function LandingExperience() {
   const [activeScene, setActiveScene] = useState(0);
   const storyRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const story = storyRef.current;
-    if (!story) return;
+    const stage = stageRef.current;
+    if (!story || !stage) return;
 
     let frame = 0;
     let currentProgress = 0;
     let targetProgress = 0;
     let currentScene = 0;
+    let underground = false;
     let lastFrameTime = performance.now();
+    let storyTop = 0;
+    let distance = 1;
+    const lastScene = chapters.length - 1;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const copyStack = stage.querySelector<HTMLElement>(".story-copy-stack");
+    const copies = Array.from(stage.querySelectorAll<HTMLElement>(".story-copy"));
+
+    // Each chapter fades and drifts with scroll: fully readable near its centre,
+    // fading out as the next one fades in around the midpoint between them.
+    const scrubCopy = (progress: number) => {
+      if (reduceMotion.matches) {
+        copyStack?.removeAttribute("data-scrub");
+        for (const copy of copies) {
+          for (const property of ["opacity", "transform", "visibility"]) copy.style.removeProperty(property);
+        }
+        return;
+      }
+      copyStack?.setAttribute("data-scrub", "");
+      const position = progress * lastScene;
+      copies.forEach((copy, index) => {
+        const offset = position - index;
+        const fade = Math.min(1, Math.max(0, (Math.abs(offset) - 0.2) / 0.36));
+        const opacity = 1 - fade * fade * (3 - 2 * fade);
+        copy.style.opacity = opacity.toFixed(3);
+        copy.style.transform = `translate3d(0, ${(-offset * 36).toFixed(1)}px, 0)`;
+        copy.style.visibility = opacity < 0.01 ? "hidden" : "visible";
+      });
+    };
+
     const setProgress = (progress: number) => {
       const segment = (start: number, end: number) => {
         const value = Math.min(1, Math.max(0, (progress - start) / (end - start)));
-        return (value * value * (3 - 2 * value)).toFixed(4);
+        return value * value * (3 - 2 * value);
       };
-      story.style.setProperty("--growth-progress", progress.toFixed(4));
-      story.style.setProperty("--root-growth", segment(0.02, 0.28));
-      story.style.setProperty("--stem-growth", segment(0.16, 0.48));
-      story.style.setProperty("--leaf-growth", segment(0.38, 0.67));
-      story.style.setProperty("--network-growth", segment(0.62, 0.9));
-      story.style.setProperty("--seed-open", segment(0.01, 0.14));
-      story.style.setProperty("--root-fine-growth", segment(0.14, 0.36));
-      story.style.setProperty("--lower-branch-growth", segment(0.29, 0.43));
-      story.style.setProperty("--upper-branch-growth", segment(0.39, 0.54));
-      story.style.setProperty("--lower-leaf-growth", segment(0.4, 0.58));
-      story.style.setProperty("--upper-leaf-growth", segment(0.52, 0.7));
+      const set = (name: string, value: number) => story.style.setProperty(name, value.toFixed(4));
+      // The camera sinks below the soil while the build runs, then rises with the healthy app.
+      const depth = reduceMotion.matches ? 0 : segment(0.12, 0.3) * (1 - segment(0.4, 0.52));
+      set("--growth-progress", progress);
+      set("--camera-depth", depth);
+      set("--seed-open", segment(0.01, 0.14));
+      set("--root-growth", segment(0.1, 0.34));
+      set("--root-fine-growth", segment(0.2, 0.38));
+      set("--stem-growth", segment(0.36, 0.52));
+      set("--lower-branch-growth", segment(0.44, 0.54));
+      set("--upper-branch-growth", segment(0.48, 0.58));
+      set("--leaf-growth", segment(0.48, 0.7));
+      set("--lower-leaf-growth", segment(0.5, 0.62));
+      set("--upper-leaf-growth", segment(0.56, 0.7));
+      set("--network-growth", segment(0.72, 0.92));
+      scrubCopy(progress);
+
+      // Flip copy colour once as the soil passes behind it, with a gap to avoid flicker.
+      const nextUnderground = underground ? depth > 0.45 : depth > 0.62;
+      if (nextUnderground !== underground) {
+        underground = nextUnderground;
+        stage.toggleAttribute("data-underground", underground);
+      }
+    };
+
+    // Measure layout only on resize; scrolling reads the cached values.
+    const measure = () => {
+      storyTop = story.getBoundingClientRect().top + window.scrollY;
+      distance = Math.max(1, story.offsetHeight - window.innerHeight);
     };
     const readTarget = () => {
-      const bounds = story.getBoundingClientRect();
-      const distance = Math.max(1, story.offsetHeight - window.innerHeight);
-      targetProgress = Math.min(1, Math.max(0, -bounds.top / distance));
-      const nextScene = Math.min(chapters.length - 1, Math.round(targetProgress * (chapters.length - 1)));
-      if (nextScene !== currentScene) {
-        currentScene = nextScene;
-        setActiveScene(nextScene);
+      targetProgress = Math.min(1, Math.max(0, (window.scrollY - storyTop) / distance));
+      // Change chapter only once progress clearly passes the midpoint between scenes.
+      const position = targetProgress * lastScene;
+      if (Math.abs(position - currentScene) > 0.58) {
+        currentScene = Math.min(lastScene, Math.max(0, Math.round(position)));
+        setActiveScene(currentScene);
       }
     };
     const animate = (time: number) => {
       const elapsed = Math.min(64, time - lastFrameTime);
       lastFrameTime = time;
       const difference = targetProgress - currentProgress;
-      const easing = 1 - Math.exp(-elapsed / 82);
-      currentProgress += difference * easing;
-      if (Math.abs(difference) < 0.0005) currentProgress = targetProgress;
+      currentProgress += difference * (1 - Math.exp(-elapsed / 90));
+      if (Math.abs(difference) < 0.0004) currentProgress = targetProgress;
       setProgress(currentProgress);
       frame = currentProgress === targetProgress ? 0 : window.requestAnimationFrame(animate);
     };
@@ -105,16 +152,21 @@ export function LandingExperience() {
         frame = window.requestAnimationFrame(animate);
       }
     };
+    const onResize = () => {
+      measure();
+      requestUpdate();
+    };
 
+    measure();
     readTarget();
     currentProgress = targetProgress;
     setProgress(currentProgress);
     window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
+    window.addEventListener("resize", onResize);
     reduceMotion.addEventListener("change", requestUpdate);
     return () => {
       window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
+      window.removeEventListener("resize", onResize);
       reduceMotion.removeEventListener("change", requestUpdate);
       if (frame) window.cancelAnimationFrame(frame);
     };
@@ -136,16 +188,33 @@ export function LandingExperience() {
       </header>
 
       <section className="scroll-story" id="story" ref={storyRef} aria-label="How Sprout works">
-        <div className="story-stage" data-scene={activeScene}>
-          <div className="story-landscape" aria-hidden="true">
-            <div className="landscape-breeze landscape-breeze-left" />
-            <div className="landscape-breeze landscape-breeze-right" />
+        <div className="story-stage" data-scene={activeScene} ref={stageRef}>
+          <div className="story-world" aria-hidden="true">
+            <div className="world-layer world-sky" />
+            <div className="world-light" />
+            <div className="world-veil" />
+            <div className="world-layer world-ground">
+              <div className="ground-soil" />
+              <div className="growth-stage">
+                <GrowthSystem />
+              </div>
+              <div className="ground-grass ground-grass-left" />
+              <div className="ground-grass ground-grass-right" />
+              <div className="ground-depth">
+                <div className="build-chamber">
+                  <p className="chamber-label"><LockKeyhole size={13} /> Sealed build · invoice-approval</p>
+                  <div className="pipeline">
+                    <span>Build</span><i /><span>Isolate</span><i /><span>Check</span>
+                  </div>
+                  <ul className="chamber-limits">
+                    <li>No network</li><li>1 CPU</li><li>1 GiB memory</li><li>2 min limit</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
           <div className="growth-atmosphere" aria-hidden="true">
             {Array.from({ length: 8 }, (_, index) => <i key={index} />)}
-          </div>
-          <div className="growth-stage" aria-hidden="true">
-            <GrowthSystem />
           </div>
           <div className="ambient-orb ambient-orb-one" />
           <div className="ambient-orb ambient-orb-two" />
@@ -163,15 +232,15 @@ export function LandingExperience() {
                 {index === activeScene && index === 0 && (
                   <div className="story-actions">
                     <Link className="button button-primary" href="/start">
-                      Explore Sprout <ArrowRight size={16} />
+                      Deploy an app <ArrowRight size={16} />
                     </Link>
-                    <span className="scroll-note">Scroll to grow the app</span>
+                    <span className="scroll-note">Scroll to plant it</span>
                   </div>
                 )}
                 {index === activeScene && index === 6 && (
                   <div className="story-actions final-actions">
                     <Link className="button button-primary" href="/start">
-                      Build something small <ArrowRight size={16} />
+                      Deploy an app <ArrowRight size={16} />
                     </Link>
                     <Link className="button button-secondary" href="/start">
                       View the workspace
@@ -185,12 +254,8 @@ export function LandingExperience() {
           <div className="product-world" aria-hidden="true">
             <div className="source-card">
               <div className="source-icon"><FileCode2 size={18} /></div>
-              <div><strong>invoice-approval</strong><span>Next.js · ready</span></div>
+              <div><strong>invoice-approval</strong><span>Node.js · ready to deploy</span></div>
               <span className="source-ready"><Check size={13} /></span>
-            </div>
-
-            <div className="pipeline">
-              <span>Build</span><i /><span>Isolate</span><i /><span>Check</span>
             </div>
 
             <div className="app-window">
@@ -203,21 +268,21 @@ export function LandingExperience() {
               </div>
             </div>
 
-            <div className="resource resource-db"><Database size={16} /><span>Postgres</span></div>
-            <div className="resource resource-secret"><LockKeyhole size={16} /><span>Secrets</span></div>
-            <div className="resource resource-logs"><ScrollText size={16} /><span>Live logs</span></div>
+            <div className="resource resource-db"><Globe size={16} /><span>Public URL</span></div>
+            <div className="resource resource-secret"><Moon size={16} /><span>Sleeps when idle</span></div>
+            <div className="resource resource-logs"><Zap size={16} /><span>Wakes on visit</span></div>
 
             <div className="team-cluster">
-              <div className="team-label"><Users size={15} /> Shared with your team</div>
+              <div className="team-label"><Users size={15} /> Looked after by your team</div>
               <div className="person person-one">PJ</div>
               <div className="person person-two">AC</div>
               <div className="person person-three">BH</div>
             </div>
 
             <div className="app-constellation">
-              <span className="mini-app mini-one">Hiring</span>
-              <span className="mini-app mini-two">Research</span>
-              <span className="mini-app mini-three">Inventory</span>
+              <span className="mini-app mini-one" data-state="live">Hiring<small>Live</small></span>
+              <span className="mini-app mini-two" data-state="paused">Research<small>Paused</small></span>
+              <span className="mini-app mini-three" data-state="archived">Inventory<small>Archived</small></span>
             </div>
           </div>
 

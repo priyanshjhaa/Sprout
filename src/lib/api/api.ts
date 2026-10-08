@@ -1,7 +1,4 @@
-import { mockApi } from "@/lib/api/mock-api";
-import type { Application, AppStatus, Workspace } from "@/types/domain";
-
-type ApplicationLifecycle = "active" | "paused" | "archived";
+import type { Application, ApplicationLifecycle, AppStatus, Workspace } from "@/types/domain";
 
 interface ApplicationResponse {
   id: string;
@@ -103,8 +100,9 @@ export async function request<T>(path: string, token: string | null, options: Re
   return (await response.json()) as T;
 }
 
+// Nothing runs yet, so an active application is shown as not deployed rather than running.
 function applicationStatus(lifecycle: ApplicationLifecycle): AppStatus {
-  if (lifecycle === "active") return "running";
+  if (lifecycle === "active") return "undeployed";
   return lifecycle;
 }
 
@@ -136,6 +134,7 @@ function mapApplication(application: ApplicationResponse): Application {
     accessMode: application.accessMode,
     createdBy: application.createdBy,
     status: applicationStatus(application.lifecycle),
+    lifecycle: application.lifecycle,
     url: application.defaultHostname,
     updatedAt: updatedLabel(application.updatedAt),
     accent: applicationAccent(application.id),
@@ -183,10 +182,37 @@ const applicationAPI = {
     return response.applications.map(mapApplication);
   },
 
+  async createApplication(
+    workspaceSlug: string,
+    input: { name: string; slug: string; description?: string },
+    token: string | null,
+  ): Promise<Application> {
+    const response = await request<ApplicationResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications`,
+      token,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
+    );
+    return mapApplication(response);
+  },
+
   async getApplication(workspaceSlug: string, applicationID: string, token: string | null): Promise<Application> {
     const response = await request<ApplicationResponse>(
       `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}`,
       token,
+    );
+    return mapApplication(response);
+  },
+
+  async updateApplication(
+    workspaceSlug: string,
+    applicationID: string,
+    input: { name?: string; description?: string; lifecycle?: ApplicationLifecycle },
+    token: string | null,
+  ): Promise<Application> {
+    const response = await request<ApplicationResponse>(
+      `/api/v1/workspaces/${encodeURIComponent(workspaceSlug)}/applications/${encodeURIComponent(applicationID)}`,
+      token,
+      { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) },
     );
     return mapApplication(response);
   },
@@ -226,7 +252,4 @@ const applicationAPI = {
   },
 };
 
-export const api = {
-  ...mockApi,
-  ...applicationAPI,
-};
+export const api = applicationAPI;
