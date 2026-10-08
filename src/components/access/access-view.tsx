@@ -96,7 +96,7 @@ export function AccessView({ workspaceSlug, appId }: { workspaceSlug: string; ap
               </div>;
             })}
           </div>
-          <footer><Link2 size={12} /> These controls do not secure a deployed app&apos;s own URL. Invite new members from the Team page.</footer>
+          <footer><Link2 size={12} /> Live apps are public; these controls decide who can see and manage this app in Sprout. Invite new members from the Team page.</footer>
         </section>
       </>}
     </section>

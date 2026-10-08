@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, Database, FileCode2, LockKeyhole, ScrollText, Users } from "lucide-react";
+import { ArrowRight, Check, FileCode2, Globe, LockKeyhole, Moon, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Brand } from "@/components/brand";
@@ -10,7 +10,7 @@ const chapters = [
   {
     eyebrow: "Small software, finally at home",
     title: "Your app works. Now give it somewhere to live.",
-    body: "Sprout takes application code you already have, from your editor, a teammate, or a coding agent, and turns it into a running app your team can open.",
+    body: "Sprout takes application code you already have, from your editor, a teammate, or a coding agent, and turns it into a running app anyone can open.",
   },
   {
     eyebrow: "Plant the code",
@@ -28,9 +28,9 @@ const chapters = [
     body: "Sprout starts the app, checks that it answers on /health, and only then sends visitors to its public address.",
   },
   {
-    eyebrow: "Everything it needs",
-    title: "Data, secrets, and logs grow around it.",
-    body: "Attach a database, keep secrets out of the code, and read its logs without leaving the app or learning a new cloud vocabulary.",
+    eyebrow: "Quiet when nobody is looking",
+    title: "Idle apps sleep. Visitors wake them.",
+    body: "An app nobody is using goes to sleep and starts again on the next visit, so dozens of small apps cost almost nothing to keep online.",
   },
   {
     eyebrow: "Online, in good hands",
@@ -268,9 +268,9 @@ export function LandingExperience() {
               </div>
             </div>
 
-            <div className="resource resource-db"><Database size={16} /><span>Postgres</span></div>
-            <div className="resource resource-secret"><LockKeyhole size={16} /><span>Secrets</span></div>
-            <div className="resource resource-logs"><ScrollText size={16} /><span>Live logs</span></div>
+            <div className="resource resource-db"><Globe size={16} /><span>Public URL</span></div>
+            <div className="resource resource-secret"><Moon size={16} /><span>Sleeps when idle</span></div>
+            <div className="resource resource-logs"><Zap size={16} /><span>Wakes on visit</span></div>
 
             <div className="team-cluster">
               <div className="team-label"><Users size={15} /> Looked after by your team</div>

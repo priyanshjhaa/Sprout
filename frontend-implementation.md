@@ -88,7 +88,7 @@ Motion should explain creation, deployment, connection, and progress.
 - Deploy page
 - Apps index
 - Individual application workspace
-- Overview, deployments, logs, environment, access, and settings views
+- Overview, deployments, access, and settings views
 - Empty, loading, success, warning, failure, and offline states
 - Responsive desktop, tablet, and mobile behavior
 - Accessible keyboard interaction and reduced-motion behavior
@@ -136,29 +136,17 @@ Mocked experiences must be visibly credible, but the product must never imply th
 /workspace/[workspaceSlug]/apps/[appId]/deployments/[deploymentId]
   Deployment details and build logs
 
-/workspace/[workspaceSlug]/apps/[appId]/logs
-  Runtime logs
-
-/workspace/[workspaceSlug]/apps/[appId]/environment
-  Variables and attached resources
-
 /workspace/[workspaceSlug]/apps/[appId]/access
   Members and application permissions
 
 /workspace/[workspaceSlug]/apps/[appId]/settings
-  Repository, domain, runtime, and destructive settings
-
-/workspace/[workspaceSlug]/activity
-  Workspace-level recent events
+  Name, description, and lifecycle (pause, resume, archive, restore)
 
 /workspace/[workspaceSlug]/team
-  Workspace members
-
-/workspace/[workspaceSlug]/settings
-  Workspace settings
+  Workspace members and invitations
 ```
 
-Only Deploy and Apps should receive strong emphasis in the global navigation. Activity, Team, and Settings are secondary destinations.
+The global navigation is Deploy, Apps, and Team. Workspace activity and workspace settings are not part of the current scope.
 
 ## 6. Landing-page experience
 
@@ -203,10 +191,10 @@ The background is a persistent Sprout cloud environment: a subtle grid or spatia
 - Reveal a Sprout application URL.
 - Communicate the repository-to-production outcome.
 
-#### Scene 5: Managed infrastructure
+#### Scene 5: Quiet when idle
 
-- Grow Database, Secrets, Storage, and Logs around the running application.
-- Keep the application as the visual center rather than making infrastructure the product.
+- Show the app sleeping when nobody uses it and waking on the next visit.
+- Communicate that many small apps stay cheap to keep online.
 
 #### Scene 6: Online and in good hands
 
@@ -251,14 +239,9 @@ Use a compact global sidebar and a wide, comfortable content area.
 ```text
 Sprout
 
-Workspace
-  Deploy
-  Apps
-  Activity
-
-Account
-  Team
-  Settings
+Deploy
+Apps
+Team
 ```
 
 The sidebar should include the current workspace switcher and compact user menu. It should collapse appropriately on smaller screens.
@@ -307,7 +290,7 @@ Required collection states:
 Keep the global sidebar. Add app-level navigation in the page header:
 
 ```text
-Overview | Deployments | Logs | Environment | Access | Settings
+Overview | Deployments | Access | Settings
 ```
 
 The header must contain:
@@ -337,28 +320,6 @@ Show the latest deployment and attached resources without turning the page into 
 - Deployment detail progression: Queued, Building, Starting, Health Check, Live
 - Build logs inside the selected deployment
 - Mock rollback action with a confirmation flow
-
-#### Logs
-
-- Runtime/build source selector
-- Level filter
-- Search
-- Time-range selector
-- Live-stream pause/resume
-- Copy/download affordance
-- Empty and disconnected states
-- Virtualized rendering if the mock dataset is large enough to justify it
-
-#### Environment
-
-Initially combine environment variables and attached resources.
-
-- Mask secret values
-- Distinguish user-managed and Sprout-managed values
-- Add, edit, and remove variable flows
-- Database status
-- Object-storage status
-- Clear redeployment warning when configuration changes require it
 
 #### Access
 
@@ -573,8 +534,6 @@ Deliverable: users can create an application, start a deployment, and find it in
 - Build application header and nested navigation
 - Implement Overview
 - Implement deployment list and deployment detail/build logs
-- Implement runtime log viewer
-- Implement Environment
 - Implement Access
 - Implement Settings and confirmations
 
@@ -618,13 +577,11 @@ The frontend phase is complete when these mocked journeys work coherently:
 4. User can retry the mocked deployment.
 5. The status updates consistently across the app.
 
-### Journey D: Configure an application and bring in the team
+### Journey D: Bring in the team
 
-1. User adds an environment variable.
-2. User sees whether redeployment is required.
-3. User invites a workspace member.
-4. User assigns a role.
-5. The Access page reflects the change.
+1. User invites a workspace member.
+2. User assigns a role.
+3. The Access page reflects who can manage the app.
 
 ## 13. Acceptance criteria
 

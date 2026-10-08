@@ -51,11 +51,11 @@ export function ApplicationOverview({ workspaceSlug, appId }: { workspaceSlug: s
         </section>
 
         <section className="overview-card">
-          <div className="card-label"><span>Who can open it</span>{restricted ? <Lock size={14} /> : <Users size={14} />}</div>
+          <div className="card-label"><span>Who can manage it</span>{restricted ? <Lock size={14} /> : <Users size={14} />}</div>
           <div className="deployment-summary">
             <div>
               <strong>{restricted ? "Only invited people" : "Everyone in this workspace"}</strong>
-              <small>{restricted ? "Owners, its creator, and people you grant access." : "Members see it according to their workspace role."}</small>
+              <small>{restricted ? "Owners, its creator, and people you grant access." : "By their workspace role."} Anyone can open it once it is live.</small>
             </div>
           </div>
           <div className="overview-card-footer"><span /><Link href={`${base}/access`}>Manage access <ArrowRight size={13} /></Link></div>

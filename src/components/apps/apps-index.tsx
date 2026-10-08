@@ -42,7 +42,7 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
       ) : applications?.length === 0 ? (
         <section className="apps-empty">
           <h2>No apps yet</h2>
-          <p>Deploy one and it will appear here, ready to share with your team.</p>
+          <p>Deploy one and it will appear here with its own public address.</p>
           <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}>Deploy your first app <ArrowRight size={16} /></Link>
         </section>
       ) : visibleApplications.length === 0 ? (

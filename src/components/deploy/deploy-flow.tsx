@@ -9,12 +9,20 @@ import { useApplications, useCreateApplication } from "@/lib/query/hooks";
 import { useCapabilities, useSimulationActions } from "@/lib/query/simulations";
 import type { Application } from "@/types/domain";
 
+// The planned front doors, all calling the same deploy API (deployment-strategy.md).
+const frontDoors = [
+  "Upload a .tar here (available when local builds are on)",
+  "sprout deploy from your terminal (coming soon)",
+  "A deploy tool for coding agents (MCP) that takes a folder or a GitHub repository (coming soon)",
+];
+
 // Mirrors the Node.js application contract in node-build-contract.md.
 const contract = [
   "One npm application with package.json and package-lock.json at the root",
   "Node.js 24 (engines.node: \"24.x\") with build and start scripts",
   "Builds into a dist/ folder; serves /health on PORT",
   "No Dockerfile, node_modules, .env files, or credentials",
+  "Static sites and Python apps are next",
 ];
 
 function slugify(value: string): string {
@@ -40,10 +48,14 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
 
       <div className="deploy-note">
         {localBuilds
-          ? <p>Local builds are on: an uploaded .tar is built in a sealed container on this machine. Starting it and giving it a URL come next.</p>
-          : <p>Code upload, <code>sprout deploy</code>, and repository deploys are on the way. Until then, a run is a simulation: no code executes.</p>}
+          ? <p>Local builds are on: an uploaded .tar is built in a sealed container on this machine. Starting it at a public URL comes next.</p>
+          : <p>Until uploads are enabled, a run is a simulation: no code executes.</p>}
         <details className="deploy-contract">
-          <summary>What Sprout will accept</summary>
+          <summary>Ways to deploy</summary>
+          <ul>{frontDoors.map((door) => <li key={door}>{door}</li>)}</ul>
+        </details>
+        <details className="deploy-contract">
+          <summary>What Sprout accepts today</summary>
           <ul>{contract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
         </details>
       </div>

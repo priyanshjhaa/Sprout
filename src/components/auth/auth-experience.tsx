@@ -7,12 +7,12 @@ const copy = {
   "sign-in": {
     eyebrow: "Welcome back",
     title: "Your apps are where you left them.",
-    description: "Deploy, share, and look after the small apps your team relies on.",
+    description: "Deploy small apps to a public URL and look after them with your team.",
   },
   "sign-up": {
     eyebrow: "Start deploying",
     title: "Give your app somewhere to live.",
-    description: "Bring code you already have. Sprout builds it sealed off, checks its health, and gives your team a place to use it.",
+    description: "Bring code you already have. Sprout builds it sealed off, checks its health, and gives it a public URL.",
   },
 } as const;
 

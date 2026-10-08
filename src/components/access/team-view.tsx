@@ -52,7 +52,7 @@ export function TeamView({ workspaceSlug }: { workspaceSlug: string }) {
     {change.isError && <p role="alert">{change.error.message}</p>}
     {notice && <p role="status">{notice}</p>}
     {isOwner && <section className="team-invite-panel">
-      <h2>Invite a teammate</h2><p>Editors can create and deploy apps. Viewers can open them. Only owners manage the team.</p>
+      <h2>Invite a teammate</h2><p>Editors can create, deploy, and pause apps. Viewers can see them in Sprout. Only owners manage the team.</p>
       <form className="team-invite-form" onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);

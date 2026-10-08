@@ -38,17 +38,15 @@ The prototype includes:
 - A simplified semantic mobile landing experience
 - Clerk sign-in and a personal workspace created on first use
 - Responsive workspace shell and navigation
-- Deploy entry flow: create an application, choose its source, and run a deployment
+- Deploy entry flow: create an application, upload a `.tar` to build it (when local builds are on), or run a simulation
 - Searchable application library
-- Application health overview
-- Deployment history and deployment-level build logs
-- Searchable and filterable runtime logs
-- Environment variables and attached resources
-- Workspace-inherited access and application roles
-- Application settings and guarded destructive actions
+- Application overview with lifecycle state and the latest deployment
+- Build and simulation history with live progress and plain-language failures
+- Team and per-application roles that control who can deploy and manage an app
+- Application settings: name, description, pause, resume, archive, restore
 - Loading, empty, failure, and responsive states
 
-The dashboard deliberately keeps only **Deploy** and **Apps** prominent. Operational concepts such as deployments, logs, environment, and permissions remain inside the selected application instead of becoming global cloud-console navigation.
+The dashboard keeps only **Deploy**, **Apps**, and **Team** in its navigation. Deployments and management stay inside the selected application. Logs, environment variables, and attached resources are not part of the current scope (see the [deployment strategy](./deployment-strategy.md)).
 
 ## Technology
 
@@ -161,8 +159,6 @@ src/
 │   ├── dashboard/        Workspace navigation
 │   ├── deploy/           Deploy entry flow
 │   ├── deployments/      Deployment history and details
-│   ├── environment/      Variables and resources
-│   ├── logs/             Runtime log viewer
 │   ├── marketing/        Scroll-driven landing experience
 │   └── settings/         Application configuration
 ├── lib/

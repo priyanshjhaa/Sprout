@@ -10,8 +10,6 @@ import { useApplication } from "@/lib/query/hooks";
 const tabs = [
   { label: "Overview", path: "" },
   { label: "Deployments", path: "/deployments" },
-  { label: "Logs", path: "/logs" },
-  { label: "Environment", path: "/environment" },
   { label: "Access", path: "/access" },
   { label: "Settings", path: "/settings" },
 ];
