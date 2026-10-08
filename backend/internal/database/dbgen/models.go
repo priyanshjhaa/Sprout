@@ -649,6 +649,9 @@ type Deployment struct {
 	StartedAt          pgtype.Timestamptz `json:"started_at"`
 	FinishedAt         pgtype.Timestamptz `json:"finished_at"`
 	Simulated          bool               `json:"simulated"`
+	ArtifactID         pgtype.Text        `json:"artifact_id"`
+	ArtifactSha256     pgtype.Text        `json:"artifact_sha256"`
+	ArtifactBytes      pgtype.Int4        `json:"artifact_bytes"`
 }
 
 type DeploymentStageEvent struct {

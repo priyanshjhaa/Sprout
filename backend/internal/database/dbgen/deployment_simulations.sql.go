@@ -42,7 +42,7 @@ JOIN workspace_memberships m ON m.workspace_id = w.id AND m.user_id = $1
 WHERE w.slug = $2 AND a.id = $3 AND a.lifecycle = 'active'
 AND (m.role = 'owner' OR a.created_by = m.user_id OR (a.access_mode = 'workspace' AND m.role = 'editor')
  OR EXISTS(SELECT 1 FROM application_access_grants g WHERE g.application_id = a.id AND g.user_id = m.user_id AND g.role = 'editor'))
-RETURNING id, application_id, source_connection_id, triggered_by, status, branch, commit_sha, failure_code, duration_ms, created_at, started_at, finished_at, simulated
+RETURNING id, application_id, source_connection_id, triggered_by, status, branch, commit_sha, failure_code, duration_ms, created_at, started_at, finished_at, simulated, artifact_id, artifact_sha256, artifact_bytes
 `
 
 type CreateDeploymentSimulationParams struct {
@@ -68,6 +68,9 @@ func (q *Queries) CreateDeploymentSimulation(ctx context.Context, arg CreateDepl
 		&i.StartedAt,
 		&i.FinishedAt,
 		&i.Simulated,
+		&i.ArtifactID,
+		&i.ArtifactSha256,
+		&i.ArtifactBytes,
 	)
 	return i, err
 }
@@ -110,7 +113,7 @@ func (q *Queries) FinishSimulationStages(ctx context.Context, arg FinishSimulati
 }
 
 const getDeploymentSimulation = `-- name: GetDeploymentSimulation :one
-SELECT d.id, d.application_id, d.source_connection_id, d.triggered_by, d.status, d.branch, d.commit_sha, d.failure_code, d.duration_ms, d.created_at, d.started_at, d.finished_at, d.simulated FROM deployments d
+SELECT d.id, d.application_id, d.source_connection_id, d.triggered_by, d.status, d.branch, d.commit_sha, d.failure_code, d.duration_ms, d.created_at, d.started_at, d.finished_at, d.simulated, d.artifact_id, d.artifact_sha256, d.artifact_bytes FROM deployments d
 JOIN applications a ON a.id = d.application_id
 JOIN workspaces w ON w.id = a.workspace_id
 JOIN workspace_memberships m ON m.workspace_id = w.id AND m.user_id = $1
@@ -149,6 +152,9 @@ func (q *Queries) GetDeploymentSimulation(ctx context.Context, arg GetDeployment
 		&i.StartedAt,
 		&i.FinishedAt,
 		&i.Simulated,
+		&i.ArtifactID,
+		&i.ArtifactSha256,
+		&i.ArtifactBytes,
 	)
 	return i, err
 }
@@ -164,7 +170,7 @@ func (q *Queries) InitializeSimulationStages(ctx context.Context, deploymentID p
 }
 
 const listDeploymentSimulations = `-- name: ListDeploymentSimulations :many
-SELECT d.id, d.application_id, d.source_connection_id, d.triggered_by, d.status, d.branch, d.commit_sha, d.failure_code, d.duration_ms, d.created_at, d.started_at, d.finished_at, d.simulated FROM deployments d
+SELECT d.id, d.application_id, d.source_connection_id, d.triggered_by, d.status, d.branch, d.commit_sha, d.failure_code, d.duration_ms, d.created_at, d.started_at, d.finished_at, d.simulated, d.artifact_id, d.artifact_sha256, d.artifact_bytes FROM deployments d
 JOIN applications a ON a.id = d.application_id
 JOIN workspaces w ON w.id = a.workspace_id
 JOIN workspace_memberships m ON m.workspace_id = w.id AND m.user_id = $1
@@ -203,6 +209,9 @@ func (q *Queries) ListDeploymentSimulations(ctx context.Context, arg ListDeploym
 			&i.StartedAt,
 			&i.FinishedAt,
 			&i.Simulated,
+			&i.ArtifactID,
+			&i.ArtifactSha256,
+			&i.ArtifactBytes,
 		); err != nil {
 			return nil, err
 		}
@@ -247,7 +256,7 @@ func (q *Queries) ListSimulationStages(ctx context.Context, deploymentID pgtype.
 }
 
 const lockDeploymentSimulation = `-- name: LockDeploymentSimulation :one
-SELECT id, application_id, source_connection_id, triggered_by, status, branch, commit_sha, failure_code, duration_ms, created_at, started_at, finished_at, simulated FROM deployments WHERE id = $1 AND simulated = true FOR UPDATE
+SELECT id, application_id, source_connection_id, triggered_by, status, branch, commit_sha, failure_code, duration_ms, created_at, started_at, finished_at, simulated, artifact_id, artifact_sha256, artifact_bytes FROM deployments WHERE id = $1 AND simulated = true FOR UPDATE
 `
 
 func (q *Queries) LockDeploymentSimulation(ctx context.Context, id pgtype.UUID) (Deployment, error) {
@@ -267,6 +276,9 @@ func (q *Queries) LockDeploymentSimulation(ctx context.Context, id pgtype.UUID) 
 		&i.StartedAt,
 		&i.FinishedAt,
 		&i.Simulated,
+		&i.ArtifactID,
+		&i.ArtifactSha256,
+		&i.ArtifactBytes,
 	)
 	return i, err
 }
