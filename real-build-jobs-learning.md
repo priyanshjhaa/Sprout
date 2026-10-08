@@ -7,7 +7,7 @@ The work is split into independently committed slices:
 1. **Artifact references** (`feat: reference real build artifacts from deployments`): deployments can record the ID, SHA-256 and size of a build's output. The bytes stay in the local artifact store.
 2. **One worker, two kinds of job** (`refactor: run real and simulated deployments on one worker`): the manager runs any job through a `Runner`; simulations become one runner among others.
 3. **Source intake** (`feat: accept source uploads for local builds`): an upload endpoint behind a local-only flag, a private source store, a real build runner, and a startup sweep for orphaned files.
-4. **Dashboard upload** (next): the Deploy page's archive upload becomes real.
+4. **Dashboard upload** (`feat: upload and follow real builds from the dashboard`): a capabilities endpoint, an upload control on the Deploy page and Deployments tab, and live build progress.
 
 ## Slice 1: artifact references
 
@@ -79,6 +79,27 @@ because a killed process never runs its cleanup code.
   hostile multi-tenant execution (see `node-build-contract.md`).
 - Dependency installs are still offline-only, so only dependency-free apps build.
 
+## Slice 4: dashboard upload
+
+**Problem.** The dashboard must offer uploads only when the API can build, and
+must never confuse a real build with a simulation.
+
+**History.** Clients that infer features from failures (a 404 here, a timeout
+there) break the moment an unrelated error looks the same. APIs such as
+Kubernetes discovery or OAuth server metadata publish what they support instead.
+
+**Decision.**
+
+- `GET /api/v1/capabilities` returns `{"localBuilds": bool}`. The dashboard, a
+  future CLI and agents ask instead of guessing.
+- With builds on, the Deploy page offers **Upload & build** after creating an app
+  (a simulation stays available), and the Deployments tab lists builds above
+  simulations, each with its own upload or run control.
+- One client handles both kinds by path, and the response parser takes the kind
+  it expects, so a simulation view rejects a real build and vice versa.
+- Build detail pages (`?kind=build`) stream live progress like simulations and
+  explain failure codes in plain language (for example, a `.env` in the archive).
+
 ## Request and job trace
 
 ```text
@@ -111,7 +132,18 @@ Docker build job test built the committed example, stored its `dist/` artifact,
 and Docker events showed the build container created and destroyed. Starting the
 API with local builds enabled swept a planted partial upload (`removed: 1`),
 logged the local-builds warning, and answered unauthenticated uploads with `401`.
-A signed-in upload from the dashboard is the next slice.
+After slice 4, frontend typecheck, lint, production build and stream tests passed,
+and `/api/v1/capabilities` required a session. A signed-in upload through the
+dashboard requires a real Clerk session and is checked manually:
+
+1. Start the API with local builds enabled (see `.env.example`).
+2. From `backend/`, create the example archive:
+   `tar --format=ustar -cf /tmp/sprout-node-example.tar -C dev/node-example package.json package-lock.json build.mjs server.mjs`
+3. In the dashboard, create an app on Deploy, choose that file, and press
+   **Upload & build**. Expect source, build and package to succeed and the build
+   to end as Succeeded with "Built and stored".
+4. Add a `.env` file to a copy of the archive and upload it: expect a failed build
+   that explains the sensitive file, and no artifact left in the artifact folder.
 
 ## Explain-back checkpoint
 

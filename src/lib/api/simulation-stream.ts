@@ -1,7 +1,8 @@
+// A deployment job: an explicit simulation or a real build. Both share one shape.
 export interface Simulation {
   id: string;
   applicationId: string;
-  simulated: true;
+  simulated: boolean;
   status: "queued" | "building" | "succeeded" | "failed" | "cancelled";
   failureCode: string | null;
   createdAt: string;
@@ -16,10 +17,12 @@ export function reconcileSimulation(old: Simulation | undefined, incoming: Simul
   return old && !isActiveSimulation(old) ? old : incoming;
 }
 
-export function parseSimulation(value: unknown): Simulation {
+// The caller states which kind it expects, so a simulation view can never show
+// a real build (or the reverse), whatever the server returns.
+export function parseSimulation(value: unknown, simulated = true): Simulation {
   const job = value as Simulation;
   const nullableString = (field: unknown) => field === null || typeof field === "string";
-  if (!job || typeof job.id !== "string" || typeof job.applicationId !== "string" || job.simulated !== true ||
+  if (!job || typeof job.id !== "string" || typeof job.applicationId !== "string" || job.simulated !== simulated ||
     !["queued", "building", "succeeded", "failed", "cancelled"].includes(job.status) ||
     typeof job.createdAt !== "string" || !Number.isFinite(Date.parse(job.createdAt)) ||
     !nullableString(job.startedAt) || !nullableString(job.finishedAt) || !nullableString(job.failureCode) ||
@@ -29,7 +32,7 @@ export function parseSimulation(value: unknown): Simulation {
     throw new Error("Invalid simulation response.");
   }
   return {
-    id: job.id, applicationId: job.applicationId, simulated: true, status: job.status,
+    id: job.id, applicationId: job.applicationId, simulated, status: job.status,
     createdAt: job.createdAt, startedAt: job.startedAt, finishedAt: job.finishedAt, failureCode: job.failureCode,
     stages: job.stages.map(({ name, status, failureCode }) => ({ name, status, failureCode })),
   };
@@ -90,6 +93,7 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
 
 export async function watchSimulation(options: {
   url: string; jobId: string; appId: string; signal: AbortSignal;
+  simulated?: boolean;
   getToken: () => Promise<string | null>;
   onProgress: (job: Simulation) => void;
   onState: (state: "connecting" | "live" | "reconnecting" | "complete") => void;
@@ -126,7 +130,7 @@ export async function watchSimulation(options: {
         if (event === "unavailable") throw new StreamFailure("Progress access changed or the service is unavailable. Retry to check again.");
         if (event === "complete") { complete = true; options.onState("complete"); return true; }
         if (event === "progress") {
-          const job = parseSimulation(JSON.parse(data));
+          const job = parseSimulation(JSON.parse(data), options.simulated ?? true);
           if (job.id !== options.jobId || job.applicationId !== options.appId || !/^[a-f0-9]{64}$/.test(id)) throw new StreamFailure("Invalid progress response.");
           cursor = id; failures = 0;
           options.onProgress(job); options.onState("live");

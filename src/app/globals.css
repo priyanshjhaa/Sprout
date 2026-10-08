@@ -3840,3 +3840,13 @@ body {
 /* Team: secondary text stays secondary. */
 .team-invite-panel > p { font-size: 14px; }
 .team-panel-note { margin: 0; padding: 16px; color: var(--muted); font-size: 13px; }
+
+/* Real builds: an upload control and grouped deployment lists. */
+.upload-build { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.upload-build input[type="file"] { max-width: 260px; color: var(--muted); font-size: 12px; }
+.upload-build input[type="file"]::file-selector-button { margin-right: 10px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fffaf2; color: var(--ink); font: inherit; cursor: pointer; }
+.upload-build input[type="file"]:focus-visible { outline: 2px solid var(--sprout); outline-offset: 2px; border-radius: 8px; }
+.upload-build .deploy-error { flex-basis: 100%; }
+.deployment-group + .deployment-group { margin-top: 28px; }
+.deployment-group-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.deployment-group-heading h3 { margin: 0; font-size: 15px; font-weight: 600; }

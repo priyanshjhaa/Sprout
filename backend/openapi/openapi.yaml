@@ -30,6 +30,23 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "503":
           description: Identity provider or database unavailable
+  /api/v1/capabilities:
+    get:
+      summary: Optional features this API process offers
+      description: Clients ask here rather than inferring features from 404s. localBuilds is true only when SPROUT_ENABLE_LOCAL_BUILDS=1.
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Feature flags for this process
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [localBuilds]
+                properties:
+                  localBuilds: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /api/v1/workspaces/{workspaceSlug}:
     parameters:
       - $ref: "#/components/parameters/WorkspaceSlug"

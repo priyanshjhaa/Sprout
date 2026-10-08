@@ -4,8 +4,9 @@ import { ArrowRight, Check, Play } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { UploadBuild } from "@/components/deployments/upload-build";
 import { useApplications, useCreateApplication } from "@/lib/query/hooks";
-import { useSimulationActions } from "@/lib/query/simulations";
+import { useCapabilities, useSimulationActions } from "@/lib/query/simulations";
 import type { Application } from "@/types/domain";
 
 // Mirrors the Node.js application contract in node-build-contract.md.
@@ -22,6 +23,7 @@ function slugify(value: string): string {
 
 export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
   const [application, setApplication] = useState<Application | null>(null);
+  const localBuilds = useCapabilities().data?.localBuilds === true;
 
   return (
     <main className="dashboard-page compact-page deploy-page">
@@ -32,12 +34,14 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
 
       <section className="deploy-card" aria-live="polite">
         {application
-          ? <RunDeployment workspaceSlug={workspaceSlug} application={application} onReset={() => setApplication(null)} />
+          ? <RunDeployment workspaceSlug={workspaceSlug} application={application} localBuilds={localBuilds} onReset={() => setApplication(null)} />
           : <CreateApplicationForm workspaceSlug={workspaceSlug} onCreated={setApplication} />}
       </section>
 
       <div className="deploy-note">
-        <p>Code upload, <code>sprout deploy</code>, and repository deploys are on the way. Until then, a run is a simulation: no code executes.</p>
+        {localBuilds
+          ? <p>Local builds are on: an uploaded .tar is built in a sealed container on this machine. Starting it and giving it a URL come next.</p>
+          : <p>Code upload, <code>sprout deploy</code>, and repository deploys are on the way. Until then, a run is a simulation: no code executes.</p>}
         <details className="deploy-contract">
           <summary>What Sprout will accept</summary>
           <ul>{contract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
@@ -90,19 +94,22 @@ function CreateApplicationForm({ workspaceSlug, onCreated }: { workspaceSlug: st
   );
 }
 
-function RunDeployment({ workspaceSlug, application, onReset }: { workspaceSlug: string; application: Application; onReset: () => void }) {
+function RunDeployment({ workspaceSlug, application, localBuilds, onReset }: { workspaceSlug: string; application: Application; localBuilds: boolean; onReset: () => void }) {
   const action = useSimulationActions(workspaceSlug, application.id);
   const router = useRouter();
   const base = `/workspace/${workspaceSlug}/apps/${application.id}/deployments`;
+  const simulate = () => action.mutate(undefined, { onSuccess: (job) => router.push(`${base}/${job.id}`) });
 
   return (
     <div className="deploy-run">
       <p className="deploy-created"><Check size={15} aria-hidden="true" /> <strong>{application.name}</strong> is ready to deploy.</p>
+      {localBuilds && <UploadBuild workspaceSlug={workspaceSlug} appId={application.id} />}
       <div className="deploy-run-actions">
-        <button className="button button-primary" type="button" disabled={action.isPending}
-          onClick={() => action.mutate(undefined, { onSuccess: (job) => router.push(`${base}/${job.id}`) })}>
-          <Play size={14} /> {action.isPending ? "Starting…" : "Run simulation"}
-        </button>
+        {localBuilds
+          ? <button className="text-button" type="button" disabled={action.isPending} onClick={simulate}>{action.isPending ? "Starting…" : "Run a simulation instead"}</button>
+          : <button className="button button-primary" type="button" disabled={action.isPending} onClick={simulate}>
+              <Play size={14} /> {action.isPending ? "Starting…" : "Run simulation"}
+            </button>}
         <button className="text-button" type="button" onClick={onReset}>Create another</button>
       </div>
       {action.isError && (

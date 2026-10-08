@@ -77,6 +77,13 @@ test("rejects another app's snapshot and non-simulated responses", async () => {
   await assert.rejects(watchSimulation(options({ fetcher: async () => response(frame({ ...job, applicationId: "another-app" })) })), /Invalid progress/);
 });
 
+test("accepts each kind only where that kind is expected", () => {
+  const build = { ...job, simulated: false };
+  assert.equal(parseSimulation(build, false).simulated, false);
+  assert.throws(() => parseSimulation(job, false));
+  assert.throws(() => parseSimulation(build, true));
+});
+
 test("completion frame terminates an unchanged reconnect", async () => {
   let calls = 0;
   await watchSimulation(options({ fetcher: async () => { calls++; return response("event: complete\ndata: {}\n\n"); } }));
