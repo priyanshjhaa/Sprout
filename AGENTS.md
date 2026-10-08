@@ -40,6 +40,11 @@ Sprout deploys untrusted small applications safely to a public URL, then lets te
 - Keep the application runnable after each implementation phase.
 - Avoid speculative abstractions, premature optimization, and backend simulations that pretend to be production infrastructure.
 
+## Git and pull requests
+
+- Do not add AI co-author trailers (for example `Co-Authored-By: Claude …`) to commit messages. Commits are authored by the repository owner only.
+- Do not add AI attribution lines (for example "Generated with Claude Code") to pull request descriptions.
+
 ## Go backend learning workflow
 
 - Teach backend mechanics through the Sprout capability being implemented; do not turn milestones into standalone syntax lessons.
