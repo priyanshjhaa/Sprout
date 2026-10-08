@@ -1,5 +1,6 @@
-export type AppStatus = "running" | "building" | "failed" | "paused" | "archived";
-export type DeploymentStatus = "live" | "building" | "failed";
+// "undeployed" is an active application that has no real deployment yet.
+export type AppStatus = "undeployed" | "running" | "building" | "failed" | "paused" | "archived";
+export type ApplicationLifecycle = "active" | "paused" | "archived";
 
 export interface Workspace {
   id: string;
@@ -13,44 +14,11 @@ export interface Application {
   slug: string;
   description: string;
   status: AppStatus;
+  lifecycle: ApplicationLifecycle;
   url: string;
   updatedAt: string;
   accent: string;
   accessMode?: "workspace" | "restricted";
   createdBy?: string;
-}
-
-export interface Deployment {
-  id: string;
-  appId: string;
-  status: DeploymentStatus;
-  branch: string;
-  commit: string;
-  message: string;
-  createdAt: string;
-  duration: string;
-}
-
-export interface LogEntry {
-  id: string;
-  timestamp: string;
-  level: "info" | "warn" | "error";
-  method?: string;
-  message: string;
-}
-
-export interface EnvironmentVariable {
-  key: string;
-  value: string;
-  managed: boolean;
-  secret: boolean;
-}
-
-export interface Member {
-  id: string;
-  name: string;
-  email: string;
-  role: "Owner" | "Editor" | "Viewer";
-  initials: string;
 }
 

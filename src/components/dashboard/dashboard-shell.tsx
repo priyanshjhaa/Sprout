@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Activity,
-  Rocket,
-  Boxes,
-  LogOut,
-  Menu,
-  Settings,
-  Sprout,
-  Users,
-  X,
-} from "lucide-react";
+import { Boxes, LogOut, Menu, Rocket, Sprout, Users, X } from "lucide-react";
 import Link from "next/link";
 import { SignOutButton, useUser, UserButton } from "@clerk/nextjs";
 import { useParams, usePathname, useRouter } from "next/navigation";
@@ -24,9 +14,7 @@ const primaryNavigation = [
 ];
 
 const secondaryNavigation = [
-  { label: "Activity", path: "activity", icon: Activity },
   { label: "Team", path: "team", icon: Users },
-  { label: "Settings", path: "settings", icon: Settings },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
@@ -76,14 +64,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       </header>
 
       <aside className={`dashboard-sidebar${mobileOpen ? " mobile-open" : ""}`}>
-        <div className="sidebar-brand"><Brand /><span>SMALL SOFTWARE, AT HOME</span></div>
+        <div className="sidebar-brand"><Brand /></div>
         <div className="workspace-switcher">
           <span className="workspace-avatar"><Sprout size={17} strokeWidth={1.7} /></span>
           <label className="workspace-picker"><span className="sr-only">Switch workspace</span>
             <select value={workspaceSlug} aria-label="Switch workspace" disabled={workspaces.isLoading || workspaces.isError} onChange={(event) => { setMobileOpen(false); router.push(`/workspace/${encodeURIComponent(event.target.value)}/apps`); }}>
               {!workspaces.data?.some((item) => item.slug === workspaceSlug) && <option value={workspaceSlug}>{workspace?.name ?? "Your workspace"}</option>}
               {workspaces.data?.map((item) => <option value={item.slug} key={item.id}>{item.name}</option>)}
-            </select><small>{workspaces.isError ? "Could not load workspaces" : "Your workspaces"}</small>
+            </select>{workspaces.isError && <small>Could not load workspaces</small>}
           </label>
         </div>
 
@@ -93,7 +81,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             {navigation(primaryNavigation)}
           </div>
           <div className="sidebar-group sidebar-group-secondary">
-            <p>Manage</p>
+            <p>People</p>
             {navigation(secondaryNavigation)}
           </div>
         </nav>
@@ -111,10 +99,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
       {mobileOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
       <div className="dashboard-content">
-        <header className="dashboard-topbar">
-          <div className="dashboard-topbar-path"><i aria-hidden="true" /><span>Workspace</span><span aria-hidden="true">/</span><strong>{workspace?.name ?? "Your workspace"}</strong></div>
-          <span className="dashboard-topbar-state"><i aria-hidden="true" /> A home for small software</span>
-        </header>
         {children}
       </div>
     </div>

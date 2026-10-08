@@ -1071,6 +1071,7 @@ html:has(.landing-shell) {
 .status-live { color: var(--sprout); }
 .status-building { color: var(--info); }
 .status-failed { color: var(--danger); }
+.status-undeployed,
 .status-paused,
 .status-archived { color: var(--muted); }
 
@@ -3436,11 +3437,10 @@ body {
   position: absolute;
   z-index: -2;
   inset: -28px;
-  background-image: url("/images/landscape/landscape-full.webp");
-  background-position: center 56%;
-  background-size: cover;
-  filter: blur(9px) saturate(0.76);
-  transform: scale(1.03);
+  /* The same painted morning as the landing, kept sharp so the two read as one place. */
+  background:
+    radial-gradient(ellipse at 50% 72%, rgba(255, 214, 160, 0.28), transparent 58%),
+    url("/images/landscape/landscape-sky.webp") center 62% / cover;
   pointer-events: none;
 }
 
@@ -3644,54 +3644,16 @@ body {
   content: "";
 }
 
-.dashboard-topbar {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  min-height: 72px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  border-bottom: 1px solid var(--line);
-  padding: 0 clamp(24px, 4vw, 62px);
-  background: rgba(255, 251, 244, 0.45);
-  backdrop-filter: blur(18px);
-}
-
-.dashboard-topbar-path,
-.dashboard-topbar-state {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  color: var(--muted);
-  font-size: 11px;
-}
-
-.dashboard-topbar-path > i,
-.dashboard-topbar-state > i {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 auto;
-  border-radius: 2px 6px 2px 6px;
-  background: var(--sprout);
-  transform: rotate(-27deg);
-}
-
-.dashboard-topbar-path > strong {
-  overflow: hidden;
-  max-width: 220px;
-  color: var(--ink);
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dashboard-topbar-state { color: var(--faint); }
-.dashboard-topbar-state > i { width: 5px; height: 5px; opacity: 0.7; }
-
 .dashboard-page { position: relative; z-index: 1; padding-top: 46px; }
 
-.page-heading h1 { font-weight: 590; letter-spacing: -0.052em; }
+/* Dashboard headings share the landing's serif voice; body text stays in Inter. */
+.page-heading h1,
+.application-title-row h1 {
+  font-family: var(--font-hero), Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: -0.035em;
+}
+
 .page-heading .eyebrow { color: var(--sprout-strong); }
 
 .application-header {
@@ -3811,13 +3773,10 @@ body {
 @media (max-width: 760px) {
   .dashboard-sidebar { width: min(280px, calc(100vw - 42px)); }
   .dashboard-content { margin-left: 0; }
-  .dashboard-topbar { min-height: 59px; padding-inline: 20px; }
   .dashboard-page { padding-top: 34px; }
 }
 
 @media (max-width: 540px) {
-  .dashboard-topbar-state { display: none; }
-  .dashboard-topbar-path > strong { max-width: 160px; }
   .workspace-welcome-copy { padding: 28px 24px; }
   .workspace-welcome-copy h2 { font-size: 30px; }
 }
@@ -3859,3 +3818,12 @@ body {
   .deploy-form, .deploy-sources { grid-template-columns: 1fr; }
   .deploy-step { padding: 18px; }
 }
+
+/* Application settings: real fields and lifecycle transitions */
+.settings-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; color: var(--faint); font-size: 12px; }
+.lifecycle-actions { display: grid; gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+.lifecycle-actions li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.lifecycle-actions li > div { display: grid; gap: 3px; min-width: 0; }
+.lifecycle-actions strong { font-size: 13px; font-weight: 600; }
+.lifecycle-actions small { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.settings-panel + .settings-panel { margin-top: 14px; }

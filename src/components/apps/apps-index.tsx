@@ -59,7 +59,7 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
               </div>
               <div className="app-card-body">
                 <div className="app-card-top"><h2>{app.name}</h2><ArrowRight size={15} /></div>
-                <p>{app.description}</p>
+                {app.description && <p>{app.description}</p>}
                 <div className="app-card-meta"><StatusPill status={app.status} /><span>{app.updatedAt}</span></div>
                 <span className="app-url">{app.url}</span>
               </div>

@@ -71,14 +71,15 @@ export const useDeployments = (slug: string, appId: string) => {
   });
 };
 
-export const useLogs = (slug: string, appId: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.logs(userId, slug, appId), queryFn: api.getLogs });
-};
-
-export const useEnvironment = (slug: string, appId: string) => {
-  const { userId } = useAuth();
-  return useQuery({ queryKey: queryKeys.environment(userId, slug, appId), queryFn: api.getEnvironment });
+export const useUpdateApplication = (slug: string, appId: string) => {
+  const { getToken, userId } = useAuth();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name?: string; description?: string; lifecycle?: "active" | "paused" | "archived" }) =>
+      api.updateApplication(slug, appId, input, await getToken()),
+    onSuccess: (application) => client.setQueryData(queryKeys.app(userId, slug, appId), application),
+    onSettled: () => client.invalidateQueries({ queryKey: queryKeys.apps(userId, slug) }),
+  });
 };
 
 export const useAccess = (slug: string, appId: string) => {

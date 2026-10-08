@@ -15,7 +15,7 @@ export function DeploymentsView({ workspaceSlug, appId }: { workspaceSlug: strin
   const router = useRouter();
   const base = `/workspace/${workspaceSlug}/apps/${appId}/deployments`;
   const busy = query.data?.some(isActiveSimulation);
-  const canStart = application.data?.status === "running" && query.isSuccess && !busy && !action.isPending;
+  const canStart = application.data?.lifecycle === "active" && query.isSuccess && !busy && !action.isPending;
 
   return (
     <section className="app-section simulation-view">
@@ -27,7 +27,7 @@ export function DeploymentsView({ workspaceSlug, appId }: { workspaceSlug: strin
         </button>
       </header>
       <p className="simulation-note">Application edit access is required to run or cancel. Simulations never create a live URL. Only one can run per application.</p>
-      {application.data && application.data.status !== "running" && <p className="simulation-note">Resume this application before running a simulation.</p>}
+      {application.data && application.data.lifecycle !== "active" && <p className="simulation-note">Resume this application in Settings before running a simulation.</p>}
       {action.isError && <p className="simulation-notice" role="alert">{action.error.message} Check the list before trying again.</p>}
       {query.isPending && <p className="simulation-notice" role="status">Loading simulations…</p>}
       {query.isError && <div className="simulation-notice" role="alert"><p>{query.error.message}</p><button className="button button-secondary" onClick={() => void query.refetch()}>Try again</button></div>}
