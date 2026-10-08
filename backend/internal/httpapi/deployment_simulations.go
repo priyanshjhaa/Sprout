@@ -33,7 +33,7 @@ func RegisterDeploymentSimulationRoutes(router chi.Router, service DeploymentSim
 	})
 }
 func simulationScope(r *http.Request) deployment.Scope {
-	return deployment.Scope{WorkspaceSlug: chi.URLParam(r, "workspaceSlug"), ApplicationID: chi.URLParam(r, "applicationId"), UserID: userIDFromContext(r.Context())}
+	return deployment.Scope{WorkspaceSlug: chi.URLParam(r, "workspaceSlug"), ApplicationID: chi.URLParam(r, "applicationId"), UserID: userIDFromContext(r.Context()), Simulated: true}
 }
 func (h *simulationHandler) submit(w http.ResponseWriter, r *http.Request) {
 	var body *struct{}

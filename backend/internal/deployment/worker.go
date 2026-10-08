@@ -11,9 +11,14 @@ import (
 type task struct {
 	job    Job
 	scope  Scope
+	work   Work
 	ctx    context.Context
 	cancel context.CancelFunc
 }
+
+// errProgress marks a failure to persist a stage boundary, as opposed to a
+// failure in the runner's own work.
+var errProgress = errors.New("progress_unavailable")
 
 type Manager struct {
 	repository Repository
@@ -83,7 +88,7 @@ func (m *Manager) Submit(ctx context.Context, scope Scope) (Job, error) {
 		return Job{}, err
 	}
 	jobCtx, cancel := context.WithCancel(m.ctx)
-	item := &task{job: job, scope: scope, ctx: jobCtx, cancel: cancel}
+	item := &task{job: job, scope: scope, work: Work{DeploymentID: job.ID, Simulated: job.Simulated}, ctx: jobCtx, cancel: cancel}
 	m.active[scope.ApplicationID] = item
 	m.queue <- item // only this locked producer can add; capacity was reserved above
 	return job, nil
@@ -140,6 +145,7 @@ func (m *Manager) execute(item *task) {
 	ctx, cancel := context.WithTimeout(item.ctx, m.timeout)
 	defer cancel()
 	status, code := "succeeded", ""
+	var outcome Outcome
 	defer func() {
 		if recover() != nil {
 			status, code = "failed", "worker_panic"
@@ -152,37 +158,75 @@ func (m *Manager) execute(item *task) {
 				code = "server_shutdown"
 			}
 		}
+		// Only a successful run may leave an artifact behind.
+		output := outcome.Artifact
+		if status != "succeeded" {
+			output = nil
+		}
 		// Request/job cancellation must not prevent recording the terminal result.
 		finishCtx, stop := context.WithTimeout(context.Background(), 5*time.Second)
 		defer stop()
-		if err := m.repository.Finish(finishCtx, item.job.ID, status, code); err != nil {
+		recorded, err := m.repository.Finish(finishCtx, item.job.ID, status, code, output)
+		if err != nil {
 			m.mu.Lock()
 			m.unhealthy = true
 			m.cancel()
 			m.mu.Unlock()
-			m.logger.Error("simulation persistence failed", "deployment_id", item.job.ID)
+			m.logger.Error("deployment persistence failed", "deployment_id", item.job.ID)
 		}
 		m.progress.notify(item.job.ID)
+		m.release(finishCtx, item, outcome, err == nil && recorded && output != nil)
 	}()
 	if err := m.repository.Start(ctx, item.scope, item.job.ID); err != nil {
 		status, code = "failed", "start_rejected"
 		return
 	}
 	m.progress.notify(item.job.ID)
-	for _, stage := range stages {
-		if err := m.repository.Advance(ctx, item.job.ID, stage, "running"); err != nil {
-			status, code = "failed", "progress_unavailable"
-			return
-		}
-		m.progress.notify(item.job.ID)
-		if err := m.runner(ctx, stage); err != nil {
-			status, code = "failed", "simulated_step_failed"
-			return
-		}
-		if err := m.repository.Advance(ctx, item.job.ID, stage, "succeeded"); err != nil {
-			status, code = "failed", "progress_unavailable"
-			return
-		}
-		m.progress.notify(item.job.ID)
+	result, err := m.runner.Run(ctx, item.work, steps{manager: m, ctx: ctx, id: item.job.ID})
+	outcome = result
+	if err != nil {
+		status, code = "failed", failureCodeFor(err, item.work.Simulated)
 	}
+}
+
+// release frees what the job owned. A panicking Release must not take down the
+// worker goroutine, which other jobs depend on.
+func (m *Manager) release(ctx context.Context, item *task, outcome Outcome, kept bool) {
+	defer func() {
+		if recover() != nil {
+			m.logger.Error("deployment release panicked", "deployment_id", item.job.ID)
+		}
+	}()
+	m.runner.Release(ctx, item.work, outcome, kept)
+}
+
+func failureCodeFor(err error, simulated bool) string {
+	var failure *Failure
+	switch {
+	case errors.Is(err, errProgress):
+		return "progress_unavailable"
+	case errors.As(err, &failure) && failureCode.MatchString(failure.Code):
+		return failure.Code
+	case simulated:
+		return "simulated_step_failed"
+	default:
+		return "build_failed"
+	}
+}
+
+// steps persists stage boundaries in order and notifies progress listeners.
+type steps struct {
+	manager *Manager
+	ctx     context.Context
+	id      string
+}
+
+func (s steps) Begin(stage string) error    { return s.advance(stage, "running") }
+func (s steps) Complete(stage string) error { return s.advance(stage, "succeeded") }
+func (s steps) advance(stage, status string) error {
+	if err := s.manager.repository.Advance(s.ctx, s.id, stage, status); err != nil {
+		return errProgress
+	}
+	s.manager.progress.notify(s.id)
+	return nil
 }

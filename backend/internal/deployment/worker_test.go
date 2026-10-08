@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 )
 
 type memoryRepository struct {
@@ -36,7 +38,7 @@ func (r *memoryRepository) Create(ctx context.Context, s Scope) (Job, error) {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	job := Job{ID: fmt.Sprint(len(r.jobs) + 1), ApplicationID: s.ApplicationID, Simulated: true, Status: "queued"}
+	job := Job{ID: fmt.Sprint(len(r.jobs) + 1), ApplicationID: s.ApplicationID, Simulated: s.Simulated, Status: "queued"}
 	r.jobs[job.ID] = job
 	return job, nil
 }
@@ -83,24 +85,25 @@ func (r *memoryRepository) Advance(ctx context.Context, id, stage, status string
 	r.jobs[id] = job
 	return nil
 }
-func (r *memoryRepository) Finish(_ context.Context, id, status, code string) error {
+func (r *memoryRepository) Finish(_ context.Context, id, status, code string, _ *artifact.Descriptor) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.failFinish {
-		return errors.New("private database details")
+		return false, errors.New("private database details")
 	}
 	job := r.jobs[id]
-	if job.Status != "cancelled" {
+	recorded := job.Status != "cancelled"
+	if recorded {
 		job.Status = status
 		job.FailureCode = &code
 		r.jobs[id] = job
 	}
 	r.done <- id
-	return nil
+	return recorded, nil
 }
-func managerForTest(t *testing.T, r *memoryRepository, run Runner, workers, queue int, timeout time.Duration) *Manager {
+func managerForTest(t *testing.T, r *memoryRepository, run StageRunner, workers, queue int, timeout time.Duration) *Manager {
 	t.Helper()
-	m, err := NewManager(r, run, slog.New(slog.NewTextHandler(io.Discard, nil)), workers, queue, timeout)
+	m, err := NewManager(r, Staged(run), slog.New(slog.NewTextHandler(io.Discard, nil)), workers, queue, timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,6 +122,16 @@ func waitSignal[T any](t *testing.T, ch <-chan T) T {
 	}
 }
 func submit(t *testing.T, m *Manager, app string) Job {
+	t.Helper()
+	job, err := m.Submit(context.Background(), Scope{ApplicationID: app, Simulated: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return job
+}
+
+// submitBuild queues a real-build-shaped job, so runner failures use build codes.
+func submitBuild(t *testing.T, m *Manager, app string) Job {
 	t.Helper()
 	job, err := m.Submit(context.Background(), Scope{ApplicationID: app})
 	if err != nil {
@@ -265,7 +278,7 @@ func TestCancellationAndShutdown(t *testing.T) {
 func TestFailuresAndPanicContainment(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
-		run     Runner
+		run     StageRunner
 		timeout time.Duration
 		code    string
 	}{
@@ -306,7 +319,116 @@ func TestAdmissionValidation(t *testing.T) {
 	if _, err := m.Submit(context.Background(), Scope{}); !errors.Is(err, ErrForbidden) {
 		t.Fatal(err)
 	}
-	if _, err := NewManager(repo, Simulate, slog.Default(), 0, 1, time.Second); !errors.Is(err, ErrInvalid) {
+	if _, err := NewManager(repo, Staged(Simulate), slog.Default(), 0, 1, time.Second); !errors.Is(err, ErrInvalid) {
 		t.Fatal(err)
+	}
+}
+
+// recordingRunner is a real-build-shaped Runner: it may produce an artifact and
+// records how the manager releases it.
+type recordingRunner struct {
+	run      func(context.Context, Steps) (Outcome, error)
+	released chan bool
+	panicky  bool
+}
+
+func (r *recordingRunner) Run(ctx context.Context, _ Work, steps Steps) (Outcome, error) {
+	return r.run(ctx, steps)
+}
+func (r *recordingRunner) Release(_ context.Context, _ Work, _ Outcome, kept bool) {
+	r.released <- kept
+	if r.panicky {
+		panic("private release failure")
+	}
+}
+
+func allStages(steps Steps) error {
+	for _, stage := range stages {
+		if err := steps.Begin(stage); err != nil {
+			return err
+		}
+		if err := steps.Complete(stage); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func TestRunnerReleaseAndFailureCodes(t *testing.T) {
+	output := &artifact.Descriptor{ID: "0123456789abcdef0123456789abcdef", Size: 1, SHA256: "00"}
+	for _, tc := range []struct {
+		name    string
+		run     func(context.Context, Steps) (Outcome, error)
+		status  string
+		code    string
+		kept    bool
+		panicky bool
+	}{
+		{"artifact kept on success", func(_ context.Context, s Steps) (Outcome, error) {
+			return Outcome{Artifact: output}, allStages(s)
+		}, "succeeded", "", true, false},
+		{"artifact discarded on failure", func(context.Context, Steps) (Outcome, error) {
+			return Outcome{Artifact: output}, &Failure{Code: "node_build_failed", Err: errors.New("private npm output")}
+		}, "failed", "node_build_failed", false, false},
+		{"unsafe code replaced", func(context.Context, Steps) (Outcome, error) {
+			return Outcome{}, &Failure{Code: "Raw Provider Error: secret"}
+		}, "failed", "build_failed", false, false},
+		{"plain error never leaks", func(context.Context, Steps) (Outcome, error) {
+			return Outcome{}, errors.New("private stderr")
+		}, "failed", "build_failed", false, false},
+		{"release panic contained", func(_ context.Context, s Steps) (Outcome, error) {
+			return Outcome{}, allStages(s)
+		}, "succeeded", "", false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newMemoryRepository()
+			runner := &recordingRunner{run: tc.run, released: make(chan bool, 2), panicky: tc.panicky}
+			m, err := NewManager(repo, runner, slog.New(slog.NewTextHandler(io.Discard, nil)), 1, 2, time.Second)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = m.Close() })
+			job := submitBuild(t, m, "app")
+			waitSignal(t, repo.done)
+			if kept := <-runner.released; kept != tc.kept {
+				t.Fatalf("kept = %v, want %v", kept, tc.kept)
+			}
+			result, _ := repo.Get(context.Background(), Scope{}, job.ID)
+			if result.Status != tc.status || result.FailureCode == nil || *result.FailureCode != tc.code {
+				t.Fatalf("result: %+v", result)
+			}
+			// The worker survives and Release ran exactly once.
+			submitBuild(t, m, "next")
+			waitSignal(t, repo.done)
+			<-runner.released
+			select {
+			case <-runner.released:
+				t.Fatal("release called more than once")
+			default:
+			}
+		})
+	}
+}
+
+func TestReleaseAfterCancellationDiscardsArtifact(t *testing.T) {
+	repo := newMemoryRepository()
+	started := make(chan struct{})
+	runner := &recordingRunner{released: make(chan bool, 1), run: func(ctx context.Context, s Steps) (Outcome, error) {
+		close(started)
+		<-ctx.Done()
+		return Outcome{Artifact: &artifact.Descriptor{ID: "0123456789abcdef0123456789abcdef", Size: 1, SHA256: "00"}}, ctx.Err()
+	}}
+	m, err := NewManager(repo, runner, slog.New(slog.NewTextHandler(io.Discard, nil)), 1, 1, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = m.Close() })
+	job := submitBuild(t, m, "app")
+	<-started
+	if _, err := m.Cancel(context.Background(), Scope{ApplicationID: "app"}, job.ID); err != nil {
+		t.Fatal(err)
+	}
+	if kept := <-runner.released; kept {
+		t.Fatal("cancelled job kept its artifact")
 	}
 }

@@ -57,7 +57,7 @@ func realMain() int {
 		return 1
 	}
 	defer releaseWorkerLock()
-	worker, err := deployment.NewManager(deploymentRepository, deployment.Simulate, logger, 2, 8, 15*time.Second)
+	worker, err := deployment.NewManager(deploymentRepository, deployment.Staged(deployment.Simulate), logger, 2, 8, 15*time.Second)
 	if err != nil {
 		logger.Error("simulation worker configuration invalid")
 		return 1
