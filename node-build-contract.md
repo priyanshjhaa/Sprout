@@ -56,7 +56,7 @@ Docker restrictions are defense in depth, not proof of safe hostile multi-tenant
 
 `sourcecheck -build-node -artifact-dir <directory>` → bounded archive extraction → root-confined filesystem → Node contract and dependency-free checks → bounded tar input → trusted Docker CLI → pinned, network-disabled build container → bounded `dist/` tar → output validation and normalization → named-container cleanup → temporary-tree cleanup → private atomic artifact save → ID, size, and digest in the local command response.
 
-`sourcecheck -runtime node` remains validation-only. `-build-node` executes the submitted build script inside Docker and discards the returned artifact unless `-artifact-dir` is supplied. It does not create a deployment image, start the runtime, or introduce new tables, credentials, HTTP endpoints, or frontend changes.
+Since the real-build milestone, the same path also runs on the deployment worker when local builds are enabled: see [real build jobs](./real-build-jobs-learning.md). `sourcecheck -runtime node` remains validation-only. `-build-node` executes the submitted build script inside Docker and discards the returned artifact unless `-artifact-dir` is supplied. It does not create a deployment image, start the runtime, or introduce new tables, credentials, HTTP endpoints, or frontend changes.
 
 ## Verification
 

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 )
 
 type task struct {
@@ -58,7 +60,44 @@ func (m *Manager) Ready() error {
 	return nil
 }
 
+// Submit queues a simulation.
 func (m *Manager) Submit(ctx context.Context, scope Scope) (Job, error) {
+	scope.Simulated = true
+	return m.admit(ctx, scope, nil)
+}
+
+// SubmitBuild queues a real build of an already-stored source archive. If it
+// returns an error the job was not accepted and the caller still owns source;
+// on success the job owns it and the runner releases it.
+func (m *Manager) SubmitBuild(ctx context.Context, scope Scope, source artifact.Descriptor) (Job, error) {
+	scope.Simulated = false
+	return m.admit(ctx, scope, &source)
+}
+
+// CheckBuild reports whether a build for scope would currently be admitted,
+// without creating anything. Admission is checked again on submission; this
+// only lets intake refuse early, before receiving an upload.
+func (m *Manager) CheckBuild(ctx context.Context, scope Scope) error {
+	ctx, stop := context.WithTimeout(ctx, 5*time.Second)
+	defer stop()
+	scope.Simulated = false
+	if err := m.repository.Authorize(ctx, scope, true); err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	switch {
+	case m.closing || m.unhealthy:
+		return ErrUnavailable
+	case m.active[scope.ApplicationID] != nil:
+		return ErrConflict
+	case len(m.queue) == cap(m.queue):
+		return ErrFull
+	}
+	return nil
+}
+
+func (m *Manager) admit(ctx context.Context, scope Scope, source *artifact.Descriptor) (Job, error) {
 	ctx, stop := context.WithTimeout(ctx, 5*time.Second)
 	defer stop()
 	if err := m.repository.Authorize(ctx, scope, true); err != nil {
@@ -88,7 +127,7 @@ func (m *Manager) Submit(ctx context.Context, scope Scope) (Job, error) {
 		return Job{}, err
 	}
 	jobCtx, cancel := context.WithCancel(m.ctx)
-	item := &task{job: job, scope: scope, work: Work{DeploymentID: job.ID, Simulated: job.Simulated}, ctx: jobCtx, cancel: cancel}
+	item := &task{job: job, scope: scope, work: Work{DeploymentID: job.ID, Simulated: job.Simulated, Source: source}, ctx: jobCtx, cancel: cancel}
 	m.active[scope.ApplicationID] = item
 	m.queue <- item // only this locked producer can add; capacity was reserved above
 	return job, nil

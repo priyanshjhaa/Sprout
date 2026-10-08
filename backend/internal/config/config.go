@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -18,6 +19,18 @@ type Config struct {
 	DatabaseURL    string
 	WebOrigin      string
 	ClerkSecretKey string
+	// LocalBuilds enables accepting source uploads and running real builds in
+	// Docker on this machine. It is local developer tooling, not a service.
+	LocalBuilds LocalBuilds
+}
+
+// LocalBuilds is enabled only with SPROUT_ENABLE_LOCAL_BUILDS=1, an API bound to
+// a loopback address, and two existing private directories for source uploads
+// and build artifacts.
+type LocalBuilds struct {
+	Enabled           bool
+	SourceDirectory   string
+	ArtifactDirectory string
 }
 
 type LookupEnv func(key string) (string, bool)
@@ -54,12 +67,51 @@ func Load(lookupEnv LookupEnv) (Config, error) {
 		return Config{}, fmt.Errorf("CLERK_SECRET_KEY is required")
 	}
 
+	builds, err := loadLocalBuilds(lookupEnv, address)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		APIAddress:     address,
 		DatabaseURL:    databaseURL,
 		WebOrigin:      webOrigin,
 		ClerkSecretKey: clerkSecretKey,
+		LocalBuilds:    builds,
 	}, nil
+}
+
+func loadLocalBuilds(lookupEnv LookupEnv, address string) (LocalBuilds, error) {
+	value, _ := lookupEnv("SPROUT_ENABLE_LOCAL_BUILDS")
+	switch strings.TrimSpace(value) {
+	case "", "0":
+		return LocalBuilds{}, nil
+	case "1":
+	default:
+		return LocalBuilds{}, fmt.Errorf("SPROUT_ENABLE_LOCAL_BUILDS must be 1 or unset")
+	}
+	// Builds run untrusted code with Docker on this machine; never offer that to
+	// anything but this machine.
+	host, _, _ := net.SplitHostPort(address)
+	if ip := net.ParseIP(host); host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+		return LocalBuilds{}, fmt.Errorf("SPROUT_ENABLE_LOCAL_BUILDS requires SPROUT_API_ADDRESS on a loopback host")
+	}
+	builds := LocalBuilds{Enabled: true}
+	for _, setting := range []struct {
+		name   string
+		target *string
+	}{{"SPROUT_SOURCE_DIR", &builds.SourceDirectory}, {"SPROUT_ARTIFACT_DIR", &builds.ArtifactDirectory}} {
+		directory, _ := lookupEnv(setting.name)
+		directory = strings.TrimSpace(directory)
+		if !filepath.IsAbs(directory) {
+			return LocalBuilds{}, fmt.Errorf("%s must be an absolute path when local builds are enabled", setting.name)
+		}
+		*setting.target = filepath.Clean(directory)
+	}
+	if builds.SourceDirectory == builds.ArtifactDirectory {
+		return LocalBuilds{}, fmt.Errorf("SPROUT_SOURCE_DIR and SPROUT_ARTIFACT_DIR must be different directories")
+	}
+	return builds, nil
 }
 
 func validWebOrigin(origin string) bool {

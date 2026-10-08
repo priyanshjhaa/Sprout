@@ -6,7 +6,7 @@ The work is split into independently committed slices:
 
 1. **Artifact references** (`feat: reference real build artifacts from deployments`): deployments can record the ID, SHA-256 and size of a build's output. The bytes stay in the local artifact store.
 2. **One worker, two kinds of job** (`refactor: run real and simulated deployments on one worker`): the manager runs any job through a `Runner`; simulations become one runner among others.
-3. **Source intake** (next): an upload endpoint behind a local-only flag, a private source store, and a startup sweep for orphaned files.
+3. **Source intake** (`feat: accept source uploads for local builds`): an upload endpoint behind a local-only flag, a private source store, a real build runner, and a startup sweep for orphaned files.
 4. **Dashboard upload** (next): the Deploy page's archive upload becomes real.
 
 ## Slice 1: artifact references
@@ -36,18 +36,87 @@ The work is split into independently committed slices:
 
 **Trade-off.** Cleanup is still in-process. If the process is killed, `Release` never runs; the startup sweep in slice 3 removes whatever was left behind.
 
-## Request and job trace (after slice 2)
+## Slice 3: source intake
+
+**Problem.** Accepting code over HTTP is the moment Sprout can be attacked by
+anyone who can reach it. Every byte received costs disk, every queued build costs
+CPU, and every crash can strand files.
+
+**History.** Upload services learned to answer cheap questions before expensive
+ones: S3 and most CDNs reject unauthorized or oversized requests from headers
+alone, so a refused client never gets to stream gigabytes. Build systems that
+keep scratch files (CI runners, Bazel's output base) all grew a sweep at startup,
+because a killed process never runs its cleanup code.
+
+**Decision.**
+
+- **Off by default.** Builds exist only with `SPROUT_ENABLE_LOCAL_BUILDS=1`, and
+  config refuses to start unless the API listens on a loopback address. Without
+  the flag the `/deployments` paths do not exist. Uploaded code runs in Docker on
+  this machine; that must never be offered to anyone else.
+- **Cheap checks first.** Permission, worker health, the per-app slot and queue
+  space are checked before the body is read. A refused request costs no disk.
+- **Bounded input.** Only `application/x-tar`, at most 16 MiB (`413` beyond),
+  then the existing extraction limits and the Node contract.
+- **Sources are disposable.** The upload is saved under a random ID in a private
+  store, handed to the job in memory, and deleted when the job ends. It never
+  appears in the database.
+- **Disk is bounded by design.** At most 2 running and 8 queued jobs exist, so at
+  most 10 uploads (160 MiB) are ever stored at once.
+- **Startup sweep.** After the worker lock is held and interrupted jobs are
+  failed, every stored upload and every artifact no deployment references is
+  removed, along with partial writes.
+- **Stable failure codes.** The runner maps known errors (`node_contract_invalid`,
+  `source_sensitive_path`, `node_build_failed`, …) to codes; anything else becomes
+  `build_failed`.
+
+**Trade-off and known limits.**
+
+- Artifacts of succeeded builds are kept indefinitely. A retention rule (for
+  example, keep the latest few per application) must exist before builds are
+  offered beyond this machine.
+- Docker restrictions are defence in depth on a shared kernel, not proof of safe
+  hostile multi-tenant execution (see `node-build-contract.md`).
+- Dependency installs are still offline-only, so only dependency-free apps build.
+
+## Request and job trace
 
 ```text
-Submit → authorize → persist queued row (simulated or real) → bounded channel
+POST …/deployments (application/x-tar)
+  → authenticate → CheckBuild: permission, worker health, app slot, queue space
+  → read body, capped at 16 MiB (413 beyond)
+  → save source blob (private store, random ID)
+  → SubmitBuild: re-check admission, persist queued row, enqueue
+       (if refused: delete the source blob before answering)
   → worker: Start (recheck access, lifecycle)
-  → Runner.Run: Begin/Complete per stage (persisted, streamed)
-  → Finish (status, code, artifact only if succeeded)
-  → Runner.Release (delete source; delete artifact unless kept)
+  → source:  load blob (digest checked) → extract to private temp tree → Node contract
+  → build:   sealed Docker build of the tree → bounded dist/ tar
+  → package: save artifact blob
+  → Finish (status, code, artifact reference only if succeeded and not cancelled)
+  → Release: delete source blob; delete artifact unless recorded
 ```
+
+## Verification
+
+From `backend/` with the local database environment loaded:
+
+```sh
+go test -race ./...
+go vet ./...
+SPROUT_DOCKER_TEST=1 go test -run TestDockerBuildJob -v ./internal/buildjob
+```
+
+Recorded for this milestone: the full race suite with PostgreSQL passed; the
+Docker build job test built the committed example, stored its `dist/` artifact,
+and Docker events showed the build container created and destroyed. Starting the
+API with local builds enabled swept a planted partial upload (`removed: 1`),
+logged the local-builds warning, and answered unauthenticated uploads with `401`.
+A signed-in upload from the dashboard is the next slice.
 
 ## Explain-back checkpoint
 
 1. Why is `Release` called after `Finish` rather than at the end of `Run`?
 2. A build finishes at the same moment a user cancels it. Which one wins in the database, and what happens to the artifact?
 3. Why would storing the runner's raw error text as the failure code be a security problem?
+4. Why does the upload handler check permission and queue space before reading the body?
+5. Why must the startup sweep run only after the worker lock is acquired?

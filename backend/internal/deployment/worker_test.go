@@ -133,7 +133,7 @@ func submit(t *testing.T, m *Manager, app string) Job {
 // submitBuild queues a real-build-shaped job, so runner failures use build codes.
 func submitBuild(t *testing.T, m *Manager, app string) Job {
 	t.Helper()
-	job, err := m.Submit(context.Background(), Scope{ApplicationID: app})
+	job, err := m.SubmitBuild(context.Background(), Scope{ApplicationID: app}, artifact.Descriptor{})
 	if err != nil {
 		t.Fatal(err)
 	}

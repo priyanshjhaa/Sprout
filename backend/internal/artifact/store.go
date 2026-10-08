@@ -1,5 +1,6 @@
-// Package artifact stores bounded build outputs as opaque local files. It does
-// not authorize users, interpret application code, or expose files over HTTP.
+// Package artifact stores bounded, opaque byte blobs as local files: build
+// outputs, and the uploaded source archives they are built from. It does not
+// authorize users, interpret application code, or expose files over HTTP.
 package artifact
 
 import (
@@ -12,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const MaxBytes = 16 << 20
@@ -169,6 +171,62 @@ func (s *Store) Delete(ctx context.Context, descriptor Descriptor) error {
 		return ErrStorage
 	}
 	return syncDirectory(s.root)
+}
+
+// Sweep removes partial writes left by an interrupted Save and every stored
+// blob whose ID keep rejects. It runs at startup, once nothing else can be
+// writing, to reclaim files a crashed process never released. It touches only
+// names this store creates; anything else in the directory is left alone.
+func (s *Store) Sweep(ctx context.Context, keep func(id string) bool) (int, error) {
+	if s == nil || s.root == nil || keep == nil {
+		return 0, ErrInvalid
+	}
+	directory, err := s.root.Open(".")
+	if err != nil {
+		return 0, ErrStorage
+	}
+	names, err := directory.Readdirnames(-1)
+	_ = directory.Close()
+	if err != nil {
+		return 0, ErrStorage
+	}
+	removed := 0
+	for _, name := range names {
+		if err := ctx.Err(); err != nil {
+			return removed, err
+		}
+		id, partial := storedID(name)
+		if id == "" || (!partial && keep(id)) {
+			continue
+		}
+		if err := s.root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return removed, ErrStorage
+		}
+		removed++
+	}
+	if removed > 0 {
+		return removed, syncDirectory(s.root)
+	}
+	return removed, nil
+}
+
+// storedID recognises "<id>.tar" and ".<id>.partial" and returns the ID.
+func storedID(name string) (string, bool) {
+	partial := strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".partial")
+	id := strings.TrimSuffix(strings.TrimPrefix(name, "."), ".partial")
+	if !partial {
+		if !strings.HasSuffix(name, ".tar") {
+			return "", false
+		}
+		id = strings.TrimSuffix(name, ".tar")
+	}
+	if len(id) != 32 {
+		return "", false
+	}
+	if _, err := hex.DecodeString(id); err != nil {
+		return "", false
+	}
+	return id, partial
 }
 
 func valid(descriptor Descriptor) bool {
