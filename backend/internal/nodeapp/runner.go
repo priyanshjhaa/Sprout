@@ -32,7 +32,7 @@ var pinnedImage = regexp.MustCompile(`^node@sha256:[a-f0-9]{64}$`)
 // multi-platform registry digest pulled for this milestone.
 const DefaultImage = "node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
 
-const buildCommand = "tar -x --no-same-owner --no-same-permissions -C /workspace && cd /workspace && npm ci --offline --ignore-scripts --no-audit --no-fund >/dev/null 2>&1 && npm --ignore-scripts run build >/dev/null 2>&1 && tar --format=ustar -C /workspace -cf - dist"
+const buildCommand = "tar -x --no-same-owner --no-same-permissions -C /workspace && cd /workspace && npm ci --offline --ignore-scripts --no-audit --no-fund >/dev/null 2>&1 && npm --ignore-scripts run build >/dev/null 2>&1 && tar --format=ustar -C /workspace -cf - dist package.json"
 
 type Runner struct {
 	image   string
@@ -65,7 +65,7 @@ func (r *Runner) RunFiles(ctx context.Context, files fs.FS) error {
 	return err
 }
 
-// BuildFiles returns a bounded, normalized tar of dist/ from a prepared source
+// BuildFiles returns a bounded, normalized tar of dist/ and package.json from a prepared source
 // filesystem. The caller owns files and must keep them available until return.
 func (r *Runner) BuildFiles(ctx context.Context, files fs.FS) ([]byte, error) {
 	if r == nil {
@@ -91,6 +91,12 @@ func (r *Runner) BuildFiles(ctx context.Context, files fs.FS) ([]byte, error) {
 	_, err = source.WithArchive(runCtx, bytes.NewReader(raw), func(ctx context.Context, built fs.FS) error {
 		info, statErr := fs.Stat(built, "dist")
 		if statErr != nil || !info.IsDir() {
+			return ErrArtifact
+		}
+		// The release must be self-contained: the runtime starts it with
+		// npm, which reads package.json.
+		manifest, statErr := fs.Stat(built, "package.json")
+		if statErr != nil || !manifest.Mode().IsRegular() {
 			return ErrArtifact
 		}
 		artifact, err = pack(ctx, built)
