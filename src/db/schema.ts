@@ -182,13 +182,16 @@ export const deployments = pgTable(
     // Real and simulated jobs share the worker, so at most one may be active per application.
     uniqueIndex("deployments_one_active_per_app").on(table.applicationId)
       .where(sql`${table.status} in ('queued', 'building')`),
+    // The release currently serving traffic. Promoting a new one demotes the old in the same transaction.
+    uniqueIndex("deployments_one_live_per_app").on(table.applicationId)
+      .where(sql`${table.status} = 'live'`),
     check("deployments_simulation_not_live", sql`not ${table.simulated} or ${table.status} <> 'live'`),
     check("deployments_duration_nonnegative", sql`${table.durationMs} is null or ${table.durationMs} >= 0`),
     // NULL satisfies a CHECK, so each artifact column is tested for presence explicitly.
     check(
       "deployments_artifact_reference",
       sql`(${table.artifactId} is null and ${table.artifactSha256} is null and ${table.artifactBytes} is null)
-        or (not ${table.simulated} and ${table.status} = 'succeeded'
+        or (not ${table.simulated} and ${table.status} in ('succeeded', 'live')
           and ${table.artifactId} is not null and ${table.artifactId} ~ '^[0-9a-f]{32}$'
           and ${table.artifactSha256} is not null and ${table.artifactSha256} ~ '^[0-9a-f]{64}$'
           and ${table.artifactBytes} is not null and ${table.artifactBytes} between 1 and 16777216)`,
