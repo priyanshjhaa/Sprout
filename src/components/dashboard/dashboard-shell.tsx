@@ -4,7 +4,7 @@ import { Boxes, LayoutDashboard, Rocket, Sprout, Users } from "lucide-react";
 import Link from "next/link";
 import { SignOutButton, UserButton } from "@clerk/nextjs";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
 import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
 
@@ -14,12 +14,33 @@ const navigationItems = [
   { label: "Team", path: "team", icon: Users },
 ];
 
+type Daypart = "dawn" | "day" | "dusk" | "night";
+
+function daypartAt(date: Date): Daypart {
+  const hour = date.getHours();
+  return hour >= 5 && hour < 9 ? "dawn" : hour >= 9 && hour < 17 ? "day" : hour >= 17 && hour < 20 ? "dusk" : "night";
+}
+
+// The sky follows the visitor's clock. It starts as "day" so server and client
+// markup match, then settles on the real hour after mounting.
+function useDaypart(): Daypart {
+  const [daypart, setDaypart] = useState<Daypart>("day");
+  useEffect(() => {
+    const update = () => setDaypart(daypartAt(new Date()));
+    update();
+    const timer = window.setInterval(update, 10 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return daypart;
+}
+
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const workspaces = useWorkspaces();
   const params = useParams<{ workspaceSlug: string }>();
   const workspaceSlug = params.workspaceSlug ?? "acme";
+  const daypart = useDaypart();
   const { data: workspace, isError: workspaceUnavailable } = useWorkspace(workspaceSlug);
 
   const navigation = (items: typeof navigationItems) =>
@@ -43,7 +64,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="sp-frame">
+    <div className="sp-frame" data-daypart={daypart}>
+      <div className="sp-sky" aria-hidden="true" />
       <div className="sp-grain" aria-hidden="true" />
       <header className="sp-bar">
         <Brand />
