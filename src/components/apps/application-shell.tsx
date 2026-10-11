@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { StatusPill } from "@/components/status-pill";
+import { Pipeline } from "@/components/pipeline";
 import { useApplication } from "@/lib/query/hooks";
+import { useLatestDeployment } from "@/lib/query/simulations";
 
 const tabs = [
   { label: "Overview", path: "" },
@@ -21,24 +23,23 @@ export function ApplicationShell({ children }: { children: ReactNode }) {
   const appId = params.appId;
   const base = `/workspace/${workspaceSlug}/apps/${appId}`;
   const { data: application, isLoading } = useApplication(workspaceSlug, appId);
+  const latest = useLatestDeployment(workspaceSlug, appId);
 
   return (
-    <main className="dashboard-page application-page">
+    <main className="dashboard-page application-page sp-app">
       <Link className="app-back-link" href={`/workspace/${workspaceSlug}/apps`}><ArrowLeft size={14} /> All apps</Link>
-      <header className="application-header">
-        <div className="application-identity">
-          <span className="application-icon">{application?.name.slice(0, 2).toUpperCase() ?? "··"}</span>
+      <header className={`sp-app-hero sp-app-hero-${application?.status ?? "undeployed"}`}>
+        <div className="sp-app-identity">
+          <span className={`sp-monogram sp-monogram-lg accent-${application?.accent ?? "amber"}`}>{application?.name.slice(0, 2).toUpperCase() ?? "··"}</span>
           <div>
-            <div className="application-title-row">
-              <h1>{isLoading ? "Loading application" : application?.name}</h1>
-              {application && <StatusPill status={application.status} />}
-            </div>
-            {application && <span>Reserved address · {application.url}</span>}
+            <div className="sp-app-title"><h1>{isLoading ? "Loading application" : application?.name}</h1>{application && <StatusPill status={application.status} />}</div>
+            {application && <span className="sp-app-url">{application.status === "running" ? "Live at" : "Reserved address"} · {application.url}</span>}
           </div>
         </div>
+        <Pipeline stages={latest.job?.stages} />
       </header>
 
-      <nav className="application-tabs" aria-label="Application navigation">
+      <nav className="sp-tabs" aria-label="Application navigation">
         {tabs.map((tab) => {
           const href = `${base}${tab.path}`;
           const active = tab.path === "" ? pathname === base : pathname.startsWith(href);

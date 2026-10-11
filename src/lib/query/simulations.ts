@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { request } from "@/lib/api/api";
 import { builds, jobsFor, simulations, type JobKind } from "@/lib/api/simulations";
 import { isActiveSimulation, reconcileSimulation, type Simulation } from "@/lib/api/simulation-stream";
+import { useDeployments } from "@/lib/query/hooks";
 import { queryKeys } from "@/lib/query/keys";
 
 export function useSimulationActions(slug: string, appId: string) {
@@ -115,4 +116,15 @@ export function useSimulation(slug: string, appId: string, id: string, kind: Job
       if (!result.isError) setAttempt((value) => value + 1);
     },
   };
+}
+
+// The most recent job for an application, real build or simulation, with the
+// kind needed to link to it. Real builds win when local builds are on.
+export function useLatestDeployment(slug: string, appId: string) {
+  const localBuilds = useCapabilities().data?.localBuilds === true;
+  const simulated = useDeployments(slug, appId);
+  const built = useBuilds(slug, appId, localBuilds);
+  const query = localBuilds ? built : simulated;
+  const job: Simulation | undefined = query.data?.[0];
+  return { job, kind: (localBuilds ? "build" : "simulation") as JobKind, isLoading: query.isPending, isError: query.isError };
 }
