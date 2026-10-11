@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
 import "./globals.css";
+import "./dashboard.css";
 
 const heroFont = Lora({
   subsets: ["latin"],

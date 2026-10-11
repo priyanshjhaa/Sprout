@@ -9,7 +9,6 @@ import { Brand } from "@/components/brand";
 import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
 
 const navigationItems = [
-  { label: "Deploy", path: "deploy", icon: Rocket },
   { label: "Apps", path: "apps", icon: Boxes },
   { label: "Team", path: "team", icon: Users },
 ];
@@ -31,7 +30,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       return (
         <Link
           key={path}
-          className={`sidebar-link${active ? " active" : ""}`}
+          className={`sp-nav-link${active ? " active" : ""}`}
           href={href}
           onClick={() => setMobileOpen(false)}
         >
@@ -46,8 +45,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="dashboard-frame">
-      <header className="mobile-dashboard-header">
+    <div className="sp-frame">
+      <header className="sp-mobile-bar">
         <Brand />
         <button
           className="icon-button"
@@ -60,37 +59,40 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </button>
       </header>
 
-      <aside className={`dashboard-sidebar${mobileOpen ? " mobile-open" : ""}`}>
-        <div className="sidebar-brand"><Brand /></div>
-        <div className="workspace-switcher">
-          <span className="workspace-avatar"><Sprout size={17} strokeWidth={1.7} /></span>
-          <label className="workspace-picker"><span className="sr-only">Switch workspace</span>
+      <aside className={`sp-side${mobileOpen ? " open" : ""}`}>
+        <Brand />
+        <div className="sp-workspace">
+          <span className="sp-workspace-mark"><Sprout size={16} strokeWidth={2} /></span>
+          <label><span className="sr-only">Switch workspace</span>
             <select value={workspaceSlug} aria-label="Switch workspace" disabled={workspaces.isLoading || workspaces.isError} onChange={(event) => { setMobileOpen(false); router.push(`/workspace/${encodeURIComponent(event.target.value)}/apps`); }}>
               {!workspaces.data?.some((item) => item.slug === workspaceSlug) && <option value={workspaceSlug}>{workspace?.name ?? "Your workspace"}</option>}
               {workspaces.data?.map((item) => <option value={item.slug} key={item.id}>{item.name}</option>)}
-            </select>{workspaces.isError && <small>Could not load workspaces</small>}
+            </select>
+            <small>{workspaces.isError ? "Could not load workspaces" : "Workspace"}</small>
           </label>
         </div>
 
-        <nav className="sidebar-navigation" aria-label="Workspace navigation">
-          <div className="sidebar-group">
-            {navigation(navigationItems)}
-          </div>
+        <Link className="sp-deploy-cta" href={`/workspace/${workspaceSlug}/deploy`} onClick={() => setMobileOpen(false)}>
+          <Rocket size={16} strokeWidth={2.2} /> Deploy an app
+        </Link>
+
+        <nav className="sp-nav" aria-label="Workspace navigation">
+          {navigation(navigationItems)}
         </nav>
 
-        <div className="sidebar-account">
-          <div className="sidebar-profile">
+        <div className="sp-account">
+          <div className="sp-profile">
             <UserButton />
             <span><strong>{user?.fullName ?? user?.username ?? "Account"}</strong><small>{user?.primaryEmailAddress?.emailAddress ?? "Signed in"}</small></span>
           </div>
           <SignOutButton redirectUrl="/">
-            <button className="sidebar-link sidebar-sign-out" type="button"><LogOut size={17} strokeWidth={1.8} /><span>Sign out</span></button>
+            <button className="sp-nav-link" type="button"><LogOut size={17} strokeWidth={1.8} /><span>Sign out</span></button>
           </SignOutButton>
         </div>
       </aside>
 
-      {mobileOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
-      <div className="dashboard-content">
+      {mobileOpen && <button className="sp-backdrop" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
+      <div className="sp-main">
         {children}
       </div>
     </div>

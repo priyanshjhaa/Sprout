@@ -1,0 +1,226 @@
+/*
+  Sprout dashboard theme: a night garden.
+  Deep forest chrome frames a warm canvas, and living green light marks anything
+  that is growing, healthy, or in motion. Components use the sp- prefix.
+*/
+
+.sp-frame {
+  --sp-forest-950: #0b1410;
+  --sp-forest-900: #101c16;
+  --sp-forest-800: #17281f;
+  --sp-forest-700: #20382b;
+  --sp-leaf: #8fd16a;
+  --sp-leaf-soft: #b9f48c;
+  --sp-leaf-deep: #4f8a3a;
+  --sp-glow: rgba(143, 209, 106, 0.28);
+  --sp-mist: rgba(236, 244, 226, 0.68);
+  --sp-mist-faint: rgba(236, 244, 226, 0.42);
+  --sp-line-dark: rgba(210, 235, 190, 0.1);
+  --sp-sidebar: 264px;
+
+  position: relative;
+  min-height: 100svh;
+  background: var(--canvas);
+}
+
+/* Sidebar */
+.sp-side {
+  position: fixed;
+  z-index: 30;
+  inset: 0 auto 0 0;
+  display: flex;
+  width: var(--sp-sidebar);
+  flex-direction: column;
+  gap: 22px;
+  padding: 20px 14px 16px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 60% at 0% 0%, rgba(143, 209, 106, 0.2), transparent 55%),
+    radial-gradient(90% 50% at 100% 100%, rgba(79, 138, 58, 0.22), transparent 60%),
+    linear-gradient(180deg, var(--sp-forest-800), var(--sp-forest-950));
+  border-right: 1px solid var(--sp-line-dark);
+  color: var(--sp-mist);
+}
+
+.sp-side::before {
+  position: absolute;
+  inset: 0;
+  background: var(--paper-grain);
+  opacity: 0.07;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  content: "";
+}
+
+.sp-side > * { position: relative; }
+
+.sp-side .brand { color: #f1f7e8; padding: 4px 8px; }
+.sp-side .brand-mark span { border-color: rgba(185, 244, 140, 0.9); }
+.sp-side .brand-mark::after { background: var(--sp-leaf); }
+
+.sp-workspace {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--sp-line-dark);
+  border-radius: 12px;
+  background: rgba(236, 244, 226, 0.05);
+  transition: border-color 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+
+.sp-workspace:hover,
+.sp-workspace:focus-within { border-color: rgba(185, 244, 140, 0.35); background: rgba(236, 244, 226, 0.08); }
+
+.sp-workspace-mark {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--sp-leaf-soft), var(--sp-leaf-deep));
+  color: var(--sp-forest-950);
+  box-shadow: 0 0 18px var(--sp-glow);
+}
+
+.sp-workspace label { min-width: 0; flex: 1; }
+.sp-workspace select {
+  width: 100%;
+  border: 0;
+  outline-offset: 6px;
+  background: transparent;
+  color: #f1f7e8;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  appearance: none;
+}
+.sp-workspace select option { color: var(--ink); }
+.sp-workspace small { display: block; color: var(--sp-mist-faint); font-size: 11px; }
+
+.sp-deploy-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--sp-leaf-soft), var(--sp-leaf) 55%, var(--sp-leaf-deep));
+  color: var(--sp-forest-950);
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 10px 30px -8px rgba(143, 209, 106, 0.55);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+
+.sp-deploy-cta:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 14px 36px -8px rgba(143, 209, 106, 0.75); }
+
+.sp-nav { display: grid; gap: 3px; }
+.sp-nav-label {
+  padding: 0 12px 6px;
+  color: var(--sp-mist-faint);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sp-nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sp-mist);
+  font-size: 14px;
+  font-weight: 520;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out);
+}
+
+.sp-nav-link:hover { background: rgba(236, 244, 226, 0.07); color: #f1f7e8; }
+.sp-nav-link.active { background: linear-gradient(90deg, rgba(143, 209, 106, 0.2), rgba(143, 209, 106, 0.04)); color: #fff; }
+.sp-nav-link.active::before {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: -14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--sp-leaf);
+  box-shadow: 0 0 12px var(--sp-leaf);
+  content: "";
+}
+.sp-nav-link.active svg { color: var(--sp-leaf-soft); }
+
+.sp-account { display: grid; gap: 4px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--sp-line-dark); }
+.sp-profile { display: flex; align-items: center; gap: 10px; padding: 6px 8px; min-width: 0; }
+.sp-profile span { display: grid; min-width: 0; }
+.sp-profile strong { overflow: hidden; color: #f1f7e8; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.sp-profile small { overflow: hidden; color: var(--sp-mist-faint); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Main canvas: warm paper lit from above by a soft green aurora. */
+.sp-main {
+  position: relative;
+  min-height: 100svh;
+  margin-left: var(--sp-sidebar);
+  isolation: isolate;
+}
+
+.sp-main::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto 0;
+  height: 520px;
+  background:
+    radial-gradient(50% 70% at 12% 0%, rgba(143, 209, 106, 0.2), transparent 70%),
+    radial-gradient(40% 60% at 78% 0%, rgba(93, 127, 142, 0.14), transparent 70%),
+    radial-gradient(35% 50% at 100% 30%, rgba(184, 115, 53, 0.08), transparent 70%);
+  pointer-events: none;
+  content: "";
+}
+
+.sp-main .dashboard-page { padding-top: 46px; }
+
+/* Mobile header and drawer */
+.sp-mobile-bar,
+.sp-backdrop { display: none; }
+
+@media (max-width: 900px) {
+  .sp-main { margin-left: 0; }
+  .sp-side { transform: translateX(-100%); transition: transform 0.28s var(--ease-out); }
+  .sp-side.open { transform: none; }
+  .sp-mobile-bar {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: linear-gradient(90deg, var(--sp-forest-900), var(--sp-forest-800));
+    color: #f1f7e8;
+  }
+  .sp-mobile-bar .brand { color: #f1f7e8; }
+  .sp-mobile-bar .icon-button { border-color: var(--sp-line-dark); background: transparent; color: #f1f7e8; }
+  .sp-backdrop {
+    position: fixed;
+    z-index: 25;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgba(5, 10, 7, 0.55);
+    backdrop-filter: blur(3px);
+  }
+  .sp-main .dashboard-page { width: calc(100% - 32px); padding-top: 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-side, .sp-nav-link, .sp-deploy-cta, .sp-workspace { transition: none; }
+}
