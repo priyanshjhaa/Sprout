@@ -1,17 +1,9 @@
-/* Pipeline: the path every deployment travels */
+/* Pipeline: the path every deployment travels, drawn like a plant growing */
 .sp-pipeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
 .sp-step { position: relative; display: grid; justify-items: center; gap: 3px; text-align: center; }
-.sp-step::before {
-  position: absolute;
-  top: 21px;
-  right: 50%;
-  left: -50%;
-  height: 2px;
-  background: rgba(236, 244, 226, 0.14);
-  content: "";
-}
+.sp-step::before { position: absolute; top: 21px; right: 50%; left: -50%; height: 2px; background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 11px); content: ""; }
 .sp-step:first-child::before { display: none; }
-.sp-step-succeeded::before { background: linear-gradient(90deg, var(--sp-leaf-deep), var(--sp-leaf)); box-shadow: 0 0 10px var(--sp-glow); }
+.sp-step-succeeded::before { background: var(--sp-moss); }
 .sp-step-failed::before { background: var(--danger); }
 .sp-step-node {
   position: relative;
@@ -19,19 +11,18 @@
   width: 44px;
   height: 44px;
   place-items: center;
-  border: 1px solid rgba(236, 244, 226, 0.2);
+  border: 1px solid var(--line-strong);
   border-radius: 50%;
-  background: var(--sp-forest-900);
-  color: var(--sp-mist-faint);
+  background: var(--sp-cream);
+  color: var(--faint);
 }
-.sp-step strong { margin-top: 8px; color: #f1f7e8; font-size: 14px; }
-.sp-step small { color: var(--sp-mist-faint); font-size: 12px; text-transform: capitalize; }
+.sp-step strong { margin-top: 8px; color: var(--ink); font-size: 14px; }
+.sp-step small { color: var(--muted); font-size: 12px; text-transform: capitalize; }
 .sp-step-pending small { text-transform: none; }
-.sp-step-succeeded .sp-step-node { border-color: var(--sp-leaf); background: linear-gradient(135deg, var(--sp-leaf-soft), var(--sp-leaf-deep)); color: var(--sp-forest-950); box-shadow: 0 0 22px var(--sp-glow); }
-.sp-step-running .sp-step-node { border-color: var(--sp-leaf-soft); color: var(--sp-leaf-soft); box-shadow: 0 0 0 0 var(--sp-glow); animation: sp-ring 1.6s ease-out infinite; }
-.sp-step-failed .sp-step-node { border-color: var(--danger); background: var(--danger); color: #fff; box-shadow: 0 0 22px rgba(184, 95, 80, 0.55); }
+.sp-step-succeeded .sp-step-node { border-color: var(--sp-moss-deep); background: linear-gradient(180deg, #76854c, var(--sp-moss-deep)); color: var(--sprout-ink); box-shadow: 0 8px 18px -8px rgba(82, 96, 50, 0.8); }
+.sp-step-running .sp-step-node { border-color: var(--sp-amber); background: #fbeed9; color: var(--sp-amber); animation: sp-ring 1.8s ease-out infinite; }
+.sp-step-failed .sp-step-node { border-color: var(--danger); background: var(--danger); color: #fff; }
 .sp-step-live .sp-step-node { border-style: dashed; }
-.sp-step-live strong { color: var(--sp-mist); }
-@keyframes sp-ring { to { box-shadow: 0 0 0 14px rgba(143, 209, 106, 0); } }
-@media (prefers-reduced-motion: reduce) { .sp-step-running .sp-step-node { animation: none; box-shadow: 0 0 18px var(--sp-glow); } }
-
+.sp-step-live strong { color: var(--muted); }
+@keyframes sp-ring { 0% { box-shadow: 0 0 0 0 rgba(184, 115, 53, 0.35); } 100% { box-shadow: 0 0 0 14px rgba(184, 115, 53, 0); } }
+@media (prefers-reduced-motion: reduce) { .sp-step-running .sp-step-node { animation: none; } }
