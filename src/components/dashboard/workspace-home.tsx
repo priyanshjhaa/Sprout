@@ -33,7 +33,7 @@ export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
       <section className="sp-hero" aria-labelledby="sp-home-title">
         <span className="sp-eyebrow">{workspace?.name ?? "Your workspace"}</span>
         <h1 id="sp-home-title">
-          {isLoading ? "Checking your garden…" : !apps?.length ? "Plant your first app." : live > 0 ? <>{live} {live === 1 ? "app is" : "apps are"} live.</> : "Nothing is live yet."}
+          {isLoading ? "Checking your garden…" : !apps?.length ? <>Plant your first <em>app</em>.</> : live > 0 ? <><em>{live}</em> {live === 1 ? "app is" : "apps are"} live.</> : <>Nothing is <em>live</em> yet.</>}
         </h1>
         <p>Send code in, get a healthy public URL out. Sprout builds it sealed off, checks it, and keeps it easy to pause, recover, or retire.</p>
         <div className="sp-hero-actions">
@@ -93,7 +93,7 @@ function AppRow({ app, base }: { app: Application; base: string }) {
     <li>
       <Link className={`sp-row sp-row-${app.status}`} href={`${base}/apps/${app.id}`}>
         <span className={`sp-monogram accent-${app.accent}`} aria-hidden="true">{app.name.slice(0, 2).toUpperCase()}</span>
-        <span className="sp-row-main"><strong>{app.name}</strong><small>{app.url}</small></span>
+        <span className="sp-row-main"><strong>{app.name}</strong><small className="sp-url">{app.url}</small></span>
         <StatusPill status={app.status} />
         <span className="sp-row-time">{app.updatedAt}</span>
         <ArrowRight size={15} aria-hidden="true" />

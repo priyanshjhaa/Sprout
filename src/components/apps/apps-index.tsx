@@ -31,7 +31,7 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
     <main className="dashboard-page sp-apps">
       <header className="sp-apps-head">
         <span className="sp-eyebrow-dark">Apps</span>
-        <h1>Everything you have planted.</h1>
+        <h1>Everything you have <em>planted</em>.</h1>
         {hasApplications && <Link className="sp-button sp-button-solid" href={`/workspace/${workspaceSlug}/deploy`}><Plus size={16} /> Deploy app</Link>}
       </header>
 

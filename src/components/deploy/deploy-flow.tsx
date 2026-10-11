@@ -39,7 +39,7 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
       <header className="sp-deploy-hero">
         <div>
           <span className="sp-eyebrow">Deploy</span>
-          <h1>From code to a public URL.</h1>
+          <h1>From code to a public <em>URL</em>.</h1>
           <p>Sprout builds it sealed off, checks its health, and only then gives it an address.</p>
         </div>
         <Pipeline stages={application ? [{ name: "source", status: "running" }] : undefined} />
