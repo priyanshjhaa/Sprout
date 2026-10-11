@@ -35,7 +35,7 @@ export function UploadBuild({ workspaceSlug, appId, disabled = false }: { worksp
         <input type="file" accept=".tar,application/x-tar" disabled={disabled || action.isPending}
           onChange={(event) => { setArchive(event.target.files?.[0] ?? null); setProblem(null); }} />
       </label>
-      <button className="button button-primary" type="submit" disabled={disabled || !archive || action.isPending}>
+      <button className="sp-button sp-button-solid" type="submit" disabled={disabled || !archive || action.isPending}>
         <Upload size={14} /> {action.isPending ? "Uploading…" : "Upload & build"}
       </button>
       {(problem || action.isError) && <p className="deploy-error" role="alert">{problem ?? action.error?.message}</p>}

@@ -1,15 +1,16 @@
 "use client";
 
-import { Boxes, LogOut, Menu, Rocket, Sprout, Users, X } from "lucide-react";
+import { Boxes, LayoutDashboard, Rocket, Sprout, Users } from "lucide-react";
 import Link from "next/link";
-import { SignOutButton, useUser, UserButton } from "@clerk/nextjs";
+import { SignOutButton, UserButton } from "@clerk/nextjs";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { CommandPalette } from "@/components/dashboard/command-palette";
 import { Brand } from "@/components/brand";
 import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
 
 const navigationItems = [
-  { label: "Deploy", path: "deploy", icon: Rocket },
+  { label: "Overview", path: "", icon: LayoutDashboard },
   { label: "Apps", path: "apps", icon: Boxes },
   { label: "Team", path: "team", icon: Users },
 ];
@@ -21,21 +22,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const params = useParams<{ workspaceSlug: string }>();
   const workspaceSlug = params.workspaceSlug ?? "acme";
   const { data: workspace, isError: workspaceUnavailable } = useWorkspace(workspaceSlug);
-  const { user } = useUser();
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navigation = (items: typeof navigationItems) =>
     items.map(({ label, path, icon: Icon }) => {
-      const href = `/workspace/${workspaceSlug}/${path}`;
+      const href = path ? `/workspace/${workspaceSlug}/${path}` : `/workspace/${workspaceSlug}`;
       const active = pathname === href || (path === "apps" && pathname.startsWith(`${href}/`));
       return (
         <Link
           key={path}
-          className={`sidebar-link${active ? " active" : ""}`}
+          className={`sp-bar-link${active ? " active" : ""}`}
           href={href}
-          onClick={() => setMobileOpen(false)}
         >
-          <Icon size={17} strokeWidth={1.8} />
+          <Icon size={15} strokeWidth={1.9} />
           <span>{label}</span>
         </Link>
       );
@@ -46,51 +44,33 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="dashboard-frame">
-      <header className="mobile-dashboard-header">
+    <div className="sp-frame">
+      <div className="sp-grain" aria-hidden="true" />
+      <header className="sp-bar">
         <Brand />
-        <button
-          className="icon-button"
-          type="button"
-          aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
-          aria-expanded={mobileOpen}
-          onClick={() => setMobileOpen((open) => !open)}
-        >
-          {mobileOpen ? <X size={19} /> : <Menu size={19} />}
-        </button>
+        <nav className="sp-bar-nav" aria-label="Workspace navigation">
+          {navigation(navigationItems)}
+        </nav>
+        <div className="sp-bar-end">
+          <CommandPalette workspaceSlug={workspaceSlug} />
+          <div className="sp-workspace">
+            <span className="sp-workspace-mark"><Sprout size={15} strokeWidth={2} /></span>
+            <label><span className="sr-only">Switch workspace</span>
+              <select value={workspaceSlug} aria-label="Switch workspace" disabled={workspaces.isLoading || workspaces.isError} onChange={(event) => router.push(`/workspace/${encodeURIComponent(event.target.value)}`)}>
+                {!workspaces.data?.some((item) => item.slug === workspaceSlug) && <option value={workspaceSlug}>{workspace?.name ?? "Your workspace"}</option>}
+                {workspaces.data?.map((item) => <option value={item.slug} key={item.id}>{item.name}</option>)}
+              </select>
+              <small>{workspaces.isError ? "Could not load workspaces" : "Workspace"}</small>
+            </label>
+          </div>
+          <Link className="sp-button sp-button-solid" href={`/workspace/${workspaceSlug}/deploy`}>
+            <Rocket size={15} strokeWidth={2.2} /> Deploy
+          </Link>
+          <UserButton />
+        </div>
       </header>
 
-      <aside className={`dashboard-sidebar${mobileOpen ? " mobile-open" : ""}`}>
-        <div className="sidebar-brand"><Brand /></div>
-        <div className="workspace-switcher">
-          <span className="workspace-avatar"><Sprout size={17} strokeWidth={1.7} /></span>
-          <label className="workspace-picker"><span className="sr-only">Switch workspace</span>
-            <select value={workspaceSlug} aria-label="Switch workspace" disabled={workspaces.isLoading || workspaces.isError} onChange={(event) => { setMobileOpen(false); router.push(`/workspace/${encodeURIComponent(event.target.value)}/apps`); }}>
-              {!workspaces.data?.some((item) => item.slug === workspaceSlug) && <option value={workspaceSlug}>{workspace?.name ?? "Your workspace"}</option>}
-              {workspaces.data?.map((item) => <option value={item.slug} key={item.id}>{item.name}</option>)}
-            </select>{workspaces.isError && <small>Could not load workspaces</small>}
-          </label>
-        </div>
-
-        <nav className="sidebar-navigation" aria-label="Workspace navigation">
-          <div className="sidebar-group">
-            {navigation(navigationItems)}
-          </div>
-        </nav>
-
-        <div className="sidebar-account">
-          <div className="sidebar-profile">
-            <UserButton />
-            <span><strong>{user?.fullName ?? user?.username ?? "Account"}</strong><small>{user?.primaryEmailAddress?.emailAddress ?? "Signed in"}</small></span>
-          </div>
-          <SignOutButton redirectUrl="/">
-            <button className="sidebar-link sidebar-sign-out" type="button"><LogOut size={17} strokeWidth={1.8} /><span>Sign out</span></button>
-          </SignOutButton>
-        </div>
-      </aside>
-
-      {mobileOpen && <button className="sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileOpen(false)} />}
-      <div className="dashboard-content">
+      <div className="sp-main">
         {children}
       </div>
     </div>

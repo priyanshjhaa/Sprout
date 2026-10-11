@@ -1,0 +1,183 @@
+/*
+  Sprout dashboard: the homepage landscape, lived in.
+  Misty hills above, paper surfaces in the middle, soil at the foot of the page.
+  No sidebar: a slim bar floats on top, and each app is a plant in the garden.
+  Components use the sp- prefix.
+*/
+
+.sp-frame {
+  --sp-soil-900: #241b11;
+  --sp-soil-800: #35281a;
+  --sp-soil-700: #4a3925;
+  --sp-moss: #687642;
+  --sp-moss-deep: #526032;
+  --sp-sage: #9aa874;
+  --sp-sage-soft: #cdd5b0;
+  --sp-amber: #b87335;
+  --sp-cream: #fffaf2;
+  --sp-glow: rgba(104, 118, 66, 0.22);
+
+  /* Legacy names still used by area files not yet restyled. */
+  --sp-forest-950: var(--sp-soil-900);
+  --sp-forest-900: var(--sp-soil-800);
+  --sp-forest-800: var(--sp-soil-700);
+  --sp-forest-700: var(--sp-moss);
+  --sp-leaf: var(--sp-sage);
+  --sp-leaf-soft: var(--sp-sage-soft);
+  --sp-leaf-deep: var(--sp-moss-deep);
+  --sp-mist: rgba(255, 250, 242, 0.78);
+  --sp-mist-faint: rgba(255, 250, 242, 0.5);
+  --sp-line-dark: rgba(255, 250, 242, 0.12);
+
+  position: relative;
+  min-height: 100svh;
+  padding-top: 14px; /* not a bar margin: that would collapse through and expose the page canvas */
+  overflow: clip;
+  background:
+    radial-gradient(circle at 12% 6%, rgba(196, 143, 91, 0.12), transparent 30%),
+    radial-gradient(circle at 88% 14%, rgba(110, 126, 70, 0.1), transparent 30%),
+    linear-gradient(135deg, #f8f2e8, #f1eadf 55%, #eee5d7);
+}
+
+/* Sky and hills, fading into the paper */
+.sp-frame::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 auto;
+  height: 620px;
+  background: url("/images/landscape/landscape-full.webp") center 40% / cover;
+  opacity: 0.55;
+  mask-image: linear-gradient(180deg, #000 20%, transparent 100%);
+  pointer-events: none;
+  content: "";
+}
+
+/* Soil at the foot of every page */
+.sp-frame::after {
+  position: absolute;
+  z-index: 0;
+  inset: auto 0 0;
+  height: 300px;
+  background: url("/images/landscape/landscape-full.webp") center bottom / cover;
+  mask-image: linear-gradient(180deg, transparent 0%, #000 55%);
+  pointer-events: none;
+  content: "";
+}
+
+.sp-grain { position: absolute; z-index: 0; inset: 0; background: var(--paper-grain) 0 0 / 180px 180px; opacity: 0.6; pointer-events: none; }
+
+/*
+  The page is one continuous scene, so overscroll must not reveal the plain
+  canvas: stop the bounce, and where a browser still bounces, extend sky above
+  and soil below (the same approach as the landing page).
+*/
+html:has(.sp-frame) {
+  overscroll-behavior-y: none;
+  background: linear-gradient(180deg, #f1e8d6 0 50%, #1d170b 50% 100%);
+}
+body:has(.sp-frame) { background: transparent; }
+
+/* Bar: it scrolls away with the page instead of floating over content */
+.sp-bar {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  width: min(1160px, calc(100% - 40px));
+  align-items: center;
+  gap: 18px;
+  margin: 0 auto;
+  padding: 8px 10px 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: rgba(251, 247, 240, 0.78);
+  box-shadow: 0 18px 44px -26px rgba(91, 72, 49, 0.45), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  backdrop-filter: blur(16px) saturate(1.2);
+}
+
+.sp-bar-nav { display: flex; flex: 1; justify-content: center; gap: 2px; }
+.sp-bar-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out);
+}
+.sp-bar-link:hover { color: var(--ink); background: rgba(104, 118, 66, 0.08); }
+.sp-bar-link.active { background: rgba(104, 118, 66, 0.16); color: var(--sp-moss-deep); }
+.sp-bar-link.active::after {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 14px;
+  height: 2px;
+  margin-left: -7px;
+  border-radius: 2px;
+  background: var(--sp-moss);
+  content: "";
+}
+
+.sp-bar-end { display: flex; align-items: center; gap: 10px; }
+.sp-workspace { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 99px; background: rgba(255, 250, 242, 0.7); color: var(--sp-moss-deep); }
+.sp-workspace select { max-width: 150px; border: 0; background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; text-overflow: ellipsis; cursor: pointer; appearance: none; outline-offset: 6px; }
+.sp-workspace small { position: absolute; color: var(--muted); font-size: 0; }
+.sp-workspace-mark { display: grid; place-items: center; }
+.sp-bar-end .sp-button { padding: 8px 16px; font-size: 13px; }
+
+/* Page body */
+.sp-main { position: relative; z-index: 1; min-height: calc(100svh - 80px); padding-bottom: 260px; }
+.sp-main .dashboard-page { padding-top: 40px; }
+
+/* Buttons */
+.sp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 99px;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+.sp-button:hover { transform: translateY(-1px); }
+.sp-button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.sp-button-solid,
+.sp-button-glow {
+  background: linear-gradient(180deg, #76854c, var(--sp-moss-deep));
+  color: var(--sprout-ink);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 12px 26px -12px rgba(82, 96, 50, 0.85);
+}
+.sp-button-ghost,
+.sp-button-outline { border-color: var(--line-strong); background: rgba(255, 250, 242, 0.7); color: var(--ink); }
+.sp-button-ghost:hover,
+.sp-button-outline:hover { border-color: rgba(104, 118, 66, 0.55); background: var(--sp-cream); }
+.sp-eyebrow,
+.sp-eyebrow-dark { color: var(--sp-moss-deep); font-size: 11.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* Small screens: the bar stacks its links below the brand */
+@media (max-width: 820px) {
+  .sp-bar { flex-wrap: wrap; gap: 8px 12px; border-radius: 24px; padding: 10px 12px 8px 16px; }
+  .sp-bar-nav { order: 3; width: 100%; flex-basis: 100%; justify-content: flex-start; overflow-x: auto; }
+  .sp-bar > .brand { margin-right: auto; }
+  .sp-workspace { display: none; }
+  .sp-main .dashboard-page { width: calc(100% - 32px); padding-top: 28px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-bar-link, .sp-button { transition: none; }
+}
+
+/* Page transition */
+.sp-page-in { animation: sp-page-in 0.55s var(--ease-out) both; }
+@keyframes sp-page-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sp-page-in { animation: none; } }

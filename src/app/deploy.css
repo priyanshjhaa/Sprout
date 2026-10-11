@@ -1,0 +1,17 @@
+/* Deploy */
+.sp-deploy { display: grid; gap: 22px; }
+.sp-deploy-hero { display: grid; gap: 26px; padding-top: 14px; }
+.sp-deploy-hero h1 { margin: 6px 0 8px; color: var(--ink); font-family: var(--font-hero), Georgia, serif; font-size: clamp(34px, 4.2vw, 50px); font-weight: 400; letter-spacing: -0.03em; line-height: 1.06; }
+.sp-deploy-hero p { max-width: 540px; margin: 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
+.sp-deploy-hero .sp-pipeline { padding: 26px 18px 22px; border: 1px solid var(--line); border-radius: 24px; background: linear-gradient(180deg, rgba(255, 250, 242, 0.8), rgba(240, 231, 214, 0.75)); box-shadow: 0 28px 56px -42px rgba(60, 40, 20, 0.6); backdrop-filter: blur(8px); }
+
+.sp-panel { padding: 26px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); box-shadow: 0 28px 56px -44px rgba(60, 40, 20, 0.55); backdrop-filter: blur(8px); }
+.sp-panel-step { display: flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 13px; font-weight: 650; }
+.sp-panel-step b { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: var(--sp-moss); color: var(--sprout-ink); font-size: 12px; }
+.sp-deploy .deploy-card { padding: 26px; border: 1px solid var(--line); background: var(--surface); }
+.sp-deploy .deploy-form input { padding: 13px 14px; border-radius: 14px; font-size: 15px; }
+.sp-deploy .deploy-name { font-size: 12.5px; font-weight: 600; }
+.sp-deploy .upload-build { padding: 20px; border: 1.5px dashed rgba(104, 118, 66, 0.55); border-radius: 18px; background: linear-gradient(135deg, rgba(104, 118, 66, 0.1), transparent); }
+.sp-deploy-more { display: grid; gap: 4px; padding: 0 6px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.sp-deploy-more p { margin: 0 0 4px; }
+@media (max-width: 720px) { .sp-step small { display: none; } }

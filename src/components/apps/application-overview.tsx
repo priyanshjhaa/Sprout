@@ -2,7 +2,9 @@
 
 import { Archive, ArrowRight, Clock3, Lock, Pause, Rocket, TriangleAlert, Users } from "lucide-react";
 import Link from "next/link";
-import { useApplication, useDeployments } from "@/lib/query/hooks";
+import { StatusPill } from "@/components/status-pill";
+import { useApplication } from "@/lib/query/hooks";
+import { useLatestDeployment } from "@/lib/query/simulations";
 import type { Application } from "@/types/domain";
 
 // One clear next step for each lifecycle state.
@@ -18,9 +20,8 @@ function lifecycleSummary(application: Application, base: string) {
 
 export function ApplicationOverview({ workspaceSlug, appId }: { workspaceSlug: string; appId: string }) {
   const { data: application, isLoading, isError } = useApplication(workspaceSlug, appId);
-  const { data: deployments, isError: deploymentsError } = useDeployments(workspaceSlug, appId);
+  const { job: latest, kind, isError: deploymentsError } = useLatestDeployment(workspaceSlug, appId);
   const base = `/workspace/${workspaceSlug}/apps/${appId}`;
-  const latest = deployments?.[0];
 
   if (isLoading) return <div className="overview-loading"><span /><span /></div>;
   if (isError || !application) return <section className="soft-empty"><TriangleAlert size={20} /><h2>Application unavailable</h2><p>Sprout could not load this application with your current access.</p></section>;
@@ -29,36 +30,26 @@ export function ApplicationOverview({ workspaceSlug, appId }: { workspaceSlug: s
   const restricted = application.accessMode === "restricted";
 
   return (
-    <div className="overview-layout">
-      <section className="health-card">
-        <div className="health-copy">
-          <span className="health-icon"><summary.icon size={18} /></span>
-          <div><h2>{summary.title}</h2><span>{summary.detail}</span></div>
-        </div>
-        <Link className="button button-secondary" href={summary.action.href}>{summary.action.label} <ArrowRight size={14} /></Link>
+    <div className="sp-overview">
+      <section className="sp-next">
+        <span className="sp-next-icon"><summary.icon size={20} /></span>
+        <div><h2>{summary.title}</h2><p>{summary.detail}</p></div>
+        <Link className="sp-button sp-button-solid" href={summary.action.href}>{summary.action.label} <ArrowRight size={14} /></Link>
       </section>
 
-      <div className="overview-grid">
-        <section className="overview-card latest-deployment">
-          <div className="card-label"><span>Latest deployment</span><Clock3 size={14} /></div>
-          <div className="deployment-summary">
-            <div>
-              <strong>{deploymentsError ? "History unavailable" : latest ? `Simulation ${latest.status}` : "None yet"}</strong>
-              {!deploymentsError && latest && <small>{new Date(latest.createdAt).toLocaleString()}</small>}
-            </div>
-          </div>
-          <div className="overview-card-footer"><span /><Link href={`${base}/deployments`}>All deployments <ArrowRight size={13} /></Link></div>
+      <div className="sp-overview-grid">
+        <section className="sp-panel sp-fact">
+          <div className="sp-fact-label"><span>Latest deployment</span><Clock3 size={14} /></div>
+          <strong>{deploymentsError ? "History unavailable" : latest ? `${kind === "build" ? "Build" : "Simulation"} ${latest.status}` : "None yet"}</strong>
+          {!deploymentsError && latest && <small>{new Date(latest.createdAt).toLocaleString()}</small>}
+          <div className="sp-fact-foot">{latest && <StatusPill status={latest.status} />}<Link href={latest ? `${base}/deployments/${latest.id}${kind === "build" ? "?kind=build" : ""}` : `${base}/deployments`}>{latest ? "Open it" : "Deployments"} <ArrowRight size={13} /></Link></div>
         </section>
 
-        <section className="overview-card">
-          <div className="card-label"><span>Who can manage it</span>{restricted ? <Lock size={14} /> : <Users size={14} />}</div>
-          <div className="deployment-summary">
-            <div>
-              <strong>{restricted ? "Only invited people" : "Everyone in this workspace"}</strong>
-              <small>{restricted ? "Owners, its creator, and people you grant access." : "By their workspace role."} Anyone can open it once it is live.</small>
-            </div>
-          </div>
-          <div className="overview-card-footer"><span /><Link href={`${base}/access`}>Manage access <ArrowRight size={13} /></Link></div>
+        <section className="sp-panel sp-fact">
+          <div className="sp-fact-label"><span>Who can manage it</span>{restricted ? <Lock size={14} /> : <Users size={14} />}</div>
+          <strong>{restricted ? "Only invited people" : "Everyone in this workspace"}</strong>
+          <small>{restricted ? "Owners, its creator, and people you grant access." : "By their workspace role."} Anyone can open it once it is live.</small>
+          <div className="sp-fact-foot"><span /><Link href={`${base}/access`}>Manage access <ArrowRight size={13} /></Link></div>
         </section>
       </div>
     </div>

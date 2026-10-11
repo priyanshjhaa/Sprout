@@ -1,0 +1,46 @@
+/*
+  Seasons: a paused app is under frost, an archived app is a pressed leaf.
+  Live and building apps stay in leaf. State is shown by more than colour:
+  frost gets a cool crystalline edge, archives get a dashed, aged border.
+*/
+
+/* Winter: paused */
+.sp-card-paused,
+.sp-row-paused,
+.sp-app-hero-paused {
+  border-color: rgba(120, 150, 165, 0.35);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 40%),
+    linear-gradient(180deg, #eef3f2, #e1e9e8);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7) inset, 0 20px 44px -34px rgba(60, 90, 110, 0.5);
+}
+.sp-card-paused { --tint: #8aa7b4; }
+.sp-card-paused .sp-monogram,
+.sp-row-paused .sp-monogram { filter: saturate(0.4) hue-rotate(160deg); }
+.sp-card-paused h2,
+.sp-row-paused .sp-row-main strong { color: #4d6470; }
+.sp-row-paused::before { background: #8aa7b4; }
+.sp-app-hero-paused { --hero-glow: rgba(138, 167, 180, 0.35); }
+
+/* Pressed leaf: archived */
+.sp-card-archived,
+.sp-row-archived,
+.sp-app-hero-archived {
+  border-style: dashed;
+  border-color: rgba(150, 120, 80, 0.4);
+  background:
+    var(--paper-grain) 0 0 / 160px 160px,
+    linear-gradient(180deg, #f1e6cd, #e8dabb);
+  box-shadow: 0 14px 30px -28px rgba(90, 65, 30, 0.5);
+}
+.sp-card-archived { --tint: #b9a27a; }
+.sp-card-archived .sp-monogram,
+.sp-row-archived .sp-monogram { filter: sepia(0.7) saturate(0.7); }
+.sp-card-archived h2,
+.sp-row-archived .sp-row-main strong { color: #6e5a3c; }
+.sp-card-archived p,
+.sp-card-archived .sp-card-foot { color: #8f7c5c; }
+.sp-row-archived::before { background: #b9a27a; }
+.sp-app-hero-archived { --hero-glow: rgba(185, 162, 122, 0.3); }
+a.sp-card-paused:hover { border-color: rgba(120, 150, 165, 0.6); }
+a.sp-card-archived:hover { border-color: rgba(150, 120, 80, 0.65); }

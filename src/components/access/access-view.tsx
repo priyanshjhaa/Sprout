@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useSessionAuth as useAuth } from "@/lib/query/session";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link2, ShieldCheck } from "lucide-react";
 import { api } from "@/lib/api/api";
