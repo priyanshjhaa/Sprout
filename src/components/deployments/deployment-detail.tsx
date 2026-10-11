@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, Circle, FlaskConical, Hammer } from "lucide-react";
+import { Check, FlaskConical, Hammer } from "lucide-react";
 import Link from "next/link";
+import { Pipeline } from "@/components/pipeline";
 import { StatusPill } from "@/components/status-pill";
 import { isActiveSimulation } from "@/lib/api/simulation-stream";
 import type { JobKind } from "@/lib/api/simulations";
@@ -34,7 +35,7 @@ export function DeploymentDetail({ workspaceSlug, appId, deploymentId, kind }: {
   const job = query.data;
   const base = `/workspace/${workspaceSlug}/apps/${appId}/deployments`;
   return (
-    <section className="app-section deployment-detail simulation-view">
+    <section className="app-section deployment-detail simulation-view sp-detail">
       <Link className="section-back" href={base}>← Deployments</Link>
       {query.isPending && <p className="simulation-notice" role="status">Loading simulation…</p>}
       {(query.isError || query.streamError) ? <div className="simulation-notice" role="alert">
@@ -47,11 +48,7 @@ export function DeploymentDetail({ workspaceSlug, appId, deploymentId, kind }: {
         </header>
         {action.isError && <p className="simulation-notice" role="alert">{action.error?.message}</p>}
         <p className="simulation-note" role="status" aria-live="polite">{isActiveSimulation(job) ? query.streamState === "live" ? "Receiving live progress" : query.streamState === "reconnecting" ? "Reconnecting — the worker continues in the background" : "Connecting to live progress…" : `${isBuild ? "Build" : "Run"} ${job.status}.`}</p>
-        <ol className="deployment-stages simulation-stages" aria-label="Simulation progress">
-          {job.stages.map((stage) => <li className={stage.status === "succeeded" ? "complete" : stage.status === "failed" ? "failed" : ""} key={stage.name}>
-            <span>{stage.status === "succeeded" ? <Check size={12} /> : <Circle size={10} />}</span><strong>{stage.name}</strong><small>{stage.status}</small>
-          </li>)}
-        </ol>
+        <div className={`sp-run sp-run-${job.status}`}><Pipeline stages={job.stages} /></div>
         {job.failureCode && <p className="simulation-notice">{failureExplanations[job.failureCode] ?? "It did not finish."} <code>{job.failureCode}</code></p>}
         {isBuild && job.status === "succeeded" && <p className="simulation-notice"><Check size={14} /> Built and stored. Starting it and giving it a URL comes next.</p>}
         <p className="simulation-note">{isBuild

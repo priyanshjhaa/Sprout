@@ -524,3 +524,23 @@ a.sp-card:hover .sp-card-foot svg { color: var(--sprout-strong); transform: tran
 .sp-fact-foot a { display: inline-flex; align-items: center; gap: 5px; color: var(--sprout-strong); font-size: 13px; font-weight: 650; }
 .sp-fact-foot a:hover { text-decoration: underline; }
 @media (max-width: 720px) { .sp-next { flex-wrap: wrap; } }
+
+/* Deployment detail */
+.sp-detail .section-heading h2 { font-family: var(--font-hero), Georgia, serif; font-size: 26px; font-weight: 400; letter-spacing: -0.02em; }
+.sp-run {
+  position: relative;
+  padding: 34px 28px;
+  overflow: hidden;
+  border: 1px solid var(--sp-line-dark);
+  border-radius: 24px;
+  background:
+    radial-gradient(60% 100% at 50% 130%, var(--run-glow, rgba(143, 209, 106, 0.2)), transparent 70%),
+    linear-gradient(160deg, var(--sp-forest-800), var(--sp-forest-950));
+  box-shadow: 0 30px 60px -38px rgba(11, 20, 16, 0.7);
+}
+.sp-run::before { position: absolute; inset: 0; background: var(--paper-grain); opacity: 0.08; mix-blend-mode: screen; pointer-events: none; content: ""; }
+.sp-run > * { position: relative; }
+.sp-run-building { --run-glow: rgba(93, 127, 142, 0.4); }
+.sp-run-succeeded { --run-glow: rgba(143, 209, 106, 0.4); }
+.sp-run-failed { --run-glow: rgba(184, 95, 80, 0.4); }
+.sp-run-cancelled { --run-glow: rgba(150, 138, 124, 0.25); }
