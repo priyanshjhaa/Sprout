@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SignOutButton, UserButton } from "@clerk/nextjs";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { CommandPalette } from "@/components/dashboard/command-palette";
 import { Brand } from "@/components/brand";
 import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
 
@@ -73,6 +74,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           {navigation(navigationItems)}
         </nav>
         <div className="sp-bar-end">
+          <CommandPalette workspaceSlug={workspaceSlug} />
           <div className="sp-workspace">
             <span className="sp-workspace-mark"><Sprout size={15} strokeWidth={2} /></span>
             <label><span className="sr-only">Switch workspace</span>
