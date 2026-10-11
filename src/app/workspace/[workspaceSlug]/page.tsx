@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { WorkspaceHome } from "@/components/dashboard/workspace-home";
 
 export default async function WorkspacePage({
   params,
@@ -6,6 +6,5 @@ export default async function WorkspacePage({
   params: Promise<{ workspaceSlug: string }>;
 }) {
   const { workspaceSlug } = await params;
-  redirect(`/workspace/${workspaceSlug}/deploy`);
+  return <WorkspaceHome workspaceSlug={workspaceSlug} />;
 }
-

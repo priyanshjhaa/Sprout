@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, LogOut, Menu, Rocket, Sprout, Users, X } from "lucide-react";
+import { Boxes, LayoutDashboard, LogOut, Menu, Rocket, Sprout, Users, X } from "lucide-react";
 import Link from "next/link";
 import { SignOutButton, useUser, UserButton } from "@clerk/nextjs";
 import { useParams, usePathname, useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { Brand } from "@/components/brand";
 import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
 
 const navigationItems = [
+  { label: "Overview", path: "", icon: LayoutDashboard },
   { label: "Apps", path: "apps", icon: Boxes },
   { label: "Team", path: "team", icon: Users },
 ];
@@ -25,7 +26,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   const navigation = (items: typeof navigationItems) =>
     items.map(({ label, path, icon: Icon }) => {
-      const href = `/workspace/${workspaceSlug}/${path}`;
+      const href = path ? `/workspace/${workspaceSlug}/${path}` : `/workspace/${workspaceSlug}`;
       const active = pathname === href || (path === "apps" && pathname.startsWith(`${href}/`));
       return (
         <Link
@@ -64,7 +65,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <div className="sp-workspace">
           <span className="sp-workspace-mark"><Sprout size={16} strokeWidth={2} /></span>
           <label><span className="sr-only">Switch workspace</span>
-            <select value={workspaceSlug} aria-label="Switch workspace" disabled={workspaces.isLoading || workspaces.isError} onChange={(event) => { setMobileOpen(false); router.push(`/workspace/${encodeURIComponent(event.target.value)}/apps`); }}>
+            <select value={workspaceSlug} aria-label="Switch workspace" disabled={workspaces.isLoading || workspaces.isError} onChange={(event) => { setMobileOpen(false); router.push(`/workspace/${encodeURIComponent(event.target.value)}`); }}>
               {!workspaces.data?.some((item) => item.slug === workspaceSlug) && <option value={workspaceSlug}>{workspace?.name ?? "Your workspace"}</option>}
               {workspaces.data?.map((item) => <option value={item.slug} key={item.id}>{item.name}</option>)}
             </select>

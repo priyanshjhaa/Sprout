@@ -17,7 +17,7 @@ export function StartWorkspace() {
   });
 
   useEffect(() => {
-    if (data) router.replace(`/workspace/${data.workspace.slug}/apps`);
+    if (data) router.replace(`/workspace/${data.workspace.slug}`);
   }, [data, router]);
 
   return (
