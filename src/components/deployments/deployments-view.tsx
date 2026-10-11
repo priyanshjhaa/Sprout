@@ -58,7 +58,7 @@ function Simulations({ workspaceSlug, appId, active, titled }: { workspaceSlug: 
     <div className="deployment-group">
       <div className="deployment-group-heading">
         {titled ? <h3>Simulations</h3> : <span />}
-        <button className="button button-secondary" type="button" disabled={!canStart}
+        <button className="sp-button sp-button-outline" type="button" disabled={!canStart}
           onClick={() => action.mutate(undefined, { onSuccess: (job) => router.push(`${base}/${job.id}`) })}>
           <Play size={14} /> {action.isPending ? "Starting…" : "Run simulation"}
         </button>
@@ -84,14 +84,14 @@ function JobList({ query, workspaceSlug, appId, kind, empty }: {
   if (!query.data?.length) return <p className="simulation-note">{empty}</p>;
   return (
     <>
-      <div className="deployment-list">
+      <div className="sp-rows">
         {query.data.map((job) => (
-          <Link className="deployment-row" href={`${base}/${job.id}${kind === "build" ? "?kind=build" : ""}`} key={job.id}>
-            <span className="deployment-icon"><Icon size={15} /></span>
-            <div className="deployment-main"><div><strong>{label} {job.id.slice(0, 8)}</strong></div><span>{job.stages.filter((stage) => stage.status === "succeeded").length} of 3 steps complete</span></div>
+          <Link className={`sp-row sp-row-${job.status === "succeeded" ? "running" : job.status === "queued" ? "building" : job.status}`} href={`${base}/${job.id}${kind === "build" ? "?kind=build" : ""}`} key={job.id}>
+            <span className="sp-monogram sp-job-icon"><Icon size={16} /></span>
+            <span className="sp-row-main"><strong>{label} {job.id.slice(0, 8)}</strong><small>{job.stages.filter((stage) => stage.status === "succeeded").length} of 3 steps complete</small></span>
             <StatusPill status={job.status} />
-            <div className="deployment-time"><strong>{new Date(job.createdAt).toLocaleString()}</strong></div>
-            <ArrowRight className="deployment-arrow" size={14} />
+            <span className="sp-row-time">{new Date(job.createdAt).toLocaleString()}</span>
+            <ArrowRight size={14} />
           </Link>
         ))}
       </div>

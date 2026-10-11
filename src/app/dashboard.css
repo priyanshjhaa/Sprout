@@ -544,3 +544,8 @@ a.sp-card:hover .sp-card-foot svg { color: var(--sprout-strong); transform: tran
 .sp-run-succeeded { --run-glow: rgba(143, 209, 106, 0.4); }
 .sp-run-failed { --run-glow: rgba(184, 95, 80, 0.4); }
 .sp-run-cancelled { --run-glow: rgba(150, 138, 124, 0.25); }
+
+.sp-job-icon { background: linear-gradient(135deg, var(--sp-forest-700), var(--sp-forest-900)); color: var(--sp-leaf-soft); }
+.sp-row-time { white-space: nowrap; }
+.sp-button-outline { border-color: var(--line-strong); background: var(--surface); color: var(--ink); }
+.sp-button-outline:hover { border-color: rgba(79, 138, 58, 0.5); }
