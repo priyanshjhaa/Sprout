@@ -4,6 +4,7 @@ import { ArrowRight, Check, Play } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { Pipeline } from "@/components/pipeline";
 import { UploadBuild } from "@/components/deployments/upload-build";
 import { useApplications, useCreateApplication } from "@/lib/query/hooks";
 import { useCapabilities, useSimulationActions } from "@/lib/query/simulations";
@@ -34,19 +35,24 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
   const localBuilds = useCapabilities().data?.localBuilds === true;
 
   return (
-    <main className="dashboard-page compact-page deploy-page">
-      <header className="page-heading">
-        <h1>Deploy an app</h1>
-        <p>Sprout builds it sealed off, checks its health, and only then gives your team an address.</p>
+    <main className="dashboard-page compact-page sp-deploy">
+      <header className="sp-deploy-hero">
+        <div>
+          <span className="sp-eyebrow">Deploy</span>
+          <h1>From code to a public URL.</h1>
+          <p>Sprout builds it sealed off, checks its health, and only then gives it an address.</p>
+        </div>
+        <Pipeline stages={application ? [{ name: "source", status: "running" }] : undefined} />
       </header>
 
-      <section className="deploy-card" aria-live="polite">
+      <section className="sp-panel deploy-card" aria-live="polite">
+        <p className="sp-panel-step"><b>{application ? 2 : 1}</b> {application ? "Send the source" : "Name your application"}</p>
         {application
           ? <RunDeployment workspaceSlug={workspaceSlug} application={application} localBuilds={localBuilds} onReset={() => setApplication(null)} />
           : <CreateApplicationForm workspaceSlug={workspaceSlug} onCreated={setApplication} />}
       </section>
 
-      <div className="deploy-note">
+      <div className="sp-deploy-more deploy-note">
         {localBuilds
           ? <p>Local builds are on: an uploaded .tar is built in a sealed container on this machine. Starting it at a public URL comes next.</p>
           : <p>Until uploads are enabled, a run is a simulation: no code executes.</p>}
@@ -84,7 +90,7 @@ function CreateApplicationForm({ workspaceSlug, onCreated }: { workspaceSlug: st
         <input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120}
           placeholder="Invoice approvals" disabled={create.isPending} autoFocus />
       </label>
-      <button className="button button-primary" disabled={create.isPending || !name.trim() || !effectiveSlug}>
+      <button className="sp-button sp-button-solid" disabled={create.isPending || !name.trim() || !effectiveSlug}>
         {create.isPending ? "Creating…" : "Create application"}
       </button>
       <div className="deploy-slug">
@@ -119,7 +125,7 @@ function RunDeployment({ workspaceSlug, application, localBuilds, onReset }: { w
       <div className="deploy-run-actions">
         {localBuilds
           ? <button className="text-button" type="button" disabled={action.isPending} onClick={simulate}>{action.isPending ? "Starting…" : "Run a simulation instead"}</button>
-          : <button className="button button-primary" type="button" disabled={action.isPending} onClick={simulate}>
+          : <button className="sp-button sp-button-solid" type="button" disabled={action.isPending} onClick={simulate}>
               <Play size={14} /> {action.isPending ? "Starting…" : "Run simulation"}
             </button>}
         <button className="text-button" type="button" onClick={onReset}>Create another</button>
