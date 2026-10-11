@@ -2,6 +2,7 @@
 
 import { ArrowRight, Rocket } from "lucide-react";
 import Link from "next/link";
+import { Plant } from "@/components/plant";
 import { StatusPill } from "@/components/status-pill";
 import { useApplications, useWorkspace } from "@/lib/query/hooks";
 import type { AppStatus, Application } from "@/types/domain";
@@ -30,28 +31,42 @@ export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
   return (
     <main className="dashboard-page sp-home">
       <section className="sp-hero" aria-labelledby="sp-home-title">
-        <div className="sp-hero-copy">
-          <span className="sp-eyebrow">{workspace?.name ?? "Your workspace"}</span>
-          <h1 id="sp-home-title">
-            {isLoading ? "Checking your garden…" : !apps?.length ? "Plant your first app." : live > 0 ? <>{live} {live === 1 ? "app is" : "apps are"} live.</> : "Nothing is live yet."}
-          </h1>
-          <p>Send code in, get a healthy public URL out. Sprout builds it sealed off, checks it, and keeps it easy to pause, recover, or retire.</p>
-          <div className="sp-hero-actions">
-            <Link className="sp-button sp-button-glow" href={`${base}/deploy`}><Rocket size={16} /> Deploy an app</Link>
-            {!!apps?.length && <Link className="sp-button sp-button-ghost" href={`${base}/apps`}>All apps <ArrowRight size={15} /></Link>}
-          </div>
+        <span className="sp-eyebrow">{workspace?.name ?? "Your workspace"}</span>
+        <h1 id="sp-home-title">
+          {isLoading ? "Checking your garden…" : !apps?.length ? "Plant your first app." : live > 0 ? <>{live} {live === 1 ? "app is" : "apps are"} live.</> : "Nothing is live yet."}
+        </h1>
+        <p>Send code in, get a healthy public URL out. Sprout builds it sealed off, checks it, and keeps it easy to pause, recover, or retire.</p>
+        <div className="sp-hero-actions">
+          <Link className="sp-button sp-button-solid" href={`${base}/deploy`}><Rocket size={16} /> Deploy an app</Link>
+          {!!apps?.length && <Link className="sp-button sp-button-ghost" href={`${base}/apps`}>All apps <ArrowRight size={15} /></Link>}
         </div>
-
-        <ol className="sp-lifecycle" aria-label="Apps by lifecycle state">
-          {phases.map((phase) => (
-            <li className={`sp-phase sp-phase-${phase.status}${count(phase.status) ? " has-apps" : ""}`} key={phase.status}>
-              <strong>{isLoading ? "–" : count(phase.status)}</strong>
-              <span>{phase.label}</span>
-              <small>{phase.hint}</small>
-            </li>
-          ))}
-        </ol>
       </section>
+
+      <section className="sp-bed" aria-label="Your apps as plants">
+        {sorted.length ? (
+          <ul className="sp-bed-row">
+            {sorted.slice(0, 10).map((app) => (
+              <li key={app.id}>
+                <Link href={`${base}/apps/${app.id}`} className={`sp-bed-plant sp-bed-${app.status}`} title={`${app.name}: ${app.status}`}>
+                  <Plant status={app.status} />
+                  <span className="sp-bed-label"><strong>{app.name}</strong><small>{phases.find((phase) => phase.status === app.status)?.label}</small></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="sp-bed-empty"><Plant status="undeployed" /><span>{isLoading ? "Looking at the soil…" : "The soil is ready."}</span></div>
+        )}
+        <div className="sp-bed-soil" aria-hidden="true" />
+      </section>
+
+      <ol className="sp-lifecycle" aria-label="Apps by lifecycle state">
+        {phases.map((phase) => (
+          <li className={`sp-phase sp-phase-${phase.status}${count(phase.status) ? " has-apps" : ""}`} key={phase.status} title={phase.hint}>
+            <i aria-hidden="true" /><strong>{isLoading ? "–" : count(phase.status)}</strong><span>{phase.label}</span>
+          </li>
+        ))}
+      </ol>
 
       <section className="sp-garden" aria-labelledby="sp-garden-title">
         <header className="sp-section-head">
