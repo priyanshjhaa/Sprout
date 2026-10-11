@@ -30,7 +30,8 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
   return (
     <main className="dashboard-page sp-apps">
       <header className="sp-apps-head">
-        <div><span className="sp-eyebrow-dark">Apps</span><h1>Everything you have planted.</h1></div>
+        <span className="sp-eyebrow-dark">Apps</span>
+        <h1>Everything you have planted.</h1>
         {hasApplications && <Link className="sp-button sp-button-solid" href={`/workspace/${workspaceSlug}/deploy`}><Plus size={16} /> Deploy app</Link>}
       </header>
 
@@ -68,7 +69,7 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
                 <StatusPill status={app.status} />
               </div>
               <h2>{app.name}</h2>
-              <p>{app.description || app.url}</p>
+              {app.description && <p>{app.description}</p>}
               <div className="sp-card-foot"><span>{app.url}</span><ArrowRight size={15} /></div>
             </Link>
           ))}
