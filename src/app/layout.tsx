@@ -5,6 +5,12 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 import "./dashboard.css";
+import "./garden.css";
+import "./pipeline.css";
+import "./deploy.css";
+import "./apps.css";
+import "./app-page.css";
+import "./run.css";
 
 const heroFont = Lora({
   subsets: ["latin"],
