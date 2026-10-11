@@ -68,7 +68,7 @@ export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
         ))}
       </ol>
 
-      <section className="sp-garden" aria-labelledby="sp-garden-title">
+      {(isLoading || isError || sorted.length > 0) && <section className="sp-garden" aria-labelledby="sp-garden-title">
         <header className="sp-section-head">
           <h2 id="sp-garden-title">Your garden</h2>
           <span>Needs attention first</span>
@@ -78,12 +78,10 @@ export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
           <div className="sp-rows" aria-label="Loading applications">{[0, 1, 2].map((item) => <div className="sp-row sp-row-skeleton" key={item} />)}</div>
         ) : isError ? (
           <div className="sp-empty"><h3>Applications could not be loaded</h3><p>You can safely try again.</p><button className="sp-button sp-button-ghost" onClick={() => refetch()}>Try again</button></div>
-        ) : sorted.length === 0 ? (
-          <div className="sp-empty"><h3>No apps yet</h3><p>Deploy one and it appears here with its own public address.</p></div>
         ) : (
           <ul className="sp-rows">{sorted.map((app) => <AppRow app={app} base={base} key={app.id} />)}</ul>
         )}
-      </section>
+      </section>}
     </main>
   );
 }

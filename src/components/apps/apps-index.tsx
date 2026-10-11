@@ -4,6 +4,7 @@ import { ArrowRight, Boxes, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { AppStatus } from "@/types/domain";
+import { EmptyState } from "@/components/empty-state";
 import { StatusPill } from "@/components/status-pill";
 import { useApplications } from "@/lib/query/hooks";
 
@@ -53,13 +54,13 @@ export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
       ) : isError ? (
         <section className="soft-empty"><Boxes size={20} /><h2>Applications could not be loaded</h2><p>Sprout could not reach your applications. You can safely try again.</p><button className="button button-secondary" onClick={() => refetch()}>Try again</button></section>
       ) : applications?.length === 0 ? (
-        <section className="apps-empty">
-          <h2>No apps yet</h2>
-          <p>Deploy one and it will appear here with its own public address.</p>
-          <Link className="button button-primary" href={`/workspace/${workspaceSlug}/deploy`}>Deploy your first app <ArrowRight size={16} /></Link>
-        </section>
+        <EmptyState plant="undeployed" title="No apps yet" action={<Link className="sp-button sp-button-solid" href={`/workspace/${workspaceSlug}/deploy`}>Deploy your first app <ArrowRight size={16} /></Link>}>
+          Deploy one and it will appear here with its own public address.
+        </EmptyState>
       ) : visibleApplications.length === 0 ? (
-        <section className="soft-empty"><Search size={20} /><h2>No applications match</h2><p>Try a different name or filter.</p><button className="button button-secondary" onClick={() => { setSearch(""); setFilter(0); }}>Clear filters</button></section>
+        <EmptyState plant="archived" title="Nothing matches" action={<button className="sp-button sp-button-outline" onClick={() => { setSearch(""); setFilter(0); }}>Clear filters</button>}>
+          No app fits that name or state. Try another search or filter.
+        </EmptyState>
       ) : (
         <section className="sp-grid" aria-label="Applications">
           {visibleApplications.map((app) => (
