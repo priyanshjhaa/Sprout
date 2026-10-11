@@ -3,8 +3,12 @@
 .sp-step { position: relative; display: grid; justify-items: center; gap: 3px; text-align: center; }
 .sp-step::before { position: absolute; top: 21px; right: 50%; left: -50%; height: 2px; background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 11px); content: ""; }
 .sp-step:first-child::before { display: none; }
-.sp-step-succeeded::before { background: var(--sp-moss); }
-.sp-step-failed::before { background: var(--danger); }
+/* The connector grows from the previous node like a stem when a step completes. */
+.sp-step::after { position: absolute; top: 21px; right: 50%; left: -50%; height: 2px; border-radius: 2px; background: var(--sp-moss); transform: scaleX(0); transform-origin: left center; content: ""; }
+.sp-step:first-child::after { display: none; }
+.sp-step-succeeded::after { transform: none; animation: sp-stem 0.8s var(--ease-out) both; }
+.sp-step-failed::after { background: var(--danger); transform: none; animation: sp-stem 0.6s var(--ease-out) both; }
+.sp-step-succeeded .sp-step-node { animation: sp-bloom 0.7s 0.55s var(--ease-out) both; }
 .sp-step-node {
   position: relative;
   display: grid;
@@ -24,5 +28,9 @@
 .sp-step-failed .sp-step-node { border-color: var(--danger); background: var(--danger); color: #fff; }
 .sp-step-live .sp-step-node { border-style: dashed; }
 .sp-step-live strong { color: var(--muted); }
+@keyframes sp-stem { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes sp-bloom { 0% { transform: scale(0.82); } 55% { transform: scale(1.14); } 100% { transform: scale(1); } }
 @keyframes sp-ring { 0% { box-shadow: 0 0 0 0 rgba(184, 115, 53, 0.35); } 100% { box-shadow: 0 0 0 14px rgba(184, 115, 53, 0); } }
-@media (prefers-reduced-motion: reduce) { .sp-step-running .sp-step-node { animation: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sp-step-running .sp-step-node, .sp-step-succeeded .sp-step-node, .sp-step-succeeded::after, .sp-step-failed::after { animation: none; }
+}
