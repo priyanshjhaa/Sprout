@@ -11,6 +11,7 @@ import "./deploy.css";
 import "./apps.css";
 import "./app-page.css";
 import "./run.css";
+import "./forms.css";
 
 const heroFont = Lora({
   subsets: ["latin"],
