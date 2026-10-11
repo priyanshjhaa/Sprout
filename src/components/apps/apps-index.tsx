@@ -19,7 +19,7 @@ const filters: Array<{ label: string; statuses: AppStatus[] | null }> = [
 export function AppsIndex({ workspaceSlug }: { workspaceSlug: string }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState(0);
-  const { data: applications, isLoading, isError, refetch } = useApplications(workspaceSlug);
+  const { data: applications, isPending: isLoading, isError, refetch } = useApplications(workspaceSlug);
   const visibleApplications = useMemo(
     () => applications?.filter((app) => app.name.toLowerCase().includes(search.toLowerCase()) && (filters[filter].statuses?.includes(app.status) ?? true)) ?? [],
     [applications, search, filter],

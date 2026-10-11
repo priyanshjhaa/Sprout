@@ -47,7 +47,9 @@ function useLean() {
 export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
   const lean = useLean();
   const { data: workspace } = useWorkspace(workspaceSlug);
-  const { data: apps, isLoading, isError, refetch } = useApplications(workspaceSlug);
+  // isPending, not isLoading: the query is disabled until Clerk restores the session,
+  // and isLoading would read false (and show "no apps") during that gap.
+  const { data: apps, isPending: isLoading, isError, refetch } = useApplications(workspaceSlug);
   const base = `/workspace/${workspaceSlug}`;
   const count = (status: AppStatus) => apps?.filter((app) => app.status === status).length ?? 0;
   const sorted = [...(apps ?? [])].sort((a, b) => attentionOrder.indexOf(a.status) - attentionOrder.indexOf(b.status));
