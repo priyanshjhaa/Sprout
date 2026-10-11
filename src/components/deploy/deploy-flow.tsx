@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Pipeline } from "@/components/pipeline";
 import { UploadBuild } from "@/components/deployments/upload-build";
+import { slugify } from "@/lib/slug";
 import { useApplications, useCreateApplication } from "@/lib/query/hooks";
 import { useCapabilities, useSimulationActions } from "@/lib/query/simulations";
 import type { Application } from "@/types/domain";
@@ -25,10 +26,6 @@ const contract = [
   "No Dockerfile, node_modules, .env files, or credentials",
   "Static sites and Python apps are next",
 ];
-
-function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 63).replace(/-+$/, "");
-}
 
 export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
   const [application, setApplication] = useState<Application | null>(null);

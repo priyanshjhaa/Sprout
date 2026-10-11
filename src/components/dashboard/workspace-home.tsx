@@ -3,6 +3,7 @@
 import { ArrowRight, Rocket } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useRef } from "react";
+import { DropToDeploy } from "@/components/dashboard/drop-to-deploy";
 import { Plant } from "@/components/plant";
 import { StatusPill } from "@/components/status-pill";
 import { useApplications, useWorkspace } from "@/lib/query/hooks";
@@ -54,6 +55,7 @@ export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
 
   return (
     <main className="dashboard-page sp-home">
+      <DropToDeploy workspaceSlug={workspaceSlug} />
       <section className="sp-hero" aria-labelledby="sp-home-title">
         <span className="sp-eyebrow">{workspace?.name ?? "Your workspace"}</span>
         <h1 id="sp-home-title">
