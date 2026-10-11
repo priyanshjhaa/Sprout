@@ -2,6 +2,7 @@
 
 import { ArrowRight, Rocket } from "lucide-react";
 import Link from "next/link";
+import { useCallback, useRef } from "react";
 import { Plant } from "@/components/plant";
 import { StatusPill } from "@/components/status-pill";
 import { useApplications, useWorkspace } from "@/lib/query/hooks";
@@ -20,7 +21,30 @@ const phases: Array<{ status: AppStatus; label: string; hint: string }> = [
 // Apps that need a person come first, then work in motion, then the calm ones.
 const attentionOrder: AppStatus[] = ["failed", "building", "undeployed", "running", "paused", "archived"];
 
+// Plants lean a few degrees toward the pointer, like seedlings toward light.
+function useLean() {
+  const frame = useRef(0);
+  const onPointerMove = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType !== "mouse") return;
+    const { currentTarget, clientX } = event;
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      for (const plant of currentTarget.querySelectorAll<HTMLElement>(".sp-bed-plant")) {
+        const box = plant.getBoundingClientRect();
+        const offset = (clientX - (box.left + box.width / 2)) / 220;
+        plant.style.setProperty("--lean", `${Math.max(-7, Math.min(7, offset * 7)).toFixed(2)}deg`);
+      }
+    });
+  }, []);
+  const onPointerLeave = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    cancelAnimationFrame(frame.current);
+    for (const plant of event.currentTarget.querySelectorAll<HTMLElement>(".sp-bed-plant")) plant.style.setProperty("--lean", "0deg");
+  }, []);
+  return { onPointerMove, onPointerLeave };
+}
+
 export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
+  const lean = useLean();
   const { data: workspace } = useWorkspace(workspaceSlug);
   const { data: apps, isLoading, isError, refetch } = useApplications(workspaceSlug);
   const base = `/workspace/${workspaceSlug}`;
@@ -42,11 +66,11 @@ export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
         </div>
       </section>
 
-      <section className="sp-bed" aria-label="Your apps as plants">
+      <section className="sp-bed" aria-label="Your apps as plants" {...lean}>
         {sorted.length ? (
           <ul className="sp-bed-row">
-            {sorted.slice(0, 10).map((app) => (
-              <li key={app.id}>
+            {sorted.slice(0, 10).map((app, index) => (
+              <li key={app.id} style={{ "--i": index } as React.CSSProperties}>
                 <Link href={`${base}/apps/${app.id}`} className={`sp-bed-plant sp-bed-${app.status}`} title={`${app.name}: ${app.status}`}>
                   <Plant status={app.status} />
                   <span className="sp-bed-label"><strong>{app.name}</strong><small>{phases.find((phase) => phase.status === app.status)?.label}</small></span>
