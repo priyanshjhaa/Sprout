@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSessionAuth as useAuth } from "@/lib/query/session";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/api";
 import { useInvitations, useMe, useWorkspaceMembers } from "@/lib/query/hooks";

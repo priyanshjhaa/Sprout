@@ -20,7 +20,9 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.7",
+    "@tanstack/query-sync-storage-persister": "^5.104.1",
     "@tanstack/react-query": "latest",
+    "@tanstack/react-query-persist-client": "^5.104.1",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "latest",

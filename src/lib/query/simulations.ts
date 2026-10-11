@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSessionAuth as useAuth } from "@/lib/query/session";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { request } from "@/lib/api/api";
 import { builds, jobsFor, simulations, type JobKind } from "@/lib/api/simulations";

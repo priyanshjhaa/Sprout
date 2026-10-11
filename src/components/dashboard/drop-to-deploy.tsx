@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useSessionAuth as useAuth } from "@/lib/query/session";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileArchive, Sprout } from "lucide-react";
 import { useRouter } from "next/navigation";

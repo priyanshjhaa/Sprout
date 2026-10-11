@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@clerk/nextjs";
+import { useSessionAuth as useAuth } from "@/lib/query/session";
 import { api } from "@/lib/api/api";
 import { queryKeys } from "@/lib/query/keys";
 import { simulations } from "@/lib/api/simulations";
