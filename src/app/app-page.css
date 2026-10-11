@@ -45,3 +45,11 @@
 .sp-fact-foot a { display: inline-flex; align-items: center; gap: 5px; color: var(--sp-moss-deep); font-size: 13px; font-weight: 650; }
 .sp-fact-foot a:hover { text-decoration: underline; }
 @media (max-width: 720px) { .sp-next { flex-wrap: wrap; } }
+
+/* Address with copy / open */
+.sp-address { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; color: var(--muted); font-size: 12.5px; }
+.sp-address-label { font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; font-size: 11px; }
+.sp-address code { max-width: 100%; overflow: hidden; padding: 4px 10px; border-radius: 99px; background: rgba(36, 27, 17, 0.07); color: var(--ink); font-family: var(--font-mono-ui); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.sp-address-button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border: 1px solid var(--line-strong); border-radius: 99px; background: rgba(255, 250, 242, 0.8); color: var(--ink); font-size: 12px; font-weight: 650; cursor: pointer; transition: border-color 0.2s var(--ease-out), background 0.2s var(--ease-out); }
+.sp-address-button:hover { border-color: rgba(104, 118, 66, 0.6); background: var(--sp-cream); }
+.sp-address-button svg { color: var(--sp-moss-deep); }

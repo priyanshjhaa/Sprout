@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { StatusPill } from "@/components/status-pill";
+import { CopyAddress } from "@/components/copy-address";
 import { Pipeline } from "@/components/pipeline";
 import { useApplication } from "@/lib/query/hooks";
 import { useLatestDeployment } from "@/lib/query/simulations";
@@ -33,7 +34,7 @@ export function ApplicationShell({ children }: { children: ReactNode }) {
           <span className={`sp-monogram sp-monogram-lg accent-${application?.accent ?? "amber"}`}>{application?.name.slice(0, 2).toUpperCase() ?? "··"}</span>
           <div>
             <div className="sp-app-title"><h1>{isLoading ? "Loading application" : application?.name}</h1>{application && <StatusPill status={application.status} />}</div>
-            {application && <span className="sp-app-url">{application.status === "running" ? "Live at" : "Reserved address"} · {application.url}</span>}
+            {application && <CopyAddress url={application.url} live={application.status === "running"} />}
           </div>
         </div>
         <Pipeline stages={latest.job?.stages} />
