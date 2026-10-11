@@ -72,7 +72,7 @@
 */
 html:has(.sp-frame) {
   overscroll-behavior-y: none;
-  background: linear-gradient(180deg, #e6d8bd 0 50%, #1d170b 50% 100%);
+  background: linear-gradient(180deg, #f1e8d6 0 50%, #1d170b 50% 100%);
 }
 body:has(.sp-frame) { background: transparent; }
 
@@ -175,3 +175,8 @@ body:has(.sp-frame) { background: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .sp-bar-link, .sp-button { transition: none; }
 }
+
+/* Page transition */
+.sp-page-in { animation: sp-page-in 0.55s var(--ease-out) both; }
+@keyframes sp-page-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sp-page-in { animation: none; } }

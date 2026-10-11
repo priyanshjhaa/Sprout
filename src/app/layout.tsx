@@ -13,7 +13,6 @@ import "./app-page.css";
 import "./run.css";
 import "./forms.css";
 import "./type.css";
-import "./daylight.css";
 import "./seasons.css";
 import "./palette.css";
 
