@@ -1,13 +1,12 @@
 /* Apps index */
 .sp-apps { display: grid; gap: 24px; }
-.sp-apps-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
-.sp-apps-head h1 { margin: 6px 0 0; font-family: var(--font-hero), Georgia, serif; font-size: clamp(30px, 3.4vw, 40px); font-weight: 400; letter-spacing: -0.025em; }
-.sp-eyebrow-dark { color: var(--sprout-strong); font-size: 11.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.sp-apps-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; padding-top: 14px; }
+.sp-apps-head h1 { margin: 6px 0 0; font-family: var(--font-hero), Georgia, serif; font-size: clamp(34px, 4vw, 48px); font-weight: 400; letter-spacing: -0.03em; line-height: 1.06; }
 .sp-apps .apps-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; }
 .sp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.sp-chips button { padding: 7px 13px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--muted); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.2s var(--ease-out); }
+.sp-chips button { padding: 7px 14px; border: 1px solid var(--line); border-radius: 99px; background: rgba(255, 250, 242, 0.72); color: var(--muted); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all 0.2s var(--ease-out); }
 .sp-chips button:hover { color: var(--ink); border-color: var(--line-strong); }
-.sp-chips button.active { border-color: transparent; background: linear-gradient(135deg, var(--sp-forest-700), var(--sp-forest-900)); color: var(--sp-leaf-soft); box-shadow: 0 8px 20px -10px rgba(16, 28, 22, 0.8); }
+.sp-chips button.active { border-color: var(--sp-moss-deep); background: var(--sp-moss); color: var(--sprout-ink); }
 
 .sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
 .sp-card {
@@ -18,23 +17,25 @@
   padding: 20px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 22px;
-  background: linear-gradient(180deg, var(--surface-solid), var(--surface));
+  border-radius: 24px;
+  background: linear-gradient(180deg, var(--surface-solid), rgba(246, 238, 224, 0.9));
+  box-shadow: 0 20px 44px -34px rgba(60, 40, 20, 0.55);
   transition: transform 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), border-color 0.25s var(--ease-out);
 }
-.sp-card::before { position: absolute; inset: 0 0 auto; height: 90px; background: radial-gradient(70% 100% at 0% 0%, var(--tint, transparent), transparent 80%); opacity: 0.9; pointer-events: none; content: ""; }
+/* A strip of soil along the base, with a tint that shows the app's state. */
+.sp-card::after { position: absolute; inset: auto 0 0; height: 5px; background: var(--tint, var(--line)); content: ""; }
 .sp-card > * { position: relative; }
-.sp-card-running { --tint: rgba(143, 209, 106, 0.38); }
-.sp-card-building { --tint: rgba(93, 127, 142, 0.34); }
-.sp-card-failed { --tint: rgba(184, 95, 80, 0.3); }
-.sp-card-undeployed { --tint: rgba(184, 115, 53, 0.16); }
-a.sp-card:hover { transform: translateY(-4px); border-color: rgba(79, 138, 58, 0.45); box-shadow: 0 28px 50px -26px rgba(30, 50, 25, 0.55); }
+.sp-card-running { --tint: var(--sprout); }
+.sp-card-building { --tint: var(--info); }
+.sp-card-failed { --tint: var(--danger); }
+.sp-card-undeployed { --tint: var(--sp-amber); }
+.sp-card-paused, .sp-card-archived { --tint: var(--faint); }
+a.sp-card:hover { transform: translateY(-4px); border-color: rgba(104, 118, 66, 0.45); box-shadow: 0 30px 50px -28px rgba(60, 40, 20, 0.6); }
 .sp-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .sp-card h2 { margin: 0; font-size: 18px; letter-spacing: -0.015em; }
 .sp-card p { display: -webkit-box; margin: 0; overflow: hidden; color: var(--muted); font-size: 13.5px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.sp-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12px; }
+.sp-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding: 12px 0 6px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12px; }
 .sp-card-foot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sp-card-foot svg { flex: 0 0 auto; transition: transform 0.2s var(--ease-out); }
-a.sp-card:hover .sp-card-foot svg { color: var(--sprout-strong); transform: translateX(3px); }
+a.sp-card:hover .sp-card-foot svg { color: var(--sp-moss-deep); transform: translateX(3px); }
 @media (prefers-reduced-motion: reduce) { .sp-card, .sp-chips button { transition: none; } }
-
