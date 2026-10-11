@@ -65,11 +65,21 @@
 
 .sp-grain { position: absolute; z-index: 0; inset: 0; background: var(--paper-grain) 0 0 / 180px 180px; opacity: 0.6; pointer-events: none; }
 
-/* Floating bar */
+/*
+  The page is one continuous scene, so overscroll must not reveal the plain
+  canvas: stop the bounce, and where a browser still bounces, extend sky above
+  and soil below (the same approach as the landing page).
+*/
+html:has(.sp-frame) {
+  overscroll-behavior-y: none;
+  background: linear-gradient(180deg, #e6d8bd 0 50%, #1d170b 50% 100%);
+}
+body:has(.sp-frame) { background: transparent; }
+
+/* Bar: it scrolls away with the page instead of floating over content */
 .sp-bar {
-  position: sticky;
+  position: relative;
   z-index: 40;
-  top: 14px;
   display: flex;
   width: min(1160px, calc(100% - 40px));
   align-items: center;
