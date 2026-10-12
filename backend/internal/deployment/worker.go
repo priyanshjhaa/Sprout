@@ -127,7 +127,7 @@ func (m *Manager) admit(ctx context.Context, scope Scope, source *artifact.Descr
 		return Job{}, err
 	}
 	jobCtx, cancel := context.WithCancel(m.ctx)
-	item := &task{job: job, scope: scope, work: Work{DeploymentID: job.ID, Simulated: job.Simulated, Source: source}, ctx: jobCtx, cancel: cancel}
+	item := &task{job: job, scope: scope, work: Work{DeploymentID: job.ID, ApplicationID: scope.ApplicationID, Simulated: job.Simulated, Source: source}, ctx: jobCtx, cancel: cancel}
 	m.active[scope.ApplicationID] = item
 	m.queue <- item // only this locked producer can add; capacity was reserved above
 	return job, nil
@@ -197,9 +197,13 @@ func (m *Manager) execute(item *task) {
 				code = "server_shutdown"
 			}
 		}
+		// A live release is a successful run that is also serving.
+		if status == "succeeded" && outcome.Live {
+			status = "live"
+		}
 		// Only a successful run may leave an artifact behind.
 		output := outcome.Artifact
-		if status != "succeeded" {
+		if status != "succeeded" && status != "live" {
 			output = nil
 		}
 		// Request/job cancellation must not prevent recording the terminal result.
@@ -214,7 +218,11 @@ func (m *Manager) execute(item *task) {
 			m.logger.Error("deployment persistence failed", "deployment_id", item.job.ID)
 		}
 		m.progress.notify(item.job.ID)
-		m.release(finishCtx, item, outcome, err == nil && recorded && output != nil)
+		// Runtime cleanup (container, volume, superseded releases) can outlast the
+		// short database deadline, so it gets its own bounded context.
+		releaseCtx, stopRelease := context.WithTimeout(context.Background(), 30*time.Second)
+		defer stopRelease()
+		m.release(releaseCtx, item, outcome, err == nil && recorded && output != nil)
 	}()
 	if err := m.repository.Start(ctx, item.scope, item.job.ID); err != nil {
 		status, code = "failed", "start_rejected"

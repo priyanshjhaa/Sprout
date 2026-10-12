@@ -1,6 +1,6 @@
 # Node.js application contract — version 1
 
-This is the first supported application type for Sprout. A local smoke runner executes the reference app's build command inside an offline, disposable Node container. Its Go API returns a validated `dist/` tar to trusted callers. The local `sourcecheck` command can save that tar in a private artifact directory when explicitly requested. No application runtime starts, and simulation jobs remain simulations.
+This is the first supported application type for Sprout. A local smoke runner executes the reference app's build command inside an offline, disposable Node container. Its Go API returns a validated `dist/` tar to trusted callers. The local `sourcecheck` command can save that tar in a private artifact directory when explicitly requested. The application runtime is described in [local runtime](./local-runtime-learning.md), and simulation jobs remain simulations.
 
 ## Accepted source
 
@@ -20,13 +20,13 @@ The Go validator is a preflight check, not a reimplementation of npm's dependenc
 
 ## Platform-owned commands
 
-The local smoke runner executes the dependency and build rows. The runtime row belongs to a later milestone:
+The sealed build runner executes the dependency and build rows. The runtime row runs in the separate runtime container described in [local runtime](./local-runtime-learning.md):
 
 | Phase | Command | Boundary |
 | --- | --- | --- |
 | Dependencies | `npm ci --offline --ignore-scripts --no-audit --no-fund` | Local smoke runner: dependency-free lockfile, offline container |
 | Build | `npm --ignore-scripts run build` | No network; bounded disposable container |
-| Runtime | `npm --ignore-scripts start` | Separate runtime container with explicit routing and permissions |
+| Runtime | `npm --ignore-scripts start` | Separate non-root, read-only runtime container with a loopback port and no host access |
 
 The smoke runner uses `node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6`, the official `node:24.21.0-bookworm-slim` image digest downloaded for this milestone. Docker identified it as Linux/arm64 on this host. The runner does not use a moving `node:24` tag. The application cannot select the image, override container flags, mount host paths, or request a Docker socket.
 
@@ -54,7 +54,7 @@ Docker restrictions are defense in depth, not proof of safe hostile multi-tenant
 
 ## Current request/resource trace
 
-`sourcecheck -build-node -artifact-dir <directory>` → bounded archive extraction → root-confined filesystem → Node contract and dependency-free checks → bounded tar input → trusted Docker CLI → pinned, network-disabled build container → bounded `dist/` tar → output validation and normalization → named-container cleanup → temporary-tree cleanup → private atomic artifact save → ID, size, and digest in the local command response.
+`sourcecheck -build-node -artifact-dir <directory>` → bounded archive extraction → root-confined filesystem → Node contract and dependency-free checks → bounded tar input → trusted Docker CLI → pinned, network-disabled build container → bounded tar of `dist/` and `package.json` (the runtime needs the manifest to start the app) → output validation and normalization → named-container cleanup → temporary-tree cleanup → private atomic artifact save → ID, size, and digest in the local command response.
 
 Since the real-build milestone, the same path also runs on the deployment worker when local builds are enabled: see [real build jobs](./real-build-jobs-learning.md). `sourcecheck -runtime node` remains validation-only. `-build-node` executes the submitted build script inside Docker and discards the returned artifact unless `-artifact-dir` is supplied. It does not create a deployment image, start the runtime, or introduce new tables, credentials, HTTP endpoints, or frontend changes.
 
@@ -72,7 +72,7 @@ SPROUT_DOCKER_TEST=1 go test ./internal/nodeapp -run '^TestDockerSmokeRunner$' -
 SPROUT_DOCKER_TEST=1 go test ./cmd/sourcecheck -run '^TestSourcecheckSavesLocalArtifact$' -count=1 -v
 ```
 
-The example has no dependencies. Its build copies the server into `dist`; its start command is reserved for the separate runtime milestone. Avoid running submitted application scripts directly on your host, even when metadata validation succeeds.
+The example has no dependencies. Its build copies the server into `dist`; its start command is run by the runtime. Avoid running submitted application scripts directly on your host, even when metadata validation succeeds.
 
 Tests cover required scripts, Node version, npm/workspace policy, root/lock mismatches, dependency URLs and integrity shape, linked packages, source-tree exclusions, malformed/oversized JSON, cancellation, and the committed example. The CLI reports only source counts or safe error codes, never script contents or package/provider error payloads.
 

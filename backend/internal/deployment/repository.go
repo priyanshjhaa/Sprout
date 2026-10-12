@@ -101,6 +101,11 @@ func (r *SQLRepository) Create(ctx context.Context, scope Scope) (Job, error) {
 	if err = q.InitializeDeploymentStages(ctx, row.ID); err != nil {
 		return Job{}, err
 	}
+	if !scope.Simulated {
+		if err = q.InitializeRuntimeStages(ctx, row.ID); err != nil {
+			return Job{}, err
+		}
+	}
 	job, err := mapJob(ctx, q, row)
 	if err != nil {
 		return Job{}, err
@@ -308,17 +313,21 @@ func (r *SQLRepository) Finish(ctx context.Context, id, status, code string, out
 	if row.Status != "queued" && row.Status != "building" {
 		return false, nil
 	} // cancellation wins over late completion
-	// Only a succeeded real build may reference an artifact; the schema enforces
-	// this too, but rejecting here keeps the error a stable domain error.
-	if output != nil && (status != "succeeded" || row.Simulated) {
+	// Only a succeeded or live real build may reference an artifact, and a live
+	// one must; the schema enforces this too, but rejecting here keeps the
+	// error a stable domain error.
+	if output != nil && ((status != "succeeded" && status != "live") || row.Simulated) {
 		return false, ErrInvalid
 	}
-	if status == "succeeded" {
+	if status == "live" && (output == nil || row.Simulated) {
+		return false, ErrInvalid
+	}
+	if status == "succeeded" || status == "live" {
 		events, err := q.ListDeploymentStages(ctx, jobID)
 		if err != nil {
 			return false, err
 		}
-		if len(events) != len(stages) {
+		if len(events) != stageCount(row.Simulated) {
 			return false, ErrConflict
 		}
 		for _, event := range events {
@@ -327,13 +336,20 @@ func (r *SQLRepository) Finish(ctx context.Context, id, status, code string, out
 			}
 		}
 	}
+	if status == "live" {
+		// The unique live index requires the old release to be demoted first;
+		// doing both in one transaction means routing never sees two or none.
+		if _, err = q.DemoteLiveDeployments(ctx, dbgen.DemoteLiveDeploymentsParams{ApplicationID: row.ApplicationID, ID: jobID}); err != nil {
+			return false, err
+		}
+	}
 	if _, err = finish(ctx, q, jobID, status, code, output); err != nil {
 		return false, err
 	}
 	return true, tx.Commit(ctx)
 }
 func finish(ctx context.Context, q *dbgen.Queries, id pgtype.UUID, status, code string, output *artifact.Descriptor) (int64, error) {
-	if status != "succeeded" && status != "failed" && status != "cancelled" {
+	if status != "succeeded" && status != "live" && status != "failed" && status != "cancelled" {
 		return 0, ErrInvalid
 	}
 	params := dbgen.FinishDeploymentParams{ID: id, Status: dbgen.DeploymentStatus(status), FailureCode: pgtype.Text{String: code, Valid: code != ""}}
@@ -346,7 +362,7 @@ func finish(ctx context.Context, q *dbgen.Queries, id pgtype.UUID, status, code 
 	if err != nil || count == 0 {
 		return count, err
 	}
-	if status != "succeeded" {
+	if status != "succeeded" && status != "live" {
 		err = q.FinishDeploymentStages(ctx, dbgen.FinishDeploymentStagesParams{DeploymentID: id, FailureCode: params.FailureCode})
 	}
 	return count, err
@@ -474,4 +490,18 @@ func (r *SQLRepository) CheckOwnership(ctx context.Context) error {
 		return ErrUnavailable
 	}
 	return nil
+}
+
+// LiveDeployments lists the IDs of deployments currently marked live, so
+// startup can keep their release files and discard everything else.
+func (r *SQLRepository) LiveDeployments(ctx context.Context) (map[string]bool, error) {
+	rows, err := dbgen.New(r.pool).ListLiveReleases(ctx)
+	if err != nil {
+		return nil, err
+	}
+	live := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		live[row.DeploymentID.String()] = true
+	}
+	return live, nil
 }

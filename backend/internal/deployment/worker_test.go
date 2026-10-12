@@ -432,3 +432,24 @@ func TestReleaseAfterCancellationDiscardsArtifact(t *testing.T) {
 		t.Fatal("cancelled job kept its artifact")
 	}
 }
+
+// A run that reports Live is recorded as a live deployment and keeps its artifact.
+func TestLiveOutcomeIsRecordedAsLive(t *testing.T) {
+	repo := newMemoryRepository()
+	runner := &recordingRunner{released: make(chan bool, 1), run: func(ctx context.Context, s Steps) (Outcome, error) {
+		return Outcome{Artifact: &artifact.Descriptor{ID: "0123456789abcdef0123456789abcdef", Size: 1, SHA256: "00"}, Provisioned: true, Live: true}, allStages(s)
+	}}
+	m, err := NewManager(repo, runner, slog.New(slog.NewTextHandler(io.Discard, nil)), 1, 1, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = m.Close() })
+	job := submitBuild(t, m, "app")
+	waitSignal(t, repo.done)
+	if kept := <-runner.released; !kept {
+		t.Fatal("live release did not keep its artifact")
+	}
+	if result, _ := repo.Get(context.Background(), Scope{}, job.ID); result.Status != "live" {
+		t.Fatalf("status = %q, want live", result.Status)
+	}
+}

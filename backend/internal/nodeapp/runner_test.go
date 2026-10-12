@@ -72,6 +72,7 @@ func TestDockerSmokeRunner(t *testing.T) {
 func checkArtifact(t *testing.T, artifact []byte) {
 	t.Helper()
 	reader := tar.NewReader(bytes.NewReader(artifact))
+	var sawServer, sawManifest bool
 	for {
 		header, err := reader.Next()
 		if errors.Is(err, io.EOF) {
@@ -80,15 +81,20 @@ func checkArtifact(t *testing.T, artifact []byte) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if header.Name == "dist/server.mjs" {
+		switch header.Name {
+		case "package.json":
+			sawManifest = true
+		case "dist/server.mjs":
 			content, err := io.ReadAll(reader)
 			if err != nil || string(content) != "// not executed" {
 				t.Fatalf("unexpected built file: %q (%v)", content, err)
 			}
-			return
+			sawServer = true
 		}
 	}
-	t.Fatal("built file missing from artifact")
+	if !sawServer || !sawManifest {
+		t.Fatalf("artifact incomplete: dist/server.mjs=%v package.json=%v", sawServer, sawManifest)
+	}
 }
 
 func errString(err error) string {

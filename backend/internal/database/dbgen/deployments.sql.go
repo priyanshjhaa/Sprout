@@ -84,6 +84,44 @@ func (q *Queries) CreateDeployment(ctx context.Context, arg CreateDeploymentPara
 	return i, err
 }
 
+const demoteLiveDeployments = `-- name: DemoteLiveDeployments :many
+UPDATE deployments SET status = 'succeeded'
+WHERE application_id = $1 AND status = 'live' AND id <> $2
+RETURNING id, artifact_id
+`
+
+type DemoteLiveDeploymentsParams struct {
+	ApplicationID pgtype.UUID `json:"application_id"`
+	ID            pgtype.UUID `json:"id"`
+}
+
+type DemoteLiveDeploymentsRow struct {
+	ID         pgtype.UUID `json:"id"`
+	ArtifactID pgtype.Text `json:"artifact_id"`
+}
+
+// The previous live release becomes an ordinary succeeded one (its artifact is
+// kept for rollback). Called in the same transaction that promotes the new one.
+func (q *Queries) DemoteLiveDeployments(ctx context.Context, arg DemoteLiveDeploymentsParams) ([]DemoteLiveDeploymentsRow, error) {
+	rows, err := q.db.Query(ctx, demoteLiveDeployments, arg.ApplicationID, arg.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DemoteLiveDeploymentsRow{}
+	for rows.Next() {
+		var i DemoteLiveDeploymentsRow
+		if err := rows.Scan(&i.ID, &i.ArtifactID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const finishDeployment = `-- name: FinishDeployment :execrows
 UPDATE deployments SET status = $1, failure_code = $2,
  artifact_id = $3, artifact_sha256 = $4, artifact_bytes = $5,
@@ -181,6 +219,45 @@ func (q *Queries) GetDeployment(ctx context.Context, arg GetDeploymentParams) (D
 	return i, err
 }
 
+const getLiveRelease = `-- name: GetLiveRelease :one
+SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
+ d.artifact_id, d.artifact_sha256, d.artifact_bytes
+FROM applications a
+JOIN workspaces w ON w.id = a.workspace_id
+LEFT JOIN deployments d ON d.application_id = a.id AND d.status = 'live'
+WHERE w.slug = $1 AND a.slug = $2
+`
+
+type GetLiveReleaseParams struct {
+	WorkspaceSlug   string `json:"workspace_slug"`
+	ApplicationSlug string `json:"application_slug"`
+}
+
+type GetLiveReleaseRow struct {
+	ApplicationID  pgtype.UUID          `json:"application_id"`
+	Lifecycle      ApplicationLifecycle `json:"lifecycle"`
+	DeploymentID   pgtype.UUID          `json:"deployment_id"`
+	ArtifactID     pgtype.Text          `json:"artifact_id"`
+	ArtifactSha256 pgtype.Text          `json:"artifact_sha256"`
+	ArtifactBytes  pgtype.Int4          `json:"artifact_bytes"`
+}
+
+// Routing lookup for a public request: no permissions, because live apps are
+// public. The lifecycle lets the caller answer paused/archived distinctly.
+func (q *Queries) GetLiveRelease(ctx context.Context, arg GetLiveReleaseParams) (GetLiveReleaseRow, error) {
+	row := q.db.QueryRow(ctx, getLiveRelease, arg.WorkspaceSlug, arg.ApplicationSlug)
+	var i GetLiveReleaseRow
+	err := row.Scan(
+		&i.ApplicationID,
+		&i.Lifecycle,
+		&i.DeploymentID,
+		&i.ArtifactID,
+		&i.ArtifactSha256,
+		&i.ArtifactBytes,
+	)
+	return i, err
+}
+
 const initializeDeploymentStages = `-- name: InitializeDeploymentStages :exec
 INSERT INTO deployment_stage_events(deployment_id, stage)
 VALUES ($1, 'source'), ($1, 'build'), ($1, 'package')
@@ -188,6 +265,18 @@ VALUES ($1, 'source'), ($1, 'build'), ($1, 'package')
 
 func (q *Queries) InitializeDeploymentStages(ctx context.Context, deploymentID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, initializeDeploymentStages, deploymentID)
+	return err
+}
+
+const initializeRuntimeStages = `-- name: InitializeRuntimeStages :exec
+INSERT INTO deployment_stage_events(deployment_id, stage)
+VALUES ($1, 'provision'), ($1, 'release'), ($1, 'health_check')
+`
+
+// Real builds continue past packaging: the release is provisioned, started and
+// health-checked before it counts as live. Simulations never get these rows.
+func (q *Queries) InitializeRuntimeStages(ctx context.Context, deploymentID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, initializeRuntimeStages, deploymentID)
 	return err
 }
 
@@ -269,6 +358,50 @@ func (q *Queries) ListDeployments(ctx context.Context, arg ListDeploymentsParams
 			&i.StartedAt,
 			&i.FinishedAt,
 			&i.Simulated,
+			&i.ArtifactID,
+			&i.ArtifactSha256,
+			&i.ArtifactBytes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLiveReleases = `-- name: ListLiveReleases :many
+SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
+ d.artifact_id, d.artifact_sha256, d.artifact_bytes
+FROM deployments d JOIN applications a ON a.id = d.application_id
+WHERE d.status = 'live'
+`
+
+type ListLiveReleasesRow struct {
+	ApplicationID  pgtype.UUID          `json:"application_id"`
+	Lifecycle      ApplicationLifecycle `json:"lifecycle"`
+	DeploymentID   pgtype.UUID          `json:"deployment_id"`
+	ArtifactID     pgtype.Text          `json:"artifact_id"`
+	ArtifactSha256 pgtype.Text          `json:"artifact_sha256"`
+	ArtifactBytes  pgtype.Int4          `json:"artifact_bytes"`
+}
+
+// Every live release with its application's lifecycle: the reconciler's desired state.
+func (q *Queries) ListLiveReleases(ctx context.Context) ([]ListLiveReleasesRow, error) {
+	rows, err := q.db.Query(ctx, listLiveReleases)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListLiveReleasesRow{}
+	for rows.Next() {
+		var i ListLiveReleasesRow
+		if err := rows.Scan(
+			&i.ApplicationID,
+			&i.Lifecycle,
+			&i.DeploymentID,
 			&i.ArtifactID,
 			&i.ArtifactSha256,
 			&i.ArtifactBytes,

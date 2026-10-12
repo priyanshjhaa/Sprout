@@ -74,3 +74,33 @@ WHERE status IN ('queued','building') RETURNING id;
 -- Artifacts still referenced by a deployment; anything else in the store is an orphan.
 -- name: ListReferencedArtifacts :many
 SELECT artifact_id::text FROM deployments WHERE artifact_id IS NOT NULL;
+
+-- The previous live release becomes an ordinary succeeded one (its artifact is
+-- kept for rollback). Called in the same transaction that promotes the new one.
+-- name: DemoteLiveDeployments :many
+UPDATE deployments SET status = 'succeeded'
+WHERE application_id = $1 AND status = 'live' AND id <> $2
+RETURNING id, artifact_id;
+
+-- Routing lookup for a public request: no permissions, because live apps are
+-- public. The lifecycle lets the caller answer paused/archived distinctly.
+-- name: GetLiveRelease :one
+SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
+ d.artifact_id, d.artifact_sha256, d.artifact_bytes
+FROM applications a
+JOIN workspaces w ON w.id = a.workspace_id
+LEFT JOIN deployments d ON d.application_id = a.id AND d.status = 'live'
+WHERE w.slug = sqlc.arg(workspace_slug) AND a.slug = sqlc.arg(application_slug);
+
+-- Every live release with its application's lifecycle: the reconciler's desired state.
+-- name: ListLiveReleases :many
+SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
+ d.artifact_id, d.artifact_sha256, d.artifact_bytes
+FROM deployments d JOIN applications a ON a.id = d.application_id
+WHERE d.status = 'live';
+
+-- Real builds continue past packaging: the release is provisioned, started and
+-- health-checked before it counts as live. Simulations never get these rows.
+-- name: InitializeRuntimeStages :exec
+INSERT INTO deployment_stage_events(deployment_id, stage)
+VALUES ($1, 'provision'), ($1, 'release'), ($1, 'health_check');

@@ -22,6 +22,7 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
 	"github.com/priyanshjhaa/Sprout/backend/internal/identity"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
+	apprt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 	"github.com/priyanshjhaa/Sprout/backend/internal/sharing"
 	"github.com/priyanshjhaa/Sprout/backend/internal/team"
 )
@@ -96,8 +97,34 @@ func realMain() int {
 			logger.Error("build storage sweep failed")
 			return 1
 		}
-		runner = buildjob.NewRunner(sources, artifacts, builder, runner, logger)
-		jobTimeout = 3 * time.Minute
+		driver, err := apprt.NewDocker(nodeapp.DefaultImage)
+		if err != nil {
+			logger.Error("runtime driver configuration invalid")
+			return 1
+		}
+		// Applications do not survive a restart: remove their containers and any
+		// release files that no live deployment owns. Live ones start on demand.
+		cleanCtx, cleanCancel := context.WithTimeout(ctx, 30*time.Second)
+		live, err := deploymentRepository.LiveDeployments(cleanCtx)
+		if err == nil {
+			var removed int
+			removed, err = apprt.CleanupStale(cleanCtx, driver, live)
+			logger.Info("runtime cleaned", "removed", removed)
+		}
+		cleanCancel()
+		if err != nil {
+			logger.Error("runtime cleanup failed; is Docker running?")
+			return 1
+		}
+		defer func() {
+			stopCtx, stop := context.WithTimeout(context.Background(), 20*time.Second)
+			defer stop()
+			if err := apprt.StopAll(stopCtx, driver); err != nil {
+				logger.Error("running applications could not all be stopped; startup cleanup will remove them")
+			}
+		}()
+		runner = buildjob.NewRunner(sources, artifacts, builder, driver, buildjob.DefaultHealthCheck, runner, logger)
+		jobTimeout = 4 * time.Minute
 		logger.Warn("local builds enabled: uploaded code runs in Docker on this machine")
 	}
 	worker, err := deployment.NewManager(deploymentRepository, runner, logger, 2, 8, jobTimeout)
