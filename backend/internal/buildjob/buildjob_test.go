@@ -44,6 +44,9 @@ func (d *fakeDriver) Start(_ context.Context, r rt.Release) (rt.Instance, error)
 	d.calls = append(d.calls, "start")
 	return rt.Instance{Release: r, Endpoint: "127.0.0.1:1"}, d.startErr
 }
+func (d *fakeDriver) Endpoint(context.Context, rt.Release) (string, error) {
+	return "", rt.ErrNotRunning
+}
 func (d *fakeDriver) Stop(context.Context, rt.Release) error { return nil }
 func (d *fakeDriver) Destroy(_ context.Context, r rt.Release) error {
 	d.destroyed = append(d.destroyed, r)

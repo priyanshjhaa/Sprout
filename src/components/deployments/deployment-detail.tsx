@@ -1,11 +1,12 @@
 "use client";
 
-import { Check, FlaskConical, Hammer } from "lucide-react";
+import { Check, ExternalLink, FlaskConical, Hammer } from "lucide-react";
 import Link from "next/link";
 import { Pipeline } from "@/components/pipeline";
 import { StatusPill } from "@/components/status-pill";
 import { isActiveSimulation } from "@/lib/api/simulation-stream";
 import type { JobKind } from "@/lib/api/simulations";
+import { useApplication } from "@/lib/query/hooks";
 import { useBuildActions, useSimulation, useSimulationActions } from "@/lib/query/simulations";
 
 // Plain-language explanations for the stable failure codes a build can end with.
@@ -22,6 +23,10 @@ const failureExplanations: Record<string, string> = {
   source_unavailable: "The uploaded archive was no longer available.",
   process_interrupted: "The server restarted while this was running.",
   job_timeout: "It took longer than the time limit.",
+  provision_failed: "The built app could not be stored for running.",
+  release_failed: "The app's container could not be started.",
+  health_check_failed: "The app started but did not answer GET /health with 200 within 30 seconds. Make sure it listens on 0.0.0.0 and the PORT environment variable. Any earlier version is still serving.",
+  runtime_unavailable: "Sprout could not reach Docker to run the app. Is Docker running?",
 };
 
 export function DeploymentDetail({ workspaceSlug, appId, deploymentId, kind }: { workspaceSlug: string; appId: string; deploymentId: string; kind: JobKind }) {
@@ -33,6 +38,7 @@ export function DeploymentDetail({ workspaceSlug, appId, deploymentId, kind }: {
     ? { isPending: buildAction.isPending, isError: buildAction.isError, error: buildAction.error, cancel: (id: string) => buildAction.mutate({ cancel: id }) }
     : { isPending: simulationAction.isPending, isError: simulationAction.isError, error: simulationAction.error, cancel: (id: string) => simulationAction.mutate(id) };
   const job = query.data;
+  const { data: application } = useApplication(workspaceSlug, appId);
   const base = `/workspace/${workspaceSlug}/apps/${appId}/deployments`;
   return (
     <section className="app-section deployment-detail simulation-view sp-detail">
@@ -48,9 +54,12 @@ export function DeploymentDetail({ workspaceSlug, appId, deploymentId, kind }: {
         </header>
         {action.isError && <p className="simulation-notice" role="alert">{action.error?.message}</p>}
         <p className="simulation-note" role="status" aria-live="polite">{isActiveSimulation(job) ? query.streamState === "live" ? "Receiving live progress" : query.streamState === "reconnecting" ? "Reconnecting — the worker continues in the background" : "Connecting to live progress…" : `${isBuild ? "Build" : "Run"} ${job.status}.`}</p>
-        <div className={`sp-run sp-run-${job.status}`}><Pipeline stages={job.stages} /></div>
+        <div className={`sp-run sp-run-${job.status}`}><Pipeline stages={job.stages} simulated={!isBuild} /></div>
         {job.failureCode && <p className="simulation-notice">{failureExplanations[job.failureCode] ?? "It did not finish."} <code>{job.failureCode}</code></p>}
-        {isBuild && job.status === "succeeded" && <p className="simulation-notice"><Check size={14} /> Built and stored. Starting it and giving it a URL comes next.</p>}
+        {isBuild && job.status === "live" && <p className="simulation-notice"><Check size={14} /> Live{application?.liveUrl
+          ? <> at <a href={application.liveUrl} target="_blank" rel="noreferrer">{application.liveUrl} <ExternalLink size={12} aria-hidden="true" /></a></>
+          : "."} Anyone with the link can open it.</p>}
+        {isBuild && job.status === "succeeded" && <p className="simulation-notice"><Check size={14} /> Built and stored. A newer version is live, or this one has not been started.</p>}
         <p className="simulation-note">{isBuild
           ? <><Hammer size={13} /> Built in a sealed container on this machine. Leaving this page does not stop it.</>
           : <><FlaskConical size={13} /> Simulated run: no code executes. Leaving this page does not stop it.</>}</p>

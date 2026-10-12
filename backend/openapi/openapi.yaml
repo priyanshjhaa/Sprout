@@ -849,7 +849,7 @@ components:
     Application:
       type: object
       additionalProperties: false
-      required: [id, name, slug, description, accessMode, lifecycle, defaultHostname, createdBy, createdAt, updatedAt]
+      required: [id, name, slug, description, accessMode, lifecycle, defaultHostname, url, createdBy, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -866,6 +866,10 @@ components:
           $ref: "#/components/schemas/ApplicationLifecycle"
         defaultHostname:
           type: string
+        url:
+          type: [string, "null"]
+          format: uri
+          description: Public address of the live deployment, or null while the application has none (or this server does not serve applications).
         createdBy:
           type: string
           format: uuid

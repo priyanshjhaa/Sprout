@@ -55,7 +55,7 @@ Sprout is the **control plane**: API, permissions, lifecycle, routing. Applicati
 ## 5. Roadmap
 
 1. Align docs (this document).
-2. **Local runtime:** run a built app in a locked-down container, health-check it, serve it publicly at `{app}.{workspace}.localhost`, and make pause, resume, archive and idle sleep real. *Part 1 done (driver, release, health check, live status); part 2 (public routing, wake, sleep, lifecycle) is next.*
+2. **Local runtime:** run a built app in a locked-down container, health-check it, serve it publicly at `{app}.{workspace}.localhost`, and make pause, resume, archive and idle sleep real. *Done: driver, release, health check, live status, public routing, wake on request, idle sleep, and real pause and archive. See `local-runtime-learning.md`.*
 3. Static sites.
 4. CLI `sprout deploy` (with CLI authentication designed first), then the MCP `deploy` tool (folder and public GitHub modes).
 5. `npm` installs through a controlled registry proxy.

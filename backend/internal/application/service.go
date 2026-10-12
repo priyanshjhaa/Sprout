@@ -22,7 +22,14 @@ type Repository interface {
 
 type Service struct {
 	repository Repository
+	// onLifecycleChange, if set, runs after a lifecycle change is committed so
+	// the runtime can stop or remove the application's resources promptly.
+	onLifecycleChange func()
 }
+
+// OnLifecycleChange registers a callback for committed lifecycle changes. It
+// must not block; the runtime's reconcile loop is the backstop if it is missed.
+func (service *Service) OnLifecycleChange(callback func()) { service.onLifecycleChange = callback }
 
 func NewService(repository Repository) *Service {
 	return &Service{repository: repository}
@@ -117,7 +124,11 @@ func (service *Service) Update(ctx context.Context, input UpdateInput) (Applicat
 		}
 	}
 
-	return service.repository.Update(ctx, input)
+	updated, err := service.repository.Update(ctx, input)
+	if err == nil && input.Lifecycle != nil && service.onLifecycleChange != nil {
+		service.onLifecycleChange()
+	}
+	return updated, err
 }
 
 func validateWorkspaceAndUser(workspaceSlug, userID string) error {

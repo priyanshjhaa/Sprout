@@ -8,15 +8,15 @@ import type { Application, ApplicationLifecycle } from "@/types/domain";
 // Each lifecycle state offers only the transitions the API accepts.
 const lifecycleActions: Record<ApplicationLifecycle, Array<{ to: ApplicationLifecycle; label: string; icon: typeof Play; effect: string }>> = {
   active: [
-    { to: "paused", label: "Pause", icon: Pause, effect: "Stops new deployments. Access and configuration stay as they are." },
-    { to: "archived", label: "Archive", icon: Archive, effect: "Retires the app from everyday use. You can restore it later." },
+    { to: "paused", label: "Pause", icon: Pause, effect: "Takes the live URL offline and stops new deployments. Resume brings it back." },
+    { to: "archived", label: "Archive", icon: Archive, effect: "Takes the live URL offline and removes the running copy. You can restore it, then deploy again." },
   ],
   paused: [
-    { to: "active", label: "Resume", icon: Play, effect: "Allows deployments again." },
-    { to: "archived", label: "Archive", icon: Archive, effect: "Retires the app from everyday use. You can restore it later." },
+    { to: "active", label: "Resume", icon: Play, effect: "Puts the live URL back; the app starts on its next visit." },
+    { to: "archived", label: "Archive", icon: Archive, effect: "Takes the live URL offline and removes the running copy. You can restore it, then deploy again." },
   ],
   archived: [
-    { to: "active", label: "Restore", icon: Play, effect: "Brings the app back so it can be deployed again." },
+    { to: "active", label: "Restore", icon: Play, effect: "Brings the app back. Its URL answers again after you deploy." },
   ],
 };
 

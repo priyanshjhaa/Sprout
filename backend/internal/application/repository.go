@@ -40,9 +40,20 @@ func (repository *SQLRepository) List(
 		return nil, err
 	}
 
+	liveIDs, err := repository.queries.ListLiveApplicationIDs(ctx, workspaceSlug)
+	if err != nil {
+		return nil, err
+	}
+	live := make(map[string]bool, len(liveIDs))
+	for _, id := range liveIDs {
+		live[formatUUID(id)] = true
+	}
+
 	applications := make([]Application, 0, len(rows))
 	for _, row := range rows {
-		applications = append(applications, mapApplication(row))
+		item := mapApplication(row)
+		item.Live = live[item.ID]
+		applications = append(applications, item)
 	}
 	return applications, nil
 }
@@ -78,7 +89,7 @@ func (repository *SQLRepository) Get(
 		return Application{}, err
 	}
 
-	return mapApplication(row), nil
+	return repository.withLive(ctx, row)
 }
 
 func (repository *SQLRepository) Create(ctx context.Context, input CreateInput) (Application, error) {
@@ -180,7 +191,7 @@ func (repository *SQLRepository) Update(ctx context.Context, input UpdateInput) 
 		return Application{}, err
 	}
 
-	return mapApplication(row), nil
+	return repository.withLive(ctx, row)
 }
 
 func (repository *SQLRepository) authorize(
@@ -242,4 +253,15 @@ func mapApplication(row dbgen.Application) Application {
 func isUniqueViolation(err error) bool {
 	var pgError *pgconn.PgError
 	return errors.As(err, &pgError) && pgError.Code == "23505"
+}
+
+// withLive maps a row and fills the derived Live flag.
+func (repository *SQLRepository) withLive(ctx context.Context, row dbgen.Application) (Application, error) {
+	live, err := repository.queries.ApplicationHasLiveDeployment(ctx, row.ID)
+	if err != nil {
+		return Application{}, err
+	}
+	item := mapApplication(row)
+	item.Live = live
+	return item, nil
 }

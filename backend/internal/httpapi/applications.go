@@ -25,9 +25,14 @@ type ApplicationService interface {
 	Update(context.Context, application.UpdateInput) (application.Application, error)
 }
 
+// AppURL builds the public URL of an application from its workspace and
+// application slugs. It is nil when applications are not served by this process.
+type AppURL func(workspaceSlug, applicationSlug string) string
+
 type applicationHandler struct {
 	service ApplicationService
 	logger  *slog.Logger
+	appURL  AppURL
 }
 
 type createApplicationRequest struct {
@@ -50,17 +55,19 @@ type applicationResponse struct {
 	AccessMode      string                `json:"accessMode"`
 	Lifecycle       application.Lifecycle `json:"lifecycle"`
 	DefaultHostname string                `json:"defaultHostname"`
-	CreatedBy       string                `json:"createdBy"`
-	CreatedAt       time.Time             `json:"createdAt"`
-	UpdatedAt       time.Time             `json:"updatedAt"`
+	// URL is where the live application answers; null until a deployment is live.
+	URL       *string   `json:"url"`
+	CreatedBy string    `json:"createdBy"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type applicationListResponse struct {
 	Applications []applicationResponse `json:"applications"`
 }
 
-func RegisterApplicationRoutes(router chi.Router, service ApplicationService, logger *slog.Logger) {
-	handler := &applicationHandler{service: service, logger: logger}
+func RegisterApplicationRoutes(router chi.Router, service ApplicationService, logger *slog.Logger, appURL AppURL) {
+	handler := &applicationHandler{service: service, logger: logger, appURL: appURL}
 
 	router.Route("/workspaces/{workspaceSlug}/applications", func(applications chi.Router) {
 		applications.Get("/", handler.list)
@@ -83,7 +90,7 @@ func (handler *applicationHandler) list(w http.ResponseWriter, r *http.Request) 
 
 	response := make([]applicationResponse, 0, len(applications))
 	for _, item := range applications {
-		response = append(response, mapApplicationResponse(item))
+		response = append(response, handler.response(r, item))
 	}
 
 	writeJSON(w, http.StatusOK, applicationListResponse{Applications: response})
@@ -101,7 +108,7 @@ func (handler *applicationHandler) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, mapApplicationResponse(item))
+	writeJSON(w, http.StatusOK, handler.response(r, item))
 }
 
 func (handler *applicationHandler) create(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +141,7 @@ func (handler *applicationHandler) create(w http.ResponseWriter, r *http.Request
 		chi.URLParam(r, "workspaceSlug"),
 		item.ID,
 	))
-	writeJSON(w, http.StatusCreated, mapApplicationResponse(item))
+	writeJSON(w, http.StatusCreated, handler.response(r, item))
 }
 
 func (handler *applicationHandler) update(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +170,7 @@ func (handler *applicationHandler) update(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	writeJSON(w, http.StatusOK, mapApplicationResponse(item))
+	writeJSON(w, http.StatusOK, handler.response(r, item))
 }
 
 func (handler *applicationHandler) writeError(w http.ResponseWriter, r *http.Request, err error) {
@@ -185,6 +192,16 @@ func (handler *applicationHandler) writeError(w http.ResponseWriter, r *http.Req
 		handler.logger.ErrorContext(r.Context(), "application request failed", "request_id", requestID)
 		writeAPIError(w, http.StatusInternalServerError, "internal_error", "The server could not complete the request.", requestID)
 	}
+}
+
+// response maps an application, adding its public URL only while it is live.
+func (handler *applicationHandler) response(r *http.Request, item application.Application) applicationResponse {
+	response := mapApplicationResponse(item)
+	if item.Live && handler.appURL != nil {
+		url := handler.appURL(chi.URLParam(r, "workspaceSlug"), item.Slug)
+		response.URL = &url
+	}
+	return response
 }
 
 func mapApplicationResponse(item application.Application) applicationResponse {

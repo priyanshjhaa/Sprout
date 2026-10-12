@@ -14,6 +14,7 @@ var (
 	ErrInvalid     = errors.New("runtime_release_invalid")
 	ErrUnavailable = errors.New("runtime_unavailable")
 	ErrStart       = errors.New("runtime_start_failed")
+	ErrNotRunning  = errors.New("runtime_not_running")
 )
 
 // Release names one immutable built deployment. Both IDs are UUIDs; drivers
@@ -44,6 +45,8 @@ type Driver interface {
 	// Start runs a prepared release and returns where it listens. It does not
 	// wait for health; the caller checks /health.
 	Start(ctx context.Context, release Release) (Instance, error)
+	// Endpoint reports where a running instance listens, or ErrNotRunning.
+	Endpoint(ctx context.Context, release Release) (string, error)
 	// Stop removes the running instance but keeps the prepared files.
 	Stop(ctx context.Context, release Release) error
 	// Destroy removes the instance and the prepared files. Missing parts are fine.

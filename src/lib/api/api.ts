@@ -9,6 +9,8 @@ interface ApplicationResponse {
   createdBy: string;
   lifecycle: ApplicationLifecycle;
   defaultHostname: string;
+  // Where the live deployment answers; null until one is live.
+  url: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -100,9 +102,9 @@ export async function request<T>(path: string, token: string | null, options: Re
   return (await response.json()) as T;
 }
 
-// Nothing runs yet, so an active application is shown as not deployed rather than running.
-function applicationStatus(lifecycle: ApplicationLifecycle): AppStatus {
-  if (lifecycle === "active") return "undeployed";
+// An active application is running only while it has a live deployment.
+function applicationStatus(lifecycle: ApplicationLifecycle, live: boolean): AppStatus {
+  if (lifecycle === "active") return live ? "running" : "undeployed";
   return lifecycle;
 }
 
@@ -133,9 +135,10 @@ function mapApplication(application: ApplicationResponse): Application {
     description: application.description,
     accessMode: application.accessMode,
     createdBy: application.createdBy,
-    status: applicationStatus(application.lifecycle),
+    status: applicationStatus(application.lifecycle, application.url !== null),
     lifecycle: application.lifecycle,
-    url: application.defaultHostname,
+    url: application.url ?? application.defaultHostname,
+    liveUrl: application.url,
     updatedAt: updatedLabel(application.updatedAt),
     accent: applicationAccent(application.id),
   };

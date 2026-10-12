@@ -67,6 +67,9 @@ func realMain() int {
 	var runner deployment.Runner = deployment.Staged(deployment.Simulate)
 	jobTimeout := 15 * time.Second
 	var sources, artifacts *artifact.Store
+	var appsServer *http.Server
+	var appURL func(workspaceSlug, applicationSlug string) string
+	var kickRuntime func()
 	if builds := appConfig.LocalBuilds; builds.Enabled {
 		if sources, err = artifact.Open(builds.SourceDirectory); err != nil {
 			logger.Error("SPROUT_SOURCE_DIR must be an existing private (0700) directory")
@@ -123,6 +126,21 @@ func realMain() int {
 				logger.Error("running applications could not all be stopped; startup cleanup will remove them")
 			}
 		}()
+		supervisor, err := apprt.NewSupervisor(driver, artifacts, logger, apprt.MaxRunning)
+		if err != nil {
+			logger.Error("runtime supervisor configuration invalid")
+			return 1
+		}
+		defer supervisor.Close() // joins in-flight starts before the containers are stopped
+		proxy, err := apprt.NewProxy(appConfig.Apps.Domain, deploymentRepository.LiveRoute, supervisor, logger)
+		if err != nil {
+			logger.Error("application proxy configuration invalid")
+			return 1
+		}
+		supervisor.StartReconciler(deploymentRepository.RuntimeDesired, apprt.DefaultReconcileInterval, apprt.DefaultIdleTimeout)
+		kickRuntime = supervisor.Kick
+		appsServer = proxy.NewServer(appConfig.Apps.Address)
+		appURL = appConfig.Apps.URL
 		runner = buildjob.NewRunner(sources, artifacts, builder, driver, buildjob.DefaultHealthCheck, runner, logger)
 		jobTimeout = 4 * time.Minute
 		logger.Warn("local builds enabled: uploaded code runs in Docker on this machine")
@@ -151,6 +169,9 @@ func realMain() int {
 	queries := dbgen.New(pool)
 	repository := application.NewSQLRepository(queries)
 	service := application.NewService(repository)
+	if kickRuntime != nil {
+		service.OnLifecycleChange(kickRuntime)
+	}
 	sharingService := sharing.NewService(queries)
 	teamService := team.NewService(pool, identity.ClerkProfileProvider{})
 	clerk.SetKey(appConfig.ClerkSecretKey)
@@ -160,7 +181,7 @@ func realMain() int {
 		api.Use(httpapi.AuthenticationMiddleware(identityService, logger, appConfig.WebOrigin))
 		httpapi.RegisterIdentityRoutes(api, identityService, logger)
 		httpapi.RegisterCapabilityRoutes(api, httpapi.Capabilities{LocalBuilds: appConfig.LocalBuilds.Enabled})
-		httpapi.RegisterApplicationRoutes(api, service, logger)
+		httpapi.RegisterApplicationRoutes(api, service, logger, appURL)
 		httpapi.RegisterSharingRoutes(api, sharingService, logger)
 		httpapi.RegisterTeamRoutes(api, teamService, logger)
 		httpapi.RegisterDeploymentSimulationRoutes(api, worker, logger)
@@ -171,7 +192,7 @@ func realMain() int {
 		}
 	})
 
-	return run(ctx, appConfig, logger, router)
+	return run(ctx, appConfig, logger, router, appsServer)
 }
 
 func run(
@@ -179,6 +200,7 @@ func run(
 	appConfig config.Config,
 	logger *slog.Logger,
 	handler http.Handler,
+	appsServer *http.Server,
 ) int {
 	listener, err := net.Listen("tcp", appConfig.APIAddress)
 	if err != nil {
@@ -186,15 +208,44 @@ func run(
 		return 1
 	}
 
+	// The public application listener lives and dies with the API: if either
+	// stops, both do. It exists only when local builds are enabled.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	appsDone := make(chan error, 1)
+	if appsServer != nil {
+		appsListener, err := net.Listen("tcp", appsServer.Addr)
+		if err != nil {
+			_ = listener.Close()
+			logger.Error("applications listen failed", "error", err)
+			return 1
+		}
+		logger.Info("applications listening", "address", appsListener.Addr().String(), "domain", appConfig.Apps.Domain)
+		go func() {
+			err := httpapi.Serve(ctx, appsListener, appsServer)
+			cancel()
+			appsDone <- err
+		}()
+	} else {
+		appsDone <- nil
+	}
+
 	server := httpapi.NewServer(listener.Addr().String(), handler)
 	logger.Info("server listening", "service", serviceName, "address", listener.Addr().String())
 
+	code := 0
 	if err := httpapi.Serve(ctx, listener, server); err != nil {
 		logger.Error("server stopped unexpectedly", "error", err)
-		return 1
+		code = 1
+	}
+	cancel()
+	if err := <-appsDone; err != nil {
+		logger.Error("applications server stopped unexpectedly", "error", err)
+		code = 1
+	}
+	if code == 0 {
+		logger.Info("server stopped", "service", serviceName)
 	}
 
-	logger.Info("server stopped", "service", serviceName)
-
-	return 0
+	return code
 }

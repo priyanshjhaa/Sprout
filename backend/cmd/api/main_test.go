@@ -23,6 +23,7 @@ func TestRunReportsListenFailure(t *testing.T) {
 		config.Config{APIAddress: "127.0.0.1:not-a-port"},
 		logger,
 		router,
+		nil,
 	)
 
 	if exitCode != 1 {

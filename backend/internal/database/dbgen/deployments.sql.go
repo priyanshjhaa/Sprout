@@ -372,6 +372,32 @@ func (q *Queries) ListDeployments(ctx context.Context, arg ListDeploymentsParams
 	return items, nil
 }
 
+const listInProgressDeployments = `-- name: ListInProgressDeployments :many
+SELECT id FROM deployments WHERE status IN ('queued', 'building') AND NOT simulated
+`
+
+// Real deployments that are queued or building. Their runtime resources exist
+// before the deployment is live and must not be reclaimed as orphans.
+func (q *Queries) ListInProgressDeployments(ctx context.Context) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listInProgressDeployments)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLiveReleases = `-- name: ListLiveReleases :many
 SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
  d.artifact_id, d.artifact_sha256, d.artifact_bytes

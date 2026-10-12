@@ -128,3 +128,14 @@ RETURNING application.id, application.workspace_id, application.name,
           application.slug, application.description, application.lifecycle,
           application.default_hostname, application.created_by,
           application.created_at, application.updated_at, application.access_mode;
+
+-- Whether an application currently has a live deployment, for the public URL
+-- the API reports. Permission checks happen in the calling query.
+-- name: ListLiveApplicationIDs :many
+SELECT d.application_id FROM deployments d
+JOIN applications a ON a.id = d.application_id
+JOIN workspaces w ON w.id = a.workspace_id
+WHERE w.slug = sqlc.arg(workspace_slug) AND d.status = 'live';
+
+-- name: ApplicationHasLiveDeployment :one
+SELECT EXISTS (SELECT 1 FROM deployments WHERE application_id = $1 AND status = 'live');
