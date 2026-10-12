@@ -98,3 +98,9 @@ SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
  d.artifact_id, d.artifact_sha256, d.artifact_bytes
 FROM deployments d JOIN applications a ON a.id = d.application_id
 WHERE d.status = 'live';
+
+-- Real builds continue past packaging: the release is provisioned, started and
+-- health-checked before it counts as live. Simulations never get these rows.
+-- name: InitializeRuntimeStages :exec
+INSERT INTO deployment_stage_events(deployment_id, stage)
+VALUES ($1, 'provision'), ($1, 'release'), ($1, 'health_check');

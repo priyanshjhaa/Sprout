@@ -268,6 +268,18 @@ func (q *Queries) InitializeDeploymentStages(ctx context.Context, deploymentID p
 	return err
 }
 
+const initializeRuntimeStages = `-- name: InitializeRuntimeStages :exec
+INSERT INTO deployment_stage_events(deployment_id, stage)
+VALUES ($1, 'provision'), ($1, 'release'), ($1, 'health_check')
+`
+
+// Real builds continue past packaging: the release is provisioned, started and
+// health-checked before it counts as live. Simulations never get these rows.
+func (q *Queries) InitializeRuntimeStages(ctx context.Context, deploymentID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, initializeRuntimeStages, deploymentID)
+	return err
+}
+
 const listDeploymentStages = `-- name: ListDeploymentStages :many
 SELECT deployment_id, stage, status, failure_code, started_at, finished_at FROM deployment_stage_events WHERE deployment_id = $1
 ORDER BY stage

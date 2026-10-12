@@ -45,7 +45,16 @@ type Job struct {
 	Stages        []Stage    `json:"stages"`
 }
 
+// Simulations walk the first three stages. Real builds continue by provisioning
+// the release, starting it, and checking it is healthy.
 var stages = [...]string{"source", "build", "package"}
+
+func stageCount(simulated bool) int {
+	if simulated {
+		return len(stages)
+	}
+	return len(stages) + 3
+}
 
 // Repository owns durable state; Manager owns process-local scheduling only.
 type Repository interface {
@@ -64,8 +73,9 @@ type Repository interface {
 
 // Work describes one accepted job to its Runner.
 type Work struct {
-	DeploymentID string
-	Simulated    bool
+	DeploymentID  string
+	ApplicationID string
+	Simulated     bool
 	// Source is the uploaded archive for a real build; nil for simulations.
 	Source *artifact.Descriptor
 }
@@ -77,8 +87,15 @@ type Steps interface {
 	Complete(stage string) error
 }
 
-// Outcome is what a successful run produced. Simulations produce nothing.
-type Outcome struct{ Artifact *artifact.Descriptor }
+// Outcome is what a run produced. Simulations produce nothing. Provisioned
+// reports that runtime resources may exist for the deployment, so Release must
+// clean them up unless the deployment went live (kept). Live reports that the
+// release started and passed its health check, so it is recorded as live.
+type Outcome struct {
+	Artifact    *artifact.Descriptor
+	Provisioned bool
+	Live        bool
+}
 
 // Runner performs a job's work. Run must honour ctx: Go cannot stop a function
 // that ignores cancellation. Release is called exactly once after the job's

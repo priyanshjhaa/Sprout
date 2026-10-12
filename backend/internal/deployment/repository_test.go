@@ -160,16 +160,46 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 	_, err = repo.Get(ctx, scope, built.ID)
 	expect(err, ErrNotFound)
 	expect(repo.Start(ctx, realScope, built.ID), nil)
-	for _, stage := range stages {
-		expect(repo.Advance(ctx, built.ID, stage, "running"), nil)
-		expect(repo.Advance(ctx, built.ID, stage, "succeeded"), nil)
+	realStages := append(stages[:], "provision", "release", "health_check")
+	runStages := func(id string, names []string) {
+		for _, stage := range names {
+			expect(repo.Advance(ctx, id, stage, "running"), nil)
+			expect(repo.Advance(ctx, id, stage, "succeeded"), nil)
+		}
 	}
+	// Going live needs every real stage, not just the three a simulation walks.
+	runStages(built.ID, stages[:])
+	_, err = repo.Finish(ctx, built.ID, "live", "", &artifact.Descriptor{ID: strings.Repeat("a", 32), SHA256: strings.Repeat("b", 64), Size: 42})
+	expect(err, ErrConflict)
+	runStages(built.ID, realStages[3:])
 	output := &artifact.Descriptor{ID: strings.Repeat("a", 32), SHA256: strings.Repeat("b", 64), Size: 42}
 	_, err = repo.Finish(ctx, built.ID, "failed", "build_failed", output)
 	expect(err, ErrInvalid)
-	recorded, err := repo.Finish(ctx, built.ID, "succeeded", "", output)
+	_, err = repo.Finish(ctx, built.ID, "live", "", nil)
+	expect(err, ErrInvalid) // live without an artifact
+	recorded, err := repo.Finish(ctx, built.ID, "live", "", output)
 	if err != nil || !recorded {
 		t.Fatalf("artifact not recorded: %v %v", recorded, err)
+	}
+	if live, err := repo.LiveDeployments(ctx); err != nil || !live[built.ID] {
+		t.Fatalf("live set: %v %v", live, err)
+	}
+	// A newer release going live demotes this one in the same transaction.
+	next, err := repo.Create(ctx, realScope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expect(repo.Start(ctx, realScope, next.ID), nil)
+	runStages(next.ID, realStages)
+	nextOutput := &artifact.Descriptor{ID: strings.Repeat("c", 32), SHA256: strings.Repeat("d", 64), Size: 43}
+	if recorded, err := repo.Finish(ctx, next.ID, "live", "", nextOutput); err != nil || !recorded {
+		t.Fatalf("second live: %v %v", recorded, err)
+	}
+	if old, err := repo.Get(ctx, realScope, built.ID); err != nil || old.Status != "succeeded" {
+		t.Fatalf("previous release not demoted: %+v %v", old, err)
+	}
+	if live, _ := repo.LiveDeployments(ctx); live[built.ID] || !live[next.ID] {
+		t.Fatalf("live set after promotion: %v", live)
 	}
 	referenced, err := repo.ReferencedArtifacts(ctx)
 	if err != nil || !referenced[output.ID] {

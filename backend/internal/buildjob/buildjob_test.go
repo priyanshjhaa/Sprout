@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -18,7 +19,39 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 	"github.com/priyanshjhaa/Sprout/backend/internal/deployment"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
+	rt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 )
+
+const (
+	testApp = "11111111-1111-4111-8111-111111111111"
+	testDep = "22222222-2222-4222-8222-222222222222"
+	oldDep  = "33333333-3333-4333-8333-333333333333"
+)
+
+// fakeDriver records calls and holds an inventory; errors are injected per method.
+type fakeDriver struct {
+	prepareErr, startErr error
+	inventory            rt.Inventory
+	calls                []string
+	destroyed            []rt.Release
+}
+
+func (d *fakeDriver) Prepare(_ context.Context, r rt.Release, archive []byte) error {
+	d.calls = append(d.calls, "prepare")
+	return d.prepareErr
+}
+func (d *fakeDriver) Start(_ context.Context, r rt.Release) (rt.Instance, error) {
+	d.calls = append(d.calls, "start")
+	return rt.Instance{Release: r, Endpoint: "127.0.0.1:1"}, d.startErr
+}
+func (d *fakeDriver) Stop(context.Context, rt.Release) error { return nil }
+func (d *fakeDriver) Destroy(_ context.Context, r rt.Release) error {
+	d.destroyed = append(d.destroyed, r)
+	return nil
+}
+func (d *fakeDriver) List(context.Context) (rt.Inventory, error) { return d.inventory, nil }
+
+func healthy(context.Context, string) error { return nil }
 
 func openStore(t *testing.T) *artifact.Store {
 	t.Helper()
@@ -95,9 +128,15 @@ func failureCode(err error) string {
 
 func newRunner(t *testing.T, builder Builder) (*Runner, *artifact.Store, *artifact.Store) {
 	t.Helper()
+	runner, sources, artifacts, _ := newRuntimeRunner(t, builder, &fakeDriver{}, healthy)
+	return runner, sources, artifacts
+}
+
+func newRuntimeRunner(t *testing.T, builder Builder, driver *fakeDriver, check HealthCheck) (*Runner, *artifact.Store, *artifact.Store, *fakeDriver) {
+	t.Helper()
 	sources, artifacts := openStore(t), openStore(t)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return NewRunner(sources, artifacts, builder, deployment.Staged(deployment.Simulate), logger), sources, artifacts
+	return NewRunner(sources, artifacts, builder, driver, check, deployment.Staged(deployment.Simulate), logger), sources, artifacts, driver
 }
 
 func TestBuildSuccessAndRelease(t *testing.T) {
@@ -107,13 +146,14 @@ func TestBuildSuccessAndRelease(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	work := deployment.Work{DeploymentID: "d1", Source: &stored}
+	work := deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}
 	steps := &recordedSteps{}
 	outcome, err := runner.Run(ctx, work, steps)
-	if err != nil || outcome.Artifact == nil {
+	if err != nil || outcome.Artifact == nil || !outcome.Live || !outcome.Provisioned {
 		t.Fatalf("build: %+v %v", outcome, err)
 	}
-	want := []string{"begin source", "complete source", "begin build", "complete build", "begin package", "complete package"}
+	want := []string{"begin source", "complete source", "begin build", "complete build", "begin package", "complete package",
+		"begin provision", "complete provision", "begin release", "complete release", "begin health_check", "complete health_check"}
 	if !reflect.DeepEqual(steps.events, want) {
 		t.Fatalf("stages: %v", steps.events)
 	}
@@ -129,9 +169,75 @@ func TestBuildSuccessAndRelease(t *testing.T) {
 		t.Fatalf("kept artifact deleted: %v", err)
 	}
 	// Not kept (e.g. cancellation won): the artifact goes too.
-	runner.Release(ctx, deployment.Work{DeploymentID: "d1"}, outcome, false)
+	runner.Release(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp}, outcome, false)
 	if _, err := artifacts.Load(ctx, *outcome.Artifact); !errors.Is(err, artifact.ErrMissing) {
 		t.Fatalf("discarded artifact survived: %v", err)
+	}
+}
+
+func TestRuntimeFailuresAreClassifiedAndCleanedUp(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name   string
+		driver *fakeDriver
+		check  HealthCheck
+		code   string
+		calls  []string
+	}{
+		{"prepare fails", &fakeDriver{prepareErr: rt.ErrStart}, healthy, "provision_failed", []string{"prepare"}},
+		{"start fails", &fakeDriver{startErr: rt.ErrStart}, healthy, "release_failed", []string{"prepare", "start"}},
+		{"docker down", &fakeDriver{prepareErr: rt.ErrUnavailable}, healthy, "runtime_unavailable", []string{"prepare"}},
+		{"never healthy", &fakeDriver{}, func(context.Context, string) error { return rt.ErrUnhealthy }, "health_check_failed", []string{"prepare", "start"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			runner, sources, artifacts, driver := newRuntimeRunner(t, fakeBuilder{output: []byte("out")}, tc.driver, tc.check)
+			stored, _ := sources.Save(ctx, archive(t, nil))
+			work := deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}
+			outcome, err := runner.Run(ctx, work, &recordedSteps{})
+			if failureCode(err) != tc.code || outcome.Live || !outcome.Provisioned || outcome.Artifact == nil {
+				t.Fatalf("code %q outcome %+v err %v", failureCode(err), outcome, err)
+			}
+			if !reflect.DeepEqual(driver.calls, tc.calls) {
+				t.Fatalf("calls %v", driver.calls)
+			}
+			// The manager reports failure, so kept is false: everything goes.
+			runner.Release(ctx, work, outcome, false)
+			if len(driver.destroyed) != 1 || driver.destroyed[0] != (rt.Release{ApplicationID: testApp, DeploymentID: testDep}) {
+				t.Fatalf("failed release not destroyed: %v", driver.destroyed)
+			}
+			if _, err := artifacts.Load(ctx, *outcome.Artifact); !errors.Is(err, artifact.ErrMissing) {
+				t.Fatalf("artifact survived failure: %v", err)
+			}
+		})
+	}
+}
+
+func TestCancellationDuringHealthCheckIsNotAHealthFailure(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	runner, sources, _, _ := newRuntimeRunner(t, fakeBuilder{output: []byte("out")}, &fakeDriver{}, func(ctx context.Context, _ string) error {
+		cancel()
+		return rt.ErrUnhealthy
+	})
+	stored, _ := sources.Save(context.Background(), archive(t, nil))
+	_, err := runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, &recordedSteps{})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want cancellation", err)
+	}
+}
+
+func TestGoingLiveRetiresOnlyTheSameApplicationsOldReleases(t *testing.T) {
+	ctx := context.Background()
+	other := rt.Release{ApplicationID: "44444444-4444-4444-8444-444444444444", DeploymentID: "55555555-5555-4555-8555-555555555555"}
+	old := rt.Release{ApplicationID: testApp, DeploymentID: oldDep}
+	driver := &fakeDriver{inventory: rt.Inventory{
+		Containers: []rt.Release{old, {ApplicationID: testApp, DeploymentID: testDep}, other},
+		Releases:   []rt.Release{old, {ApplicationID: testApp, DeploymentID: testDep}, other},
+	}}
+	runner, _, artifacts, _ := newRuntimeRunner(t, fakeBuilder{}, driver, healthy)
+	stored, _ := artifacts.Save(ctx, []byte("out"))
+	runner.Release(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp}, deployment.Outcome{Artifact: &stored, Provisioned: true, Live: true}, true)
+	if !reflect.DeepEqual(driver.destroyed, []rt.Release{old}) {
+		t.Fatalf("destroyed %v, want only the previous release of the same app", driver.destroyed)
 	}
 }
 
@@ -262,16 +368,28 @@ func TestDockerBuildJob(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	runner, sources, artifacts := newRunner(t, builder)
+	docker, err := rt.NewDocker(nodeapp.DefaultImage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sources, artifacts := openStore(t), openStore(t)
+	runner := NewRunner(sources, artifacts, builder, docker, DefaultHealthCheck, deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	ctx := context.Background()
 	stored, err := sources.Save(ctx, archive(t, nil))
 	if err != nil {
 		t.Fatal(err)
 	}
-	work := deployment.Work{DeploymentID: "docker", Source: &stored}
+	work := deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}
+	t.Cleanup(func() {
+		_ = docker.Destroy(context.Background(), rt.Release{ApplicationID: testApp, DeploymentID: testDep})
+	})
 	outcome, err := runner.Run(ctx, work, &recordedSteps{})
-	if err != nil || outcome.Artifact == nil {
+	if err != nil || outcome.Artifact == nil || !outcome.Live {
 		t.Fatalf("docker build: %+v %v", outcome, err)
+	}
+	inventory, err := docker.List(ctx)
+	if err != nil || !slices.Contains(inventory.Containers, rt.Release{ApplicationID: testApp, DeploymentID: testDep}) {
+		t.Fatalf("live app is not running: %+v %v", inventory, err)
 	}
 	data, err := artifacts.Load(ctx, *outcome.Artifact)
 	if err != nil {
@@ -295,5 +413,8 @@ func TestDockerBuildJob(t *testing.T) {
 	runner.Release(ctx, work, outcome, false)
 	if _, err := artifacts.Load(ctx, *outcome.Artifact); !errors.Is(err, artifact.ErrMissing) {
 		t.Fatalf("artifact not released: %v", err)
+	}
+	if inventory, _ := docker.List(ctx); slices.Contains(inventory.Containers, rt.Release{ApplicationID: testApp, DeploymentID: testDep}) || slices.Contains(inventory.Releases, rt.Release{ApplicationID: testApp, DeploymentID: testDep}) {
+		t.Fatalf("runtime resources survived release: %+v", inventory)
 	}
 }
