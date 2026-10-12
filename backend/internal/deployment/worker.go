@@ -218,7 +218,11 @@ func (m *Manager) execute(item *task) {
 			m.logger.Error("deployment persistence failed", "deployment_id", item.job.ID)
 		}
 		m.progress.notify(item.job.ID)
-		m.release(finishCtx, item, outcome, err == nil && recorded && output != nil)
+		// Runtime cleanup (container, volume, superseded releases) can outlast the
+		// short database deadline, so it gets its own bounded context.
+		releaseCtx, stopRelease := context.WithTimeout(context.Background(), 30*time.Second)
+		defer stopRelease()
+		m.release(releaseCtx, item, outcome, err == nil && recorded && output != nil)
 	}()
 	if err := m.repository.Start(ctx, item.scope, item.job.ID); err != nil {
 		status, code = "failed", "start_rejected"
