@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -12,6 +13,9 @@ import (
 const (
 	DefaultAPIAddress = "127.0.0.1:8080"
 	DefaultWebOrigin  = "http://localhost:3000"
+
+	DefaultAppsAddress = "127.0.0.1:8081"
+	DefaultAppsDomain  = "localhost"
 )
 
 type Config struct {
@@ -22,6 +26,17 @@ type Config struct {
 	// LocalBuilds enables accepting source uploads and running real builds in
 	// Docker on this machine. It is local developer tooling, not a service.
 	LocalBuilds LocalBuilds
+	// Apps configures the public listener that serves live applications. It is
+	// only started when local builds are enabled.
+	Apps Apps
+}
+
+// Apps is the address and base domain of the application proxy. Applications
+// are served at {application}.{workspace}.{Domain}. The address must be
+// loopback: this is local developer infrastructure, not an internet-facing edge.
+type Apps struct {
+	Address string
+	Domain  string
 }
 
 // LocalBuilds is enabled only with SPROUT_ENABLE_LOCAL_BUILDS=1, an API bound to
@@ -71,6 +86,10 @@ func Load(lookupEnv LookupEnv) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	apps, err := loadApps(lookupEnv)
+	if err != nil {
+		return Config{}, err
+	}
 
 	return Config{
 		APIAddress:     address,
@@ -78,6 +97,7 @@ func Load(lookupEnv LookupEnv) (Config, error) {
 		WebOrigin:      webOrigin,
 		ClerkSecretKey: clerkSecretKey,
 		LocalBuilds:    builds,
+		Apps:           apps,
 	}, nil
 }
 
@@ -112,6 +132,40 @@ func loadLocalBuilds(lookupEnv LookupEnv, address string) (LocalBuilds, error) {
 		return LocalBuilds{}, fmt.Errorf("SPROUT_SOURCE_DIR and SPROUT_ARTIFACT_DIR must be different directories")
 	}
 	return builds, nil
+}
+
+var domainLabel = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+
+func loadApps(lookupEnv LookupEnv) (Apps, error) {
+	apps := Apps{Address: DefaultAppsAddress, Domain: DefaultAppsDomain}
+	if value, exists := lookupEnv("SPROUT_APPS_ADDRESS"); exists {
+		apps.Address = strings.TrimSpace(value)
+	}
+	if err := validateAddress(apps.Address); err != nil {
+		return Apps{}, fmt.Errorf("SPROUT_APPS_ADDRESS: %w", err)
+	}
+	host, _, _ := net.SplitHostPort(apps.Address)
+	if ip := net.ParseIP(host); host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+		return Apps{}, fmt.Errorf("SPROUT_APPS_ADDRESS must be on a loopback host")
+	}
+	if value, exists := lookupEnv("SPROUT_APPS_DOMAIN"); exists {
+		apps.Domain = strings.ToLower(strings.Trim(strings.TrimSpace(value), "."))
+	}
+	for _, label := range strings.Split(apps.Domain, ".") {
+		if len(label) > 63 || !domainLabel.MatchString(label) {
+			return Apps{}, fmt.Errorf("SPROUT_APPS_DOMAIN must be a valid DNS name such as localhost")
+		}
+	}
+	return apps, nil
+}
+
+// URL is where a live application is reachable from this machine.
+func (a Apps) URL(workspaceSlug, applicationSlug string) string {
+	url := "http://" + applicationSlug + "." + workspaceSlug + "." + a.Domain
+	if _, port, err := net.SplitHostPort(a.Address); err == nil && port != "80" {
+		url += ":" + port
+	}
+	return url
 }
 
 func validWebOrigin(origin string) bool {

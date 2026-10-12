@@ -68,17 +68,26 @@ func (d *Docker) Start(ctx context.Context, release Release) (Instance, error) {
 		_ = d.Stop(context.WithoutCancel(ctx), release)
 		return Instance{}, ErrStart
 	}
-	var out bytes.Buffer
-	if err := docker(ctx, nil, &out, "port", containerName(release), appPort+"/tcp"); err != nil {
-		_ = d.Stop(context.WithoutCancel(ctx), release)
-		return Instance{}, ErrStart
-	}
-	endpoint := loopbackEndpoint(out.String())
-	if endpoint == "" {
+	endpoint, err := d.Endpoint(ctx, release)
+	if err != nil {
 		_ = d.Stop(context.WithoutCancel(ctx), release)
 		return Instance{}, ErrStart
 	}
 	return Instance{Release: release, Endpoint: endpoint}, nil
+}
+
+func (d *Docker) Endpoint(ctx context.Context, release Release) (string, error) {
+	if !valid(release) {
+		return "", ErrInvalid
+	}
+	var out bytes.Buffer
+	if err := docker(ctx, nil, &out, "port", containerName(release), appPort+"/tcp"); err != nil {
+		return "", ErrNotRunning
+	}
+	if endpoint := loopbackEndpoint(out.String()); endpoint != "" {
+		return endpoint, nil
+	}
+	return "", ErrNotRunning
 }
 
 func (d *Docker) Stop(ctx context.Context, release Release) error {

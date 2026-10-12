@@ -189,3 +189,32 @@ func TestLocalBuilds(t *testing.T) {
 		}
 	}
 }
+
+func TestAppsConfiguration(t *testing.T) {
+	t.Parallel()
+
+	apps, err := loadApps(func(string) (string, bool) { return "", false })
+	if err != nil || apps.Address != "127.0.0.1:8081" || apps.Domain != "localhost" {
+		t.Fatalf("defaults = %+v (%v)", apps, err)
+	}
+	if got := apps.URL("acme", "shop"); got != "http://shop.acme.localhost:8081" {
+		t.Fatalf("URL = %q", got)
+	}
+	for name, env := range map[string]map[string]string{
+		"public address": {"SPROUT_APPS_ADDRESS": "0.0.0.0:8081"},
+		"bad port":       {"SPROUT_APPS_ADDRESS": "127.0.0.1:0"},
+		"bad domain":     {"SPROUT_APPS_DOMAIN": "-evil.com"},
+		"path in domain": {"SPROUT_APPS_DOMAIN": "a/b"},
+	} {
+		lookup := func(key string) (string, bool) { value, ok := env[key]; return value, ok }
+		if _, err := loadApps(lookup); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	custom, err := loadApps(func(key string) (string, bool) {
+		return map[string]string{"SPROUT_APPS_ADDRESS": "localhost:80", "SPROUT_APPS_DOMAIN": "Apps.Test."}[key], true
+	})
+	if err != nil || custom.URL("w", "a") != "http://a.w.apps.test" {
+		t.Fatalf("custom = %+v %q (%v)", custom, custom.URL("w", "a"), err)
+	}
+}

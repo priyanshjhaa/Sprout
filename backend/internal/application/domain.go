@@ -30,9 +30,12 @@ type Application struct {
 	AccessMode      string
 	Lifecycle       Lifecycle
 	DefaultHostname string
-	CreatedBy       string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	// Live reports that the application has a live deployment, i.e. its public
+	// URL answers. It is derived, never stored on the application.
+	Live      bool
+	CreatedBy string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type CreateInput struct {

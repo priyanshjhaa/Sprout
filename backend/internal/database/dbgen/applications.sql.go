@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const applicationHasLiveDeployment = `-- name: ApplicationHasLiveDeployment :one
+SELECT EXISTS (SELECT 1 FROM deployments WHERE application_id = $1 AND status = 'live')
+`
+
+func (q *Queries) ApplicationHasLiveDeployment(ctx context.Context, applicationID pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, applicationHasLiveDeployment, applicationID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createApplicationForMember = `-- name: CreateApplicationForMember :one
 INSERT INTO applications (
     workspace_id,
@@ -231,6 +242,35 @@ func (q *Queries) ListApplicationsForMember(ctx context.Context, arg ListApplica
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLiveApplicationIDs = `-- name: ListLiveApplicationIDs :many
+SELECT d.application_id FROM deployments d
+JOIN applications a ON a.id = d.application_id
+JOIN workspaces w ON w.id = a.workspace_id
+WHERE w.slug = $1 AND d.status = 'live'
+`
+
+// Whether an application currently has a live deployment, for the public URL
+// the API reports. Permission checks happen in the calling query.
+func (q *Queries) ListLiveApplicationIDs(ctx context.Context, workspaceSlug string) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listLiveApplicationIDs, workspaceSlug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var application_id pgtype.UUID
+		if err := rows.Scan(&application_id); err != nil {
+			return nil, err
+		}
+		items = append(items, application_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

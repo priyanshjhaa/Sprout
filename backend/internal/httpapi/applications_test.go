@@ -28,7 +28,9 @@ func applicationRouterForTest(service ApplicationService) *chi.Mux {
 				next.ServeHTTP(w, r.WithContext(ctx))
 			})
 		})
-		RegisterApplicationRoutes(api, service, discardLogger())
+		RegisterApplicationRoutes(api, service, discardLogger(), func(workspace, app string) string {
+			return "http://" + app + "." + workspace + ".localhost:8081"
+		})
 	})
 	return router
 }
@@ -191,5 +193,36 @@ func assertErrorCode(t *testing.T, response *httptest.ResponseRecorder, expected
 	}
 	if payload.Error.RequestID == "" || payload.Error.RequestID != response.Header().Get(requestIDHeader) {
 		t.Fatalf("error request ID = %q, header = %q", payload.Error.RequestID, response.Header().Get(requestIDHeader))
+	}
+}
+
+// The URL is reported only while the application has a live deployment.
+func TestApplicationURLAppearsOnlyWhileLive(t *testing.T) {
+	t.Parallel()
+
+	service := &stubApplicationService{
+		list: func(context.Context, string, string) ([]application.Application, error) {
+			return []application.Application{{ID: "a", Slug: "shop", Live: true}, {ID: "b", Slug: "idle"}}, nil
+		},
+	}
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/workspaces/acme/applications", nil)
+	request.Header.Set("Authorization", "Bearer test-session")
+	response := httptest.NewRecorder()
+	applicationRouterForTest(service).ServeHTTP(response, request)
+
+	var body struct {
+		Applications []struct {
+			Slug string  `json:"slug"`
+			URL  *string `json:"url"`
+		} `json:"applications"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil || len(body.Applications) != 2 {
+		t.Fatalf("body = %s (%v)", response.Body.String(), err)
+	}
+	if got := body.Applications[0].URL; got == nil || *got != "http://shop.acme.localhost:8081" {
+		t.Fatalf("live url = %v", got)
+	}
+	if body.Applications[1].URL != nil {
+		t.Fatalf("idle application reported a url: %v", *body.Applications[1].URL)
 	}
 }

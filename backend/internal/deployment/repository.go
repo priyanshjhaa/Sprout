@@ -13,6 +13,7 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 	"github.com/priyanshjhaa/Sprout/backend/internal/authorization"
 	"github.com/priyanshjhaa/Sprout/backend/internal/database/dbgen"
+	"github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 )
 
 type SQLRepository struct {
@@ -504,4 +505,24 @@ func (r *SQLRepository) LiveDeployments(ctx context.Context) (map[string]bool, e
 		live[row.DeploymentID.String()] = true
 	}
 	return live, nil
+}
+
+// LiveRoute finds an application by its public slugs for the routing proxy.
+// Live applications are public, so there is deliberately no user or permission
+// here; only what a visitor to the URL may learn is returned.
+func (r *SQLRepository) LiveRoute(ctx context.Context, workspaceSlug, applicationSlug string) (runtime.Route, error) {
+	row, err := dbgen.New(r.pool).GetLiveRelease(ctx, dbgen.GetLiveReleaseParams{WorkspaceSlug: workspaceSlug, ApplicationSlug: applicationSlug})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return runtime.Route{}, runtime.ErrNoApp
+	}
+	if err != nil {
+		return runtime.Route{}, err
+	}
+	route := runtime.Route{Release: runtime.Release{ApplicationID: row.ApplicationID.String()}, Lifecycle: string(row.Lifecycle)}
+	if row.DeploymentID.Valid && row.ArtifactID.Valid && row.ArtifactSha256.Valid && row.ArtifactBytes.Valid {
+		route.Live = true
+		route.Release.DeploymentID = row.DeploymentID.String()
+		route.Artifact = artifact.Descriptor{ID: row.ArtifactID.String, SHA256: row.ArtifactSha256.String, Size: int64(row.ArtifactBytes.Int32)}
+	}
+	return route, nil
 }
