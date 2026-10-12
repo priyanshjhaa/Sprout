@@ -37,7 +37,7 @@ export function ApplicationShell({ children }: { children: ReactNode }) {
             {application && <CopyAddress url={application.url} live={application.status === "running"} />}
           </div>
         </div>
-        <Pipeline stages={latest.job?.stages} />
+        <Pipeline stages={latest.job?.stages} simulated={latest.kind === "simulation"} />
       </header>
 
       <nav className="sp-tabs" aria-label="Application navigation">

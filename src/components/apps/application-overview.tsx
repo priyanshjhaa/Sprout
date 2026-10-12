@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArrowRight, Clock3, Lock, Pause, Rocket, TriangleAlert, Users } from "lucide-react";
+import { Archive, ArrowRight, Clock3, ExternalLink, Globe, Lock, Pause, Rocket, TriangleAlert, Users } from "lucide-react";
 import Link from "next/link";
 import { StatusPill } from "@/components/status-pill";
 import { useApplication } from "@/lib/query/hooks";
@@ -10,10 +10,13 @@ import type { Application } from "@/types/domain";
 // One clear next step for each lifecycle state.
 function lifecycleSummary(application: Application, base: string) {
   if (application.lifecycle === "paused") {
-    return { icon: Pause, title: "Paused.", detail: "Deployments are on hold until you resume it.", action: { label: "Resume in settings", href: `${base}/settings` } };
+    return { icon: Pause, title: "Paused.", detail: "Its URL is offline and deployments are on hold until you resume it.", action: { label: "Resume in settings", href: `${base}/settings` } };
   }
   if (application.lifecycle === "archived") {
-    return { icon: Archive, title: "Archived.", detail: "Kept for reference. Restore it to deploy again.", action: { label: "Restore in settings", href: `${base}/settings` } };
+    return { icon: Archive, title: "Archived.", detail: "Its URL is offline. Restore it, then deploy again.", action: { label: "Restore in settings", href: `${base}/settings` } };
+  }
+  if (application.liveUrl) {
+    return { icon: Globe, title: "Live.", detail: "Anyone with the link can open it. It sleeps when idle and wakes on the next visit.", action: { label: "Open the app", href: application.liveUrl, external: true } };
   }
   return { icon: Rocket, title: "Not deployed yet.", detail: "Run a deployment to watch it move through the pipeline.", action: { label: "Open deployments", href: `${base}/deployments` } };
 }
@@ -34,7 +37,9 @@ export function ApplicationOverview({ workspaceSlug, appId }: { workspaceSlug: s
       <section className="sp-next">
         <span className="sp-next-icon"><summary.icon size={20} /></span>
         <div><h2>{summary.title}</h2><p>{summary.detail}</p></div>
-        <Link className="sp-button sp-button-solid" href={summary.action.href}>{summary.action.label} <ArrowRight size={14} /></Link>
+        {"external" in summary.action
+          ? <a className="sp-button sp-button-solid" href={summary.action.href} target="_blank" rel="noreferrer">{summary.action.label} <ExternalLink size={14} /></a>
+          : <Link className="sp-button sp-button-solid" href={summary.action.href}>{summary.action.label} <ArrowRight size={14} /></Link>}
       </section>
 
       <div className="sp-overview-grid">

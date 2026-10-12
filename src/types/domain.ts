@@ -15,7 +15,10 @@ export interface Application {
   description: string;
   status: AppStatus;
   lifecycle: ApplicationLifecycle;
+  // The address shown for the app; the live URL when there is one.
   url: string;
+  // Set only while the app has a live deployment.
+  liveUrl: string | null;
   updatedAt: string;
   accent: string;
   accessMode?: "workspace" | "restricted";

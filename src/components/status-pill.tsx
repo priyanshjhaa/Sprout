@@ -5,6 +5,7 @@ const labels: Record<AppStatus | Simulation["status"], string> = {
   undeployed: "Not deployed",
   queued: "Queued",
   succeeded: "Succeeded",
+  live: "Live",
   cancelled: "Cancelled",
   running: "Running",
   building: "Building",

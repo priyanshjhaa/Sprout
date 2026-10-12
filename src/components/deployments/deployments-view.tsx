@@ -86,9 +86,9 @@ function JobList({ query, workspaceSlug, appId, kind, empty }: {
     <>
       <div className="sp-rows">
         {query.data.map((job) => (
-          <Link className={`sp-row sp-row-${job.status === "succeeded" ? "running" : job.status === "queued" ? "building" : job.status}`} href={`${base}/${job.id}${kind === "build" ? "?kind=build" : ""}`} key={job.id}>
+          <Link className={`sp-row sp-row-${job.status === "succeeded" || job.status === "live" ? "running" : job.status === "queued" ? "building" : job.status}`} href={`${base}/${job.id}${kind === "build" ? "?kind=build" : ""}`} key={job.id}>
             <span className="sp-monogram sp-job-icon"><Icon size={16} /></span>
-            <span className="sp-row-main"><strong>{label} {job.id.slice(0, 8)}</strong><small>{job.stages.filter((stage) => stage.status === "succeeded").length} of 3 steps complete</small></span>
+            <span className="sp-row-main"><strong>{label} {job.id.slice(0, 8)}</strong><small>{job.stages.filter((stage) => stage.status === "succeeded").length} of {job.stages.length} steps complete</small></span>
             <StatusPill status={job.status} />
             <span className="sp-row-time">{new Date(job.createdAt).toLocaleString()}</span>
             <ArrowRight size={14} />

@@ -116,3 +116,15 @@ test("invalid typed fields are rejected and unknown fields are not retained", ()
   assert.throws(() => parseSimulation({ ...job, createdAt: "not-a-date" }));
   assert.equal("rawOutput" in parseSimulation({ ...job, rawOutput: "not part of contract" }), false);
 });
+
+test("accepts a live build with all six stages and still rejects unknown shapes", () => {
+  const names = ["source", "build", "package", "provision", "release", "health_check"];
+  const live = { ...job, simulated: false, status: "live", stages: names.map((name) => ({ name, status: "succeeded", failureCode: null })) };
+  assert.equal(parseSimulation(live, false).status, "live");
+  assert.equal(parseSimulation(live, false).stages.length, 6);
+  assert.throws(() => parseSimulation({ ...live, status: "serving" }, false), /Invalid simulation/);
+  assert.throws(() => parseSimulation({ ...live, stages: [...live.stages, { name: "source", status: "pending", failureCode: null }] }, false), /Invalid simulation/);
+  assert.throws(() => parseSimulation({ ...live, stages: [{ name: "deploy", status: "pending", failureCode: null }] }, false), /Invalid simulation/);
+  // A live build is finished: a late active frame cannot reopen it.
+  assert.equal(reconcileSimulation(live, { ...live, status: "building" }), live);
+});

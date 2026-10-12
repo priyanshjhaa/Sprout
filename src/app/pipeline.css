@@ -1,5 +1,5 @@
 /* Pipeline: the path every deployment travels, drawn like a plant growing */
-.sp-pipeline { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+.sp-pipeline { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; }
 .sp-step { position: relative; display: grid; justify-items: center; gap: 3px; text-align: center; }
 .sp-step::before { position: absolute; top: 21px; right: 50%; left: -50%; height: 2px; background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 11px); content: ""; }
 .sp-step:first-child::before { display: none; }
@@ -26,8 +26,9 @@
 .sp-step-succeeded .sp-step-node { border-color: var(--sp-moss-deep); background: linear-gradient(180deg, #76854c, var(--sp-moss-deep)); color: var(--sprout-ink); box-shadow: 0 8px 18px -8px rgba(82, 96, 50, 0.8); }
 .sp-step-running .sp-step-node { border-color: var(--sp-amber); background: #fbeed9; color: var(--sp-amber); animation: sp-ring 1.8s ease-out infinite; }
 .sp-step-failed .sp-step-node { border-color: var(--danger); background: var(--danger); color: #fff; }
-.sp-step-live .sp-step-node { border-style: dashed; }
-.sp-step-live strong { color: var(--muted); }
+/* Live is a destination until the health check passes. */
+.sp-step-live.sp-step-pending .sp-step-node { border-style: dashed; }
+.sp-step-live.sp-step-pending strong { color: var(--muted); }
 @keyframes sp-stem { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes sp-bloom { 0% { transform: scale(0.82); } 55% { transform: scale(1.14); } 100% { transform: scale(1); } }
 @keyframes sp-ring { 0% { box-shadow: 0 0 0 0 rgba(184, 115, 53, 0.35); } 100% { box-shadow: 0 0 0 14px rgba(184, 115, 53, 0); } }

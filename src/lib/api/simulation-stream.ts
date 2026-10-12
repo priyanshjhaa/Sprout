@@ -1,14 +1,18 @@
+// A simulation walks the first three stages; a real build continues until its release is healthy.
+export type StageName = "source" | "build" | "package" | "provision" | "release" | "health_check";
+export const stageNames: readonly StageName[] = ["source", "build", "package", "provision", "release", "health_check"];
+
 // A deployment job: an explicit simulation or a real build. Both share one shape.
 export interface Simulation {
   id: string;
   applicationId: string;
   simulated: boolean;
-  status: "queued" | "building" | "succeeded" | "failed" | "cancelled";
+  status: "queued" | "building" | "succeeded" | "live" | "failed" | "cancelled";
   failureCode: string | null;
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
-  stages: Array<{ name: "source" | "build" | "package"; status: "pending" | "running" | "succeeded" | "failed" | "skipped"; failureCode: string | null }>;
+  stages: Array<{ name: StageName; status: "pending" | "running" | "succeeded" | "failed" | "skipped"; failureCode: string | null }>;
 }
 
 export const isActiveSimulation = (job: Simulation) => job.status === "queued" || job.status === "building";
@@ -23,11 +27,11 @@ export function parseSimulation(value: unknown, simulated = true): Simulation {
   const job = value as Simulation;
   const nullableString = (field: unknown) => field === null || typeof field === "string";
   if (!job || typeof job.id !== "string" || typeof job.applicationId !== "string" || job.simulated !== simulated ||
-    !["queued", "building", "succeeded", "failed", "cancelled"].includes(job.status) ||
+    !["queued", "building", "succeeded", "live", "failed", "cancelled"].includes(job.status) ||
     typeof job.createdAt !== "string" || !Number.isFinite(Date.parse(job.createdAt)) ||
     !nullableString(job.startedAt) || !nullableString(job.finishedAt) || !nullableString(job.failureCode) ||
-    !Array.isArray(job.stages) || job.stages.length > 3 || new Set(job.stages.map((stage) => stage?.name)).size !== job.stages.length ||
-    !job.stages.every((stage) => stage && ["source", "build", "package"].includes(stage.name) &&
+    !Array.isArray(job.stages) || job.stages.length > stageNames.length || new Set(job.stages.map((stage) => stage?.name)).size !== job.stages.length ||
+    !job.stages.every((stage) => stage && (stageNames as readonly string[]).includes(stage.name) &&
       ["pending", "running", "succeeded", "failed", "skipped"].includes(stage.status) && nullableString(stage.failureCode))) {
     throw new Error("Invalid simulation response.");
   }
