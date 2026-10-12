@@ -526,3 +526,30 @@ func (r *SQLRepository) LiveRoute(ctx context.Context, workspaceSlug, applicatio
 	}
 	return route, nil
 }
+
+// RuntimeDesired reports what the runtime should be holding: every live
+// release with its application's lifecycle, and the real deployments still in
+// progress, whose resources must survive the reconciler.
+func (r *SQLRepository) RuntimeDesired(ctx context.Context) (runtime.Desired, error) {
+	q := dbgen.New(r.pool)
+	rows, err := q.ListLiveReleases(ctx)
+	if err != nil {
+		return runtime.Desired{}, err
+	}
+	var desired runtime.Desired
+	for _, row := range rows {
+		desired.Live = append(desired.Live, runtime.Route{
+			Release:   runtime.Release{ApplicationID: row.ApplicationID.String(), DeploymentID: row.DeploymentID.String()},
+			Lifecycle: string(row.Lifecycle),
+			Live:      true,
+		})
+	}
+	ids, err := q.ListInProgressDeployments(ctx)
+	if err != nil {
+		return runtime.Desired{}, err
+	}
+	for _, id := range ids {
+		desired.InProgress = append(desired.InProgress, id.String())
+	}
+	return desired, nil
+}

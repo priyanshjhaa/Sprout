@@ -231,3 +231,44 @@ type archiveLoader struct{ archive []byte }
 func (l archiveLoader) Load(context.Context, artifact.Descriptor) ([]byte, error) {
 	return l.archive, nil
 }
+
+// Run with SPROUT_DOCKER_TEST=1. Idle sleep stops the container but keeps the
+// release files; archiving removes the files as well.
+func TestReconcileSleepsAndArchivesARealApp(t *testing.T) {
+	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
+		t.Skip("set SPROUT_DOCKER_TEST=1 to run the local Docker runtime test")
+	}
+	driver, _ := NewDocker(testImage)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	defer driver.Destroy(context.Background(), testRelease)
+	supervisor := newSupervisor(t, driver, archiveLoader{exampleArchive(t)}, 2)
+	clock := time.Unix(1_000_000, 0)
+	supervisor.now = func() time.Time { return clock }
+
+	if _, err := supervisor.Ensure(ctx, testRoute); err != nil {
+		t.Fatal(err)
+	}
+	active := source(Desired{Live: []Route{testRoute}})
+	state := func() Inventory { inv, _ := driver.List(ctx); return inv }
+
+	clock = clock.Add(11 * time.Minute)
+	if err := supervisor.reconcile(ctx, active, 10*time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	if inv := state(); slices.Contains(inv.Containers, testRelease) || !slices.Contains(inv.Releases, testRelease) {
+		t.Fatalf("after idle sleep: %+v (want container gone, files kept)", inv)
+	}
+	// The app wakes again from its kept files.
+	if _, err := supervisor.Ensure(ctx, testRoute); err != nil {
+		t.Fatal(err)
+	}
+	archived := testRoute
+	archived.Lifecycle = "archived"
+	if err := supervisor.reconcile(ctx, source(Desired{Live: []Route{archived}}), 10*time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	if inv := state(); slices.Contains(inv.Containers, testRelease) || slices.Contains(inv.Releases, testRelease) {
+		t.Fatalf("after archive: %+v (want everything gone)", inv)
+	}
+}

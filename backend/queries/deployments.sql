@@ -104,3 +104,8 @@ WHERE d.status = 'live';
 -- name: InitializeRuntimeStages :exec
 INSERT INTO deployment_stage_events(deployment_id, stage)
 VALUES ($1, 'provision'), ($1, 'release'), ($1, 'health_check');
+
+-- Real deployments that are queued or building. Their runtime resources exist
+-- before the deployment is live and must not be reclaimed as orphans.
+-- name: ListInProgressDeployments :many
+SELECT id FROM deployments WHERE status IN ('queued', 'building') AND NOT simulated;

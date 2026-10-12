@@ -188,3 +188,5 @@ func TestVisitorLeavingDoesNotCancelTheStart(t *testing.T) {
 		t.Fatalf("endpoint=%q err=%v starts=%d", endpoint, err, driver.starts.Load())
 	}
 }
+
+func testLogger() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }

@@ -35,6 +35,8 @@ type Supervisor struct {
 	artifacts ArtifactLoader
 	logger    *slog.Logger
 	max       int
+	now       func() time.Time
+	kick      chan struct{}
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -63,7 +65,7 @@ func NewSupervisor(driver Driver, artifacts ArtifactLoader, logger *slog.Logger,
 		return nil, ErrInvalid
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Supervisor{driver: driver, artifacts: artifacts, logger: logger, max: max, ctx: ctx, cancel: cancel,
+	return &Supervisor{driver: driver, artifacts: artifacts, logger: logger, max: max, now: time.Now, kick: make(chan struct{}, 1), ctx: ctx, cancel: cancel,
 		running: map[string]*instance{}, starting: map[string]*flight{}}, nil
 }
 
@@ -77,7 +79,7 @@ func (s *Supervisor) Ensure(ctx context.Context, route Route) (string, error) {
 		return "", ErrUnavailable
 	}
 	if running := s.running[key]; running != nil {
-		running.lastUsed = time.Now()
+		running.lastUsed = s.now()
 		endpoint := running.endpoint
 		s.mu.Unlock()
 		return endpoint, nil
@@ -114,7 +116,7 @@ func (s *Supervisor) start(route Route, pending *flight) {
 		err = ErrUnavailable
 	}
 	if err == nil {
-		s.running[route.Release.DeploymentID] = &instance{release: route.Release, endpoint: endpoint, lastUsed: time.Now()}
+		s.running[route.Release.DeploymentID] = &instance{release: route.Release, endpoint: endpoint, lastUsed: s.now()}
 	}
 	pending.endpoint, pending.err = endpoint, err
 	close(pending.done)

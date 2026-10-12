@@ -144,3 +144,39 @@ func TestUpdateAllowsArchivedToActiveTransition(t *testing.T) {
 		t.Fatalf("lifecycle = %q, want active", application.Lifecycle)
 	}
 }
+
+// A committed lifecycle change tells the runtime; a rename or a failed update does not.
+func TestLifecycleChangeNotifiesRuntimeOnlyWhenCommitted(t *testing.T) {
+	t.Parallel()
+
+	fail := false
+	repository := &stubRepository{
+		get: func(context.Context, string, string, string) (Application, error) {
+			return Application{Lifecycle: LifecycleActive}, nil
+		},
+		update: func(context.Context, UpdateInput) (Application, error) {
+			if fail {
+				return Application{}, ErrConflict
+			}
+			return Application{}, nil
+		},
+	}
+	service := NewService(repository)
+	notified := 0
+	service.OnLifecycleChange(func() { notified++ })
+	input := UpdateInput{WorkspaceSlug: "acme", ApplicationID: testApplicationID, UserID: testUserID}
+
+	paused, name := LifecyclePaused, "New name"
+	input.Lifecycle = &paused
+	if _, err := service.Update(context.Background(), input); err != nil || notified != 1 {
+		t.Fatalf("pause: err=%v notified=%d", err, notified)
+	}
+	input.Lifecycle, input.Name = nil, &name
+	if _, err := service.Update(context.Background(), input); err != nil || notified != 1 {
+		t.Fatalf("rename notified the runtime: err=%v notified=%d", err, notified)
+	}
+	fail, input.Name, input.Lifecycle = true, nil, &paused
+	if _, err := service.Update(context.Background(), input); err == nil || notified != 1 {
+		t.Fatalf("failed update notified the runtime: err=%v notified=%d", err, notified)
+	}
+}

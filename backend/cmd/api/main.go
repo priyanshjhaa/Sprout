@@ -69,6 +69,7 @@ func realMain() int {
 	var sources, artifacts *artifact.Store
 	var appsServer *http.Server
 	var appURL func(workspaceSlug, applicationSlug string) string
+	var kickRuntime func()
 	if builds := appConfig.LocalBuilds; builds.Enabled {
 		if sources, err = artifact.Open(builds.SourceDirectory); err != nil {
 			logger.Error("SPROUT_SOURCE_DIR must be an existing private (0700) directory")
@@ -136,6 +137,8 @@ func realMain() int {
 			logger.Error("application proxy configuration invalid")
 			return 1
 		}
+		supervisor.StartReconciler(deploymentRepository.RuntimeDesired, apprt.DefaultReconcileInterval, apprt.DefaultIdleTimeout)
+		kickRuntime = supervisor.Kick
 		appsServer = proxy.NewServer(appConfig.Apps.Address)
 		appURL = appConfig.Apps.URL
 		runner = buildjob.NewRunner(sources, artifacts, builder, driver, buildjob.DefaultHealthCheck, runner, logger)
@@ -166,6 +169,9 @@ func realMain() int {
 	queries := dbgen.New(pool)
 	repository := application.NewSQLRepository(queries)
 	service := application.NewService(repository)
+	if kickRuntime != nil {
+		service.OnLifecycleChange(kickRuntime)
+	}
 	sharingService := sharing.NewService(queries)
 	teamService := team.NewService(pool, identity.ClerkProfileProvider{})
 	clerk.SetKey(appConfig.ClerkSecretKey)

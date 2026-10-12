@@ -201,6 +201,29 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 	if live, _ := repo.LiveDeployments(ctx); live[built.ID] || !live[next.ID] {
 		t.Fatalf("live set after promotion: %v", live)
 	}
+	// A build in progress is protected from the runtime reconciler; the live one is desired.
+	pending, err := repo.Create(ctx, realScope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	desired, err := repo.RuntimeDesired(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundLive, foundPending := false, false
+	for _, route := range desired.Live {
+		foundLive = foundLive || (route.Release.DeploymentID == next.ID && route.Lifecycle == "active")
+	}
+	for _, id := range desired.InProgress {
+		foundPending = foundPending || id == pending.ID
+	}
+	if !foundLive || !foundPending {
+		t.Fatalf("desired = %+v, want live %s and in-progress %s", desired, next.ID, pending.ID)
+	}
+	expect(repo.Start(ctx, realScope, pending.ID), nil)
+	if _, err := repo.Cancel(ctx, realScope, pending.ID); err != nil {
+		t.Fatal(err)
+	}
 	referenced, err := repo.ReferencedArtifacts(ctx)
 	if err != nil || !referenced[output.ID] {
 		t.Fatalf("artifact reference missing: %v %v", referenced, err)
