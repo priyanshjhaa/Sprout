@@ -20,6 +20,7 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/deployment"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
 	rt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
+	"github.com/priyanshjhaa/Sprout/backend/internal/staticsite"
 )
 
 const (
@@ -257,14 +258,14 @@ func TestBuildFailureCodes(t *testing.T) {
 		builder fakeBuilder
 		code    string
 	}{
-		{"not a node app", func() []byte {
+		{"neither a node app nor a static site", func() []byte {
 			var buffer bytes.Buffer
 			writer := tar.NewWriter(&buffer)
-			_ = writer.WriteHeader(&tar.Header{Name: "index.html", Mode: 0600, Size: 2, Typeflag: tar.TypeReg, Format: tar.FormatUSTAR})
+			_ = writer.WriteHeader(&tar.Header{Name: "readme.txt", Mode: 0600, Size: 2, Typeflag: tar.TypeReg, Format: tar.FormatUSTAR})
 			_, _ = writer.Write([]byte("hi"))
 			_ = writer.Close()
 			return buffer.Bytes()
-		}(), fakeBuilder{}, "node_contract_invalid"},
+		}(), fakeBuilder{}, "static_contract_invalid"},
 		{"sensitive file", archive(t, map[string]string{".env": "SECRET=1"}), fakeBuilder{}, "source_sensitive_path"},
 		{"build script fails", archive(t, nil), fakeBuilder{err: nodeapp.ErrBuild}, "node_build_failed"},
 		{"not an archive", []byte(strings.Repeat("x", 600)), fakeBuilder{}, "source_archive_invalid"},
@@ -424,5 +425,98 @@ func TestDockerBuildJob(t *testing.T) {
 	}
 	if inventory, _ := docker.List(ctx); slices.Contains(inventory.Containers, rt.Release{ApplicationID: testApp, DeploymentID: testDep}) || slices.Contains(inventory.Releases, rt.Release{ApplicationID: testApp, DeploymentID: testDep}) {
 		t.Fatalf("runtime resources survived release: %+v", inventory)
+	}
+}
+
+// plainArchive packs exactly the given files, with no Node example mixed in.
+func plainArchive(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+	var buffer bytes.Buffer
+	writer := tar.NewWriter(&buffer)
+	for name, body := range files {
+		if err := writer.WriteHeader(&tar.Header{Name: name, Mode: 0600, Size: int64(len(body)), Typeflag: tar.TypeReg, Format: tar.FormatUSTAR}); err != nil {
+			t.Fatal(err)
+		}
+		_, _ = writer.Write([]byte(body))
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buffer.Bytes()
+}
+
+func TestStaticSiteGoesLiveWithoutTouchingTheRuntime(t *testing.T) {
+	ctx := context.Background()
+	runner, sources, artifacts, driver := newRuntimeRunner(t, fakeBuilder{err: errors.New("a static site must not be built")}, &fakeDriver{prepareErr: errors.New("nor provisioned")}, func(context.Context, string) error {
+		return errors.New("nor health-checked over HTTP")
+	})
+	stored, err := sources.Save(ctx, plainArchive(t, map[string]string{"index.html": "<h1>hi</h1>", "css/site.css": "h1{}"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	work := deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}
+	steps := &recordedSteps{}
+	outcome, err := runner.Run(ctx, work, steps)
+	if err != nil || !outcome.Live || outcome.Provisioned || outcome.Artifact == nil {
+		t.Fatalf("static run: %+v %v", outcome, err)
+	}
+	want := []string{"begin source", "complete source", "begin build", "complete build", "begin package", "complete package",
+		"begin provision", "complete provision", "begin release", "complete release", "begin health_check", "complete health_check"}
+	if !reflect.DeepEqual(steps.events, want) || !reflect.DeepEqual(steps.runtimes, []string{"static"}) {
+		t.Fatalf("events %v runtimes %v", steps.events, steps.runtimes)
+	}
+	if len(driver.calls) != 0 {
+		t.Fatalf("static site used the runtime driver: %v", driver.calls)
+	}
+	// The stored artifact is a servable site.
+	data, err := artifacts.Load(ctx, *outcome.Artifact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	site, err := staticsite.Load(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file, ok := site.Lookup("/"); !ok || string(file.Data) != "<h1>hi</h1>" {
+		t.Fatalf("index not servable: %q %v", file.Data, ok)
+	}
+	// Going live retires nothing and destroys nothing, because there is no runtime state.
+	runner.Release(ctx, work, outcome, true)
+	if len(driver.destroyed) != 0 {
+		t.Fatalf("release touched the runtime: %v", driver.destroyed)
+	}
+}
+
+func TestStaticAndNodeAreToldApartByPackageJSON(t *testing.T) {
+	ctx := context.Background()
+	runner, sources, _ := newRunner(t, fakeBuilder{output: []byte("out")})
+	stored, _ := sources.Save(ctx, archive(t, nil))
+	steps := &recordedSteps{}
+	if _, err := runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, steps); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(steps.runtimes, []string{"node"}) {
+		t.Fatalf("node app recorded runtime %v", steps.runtimes)
+	}
+}
+
+func TestStaticContractFailures(t *testing.T) {
+	ctx := context.Background()
+	for name, files := range map[string]map[string]string{
+		"no index":          {"about.html": "x"},
+		"unsafe file name":  {"index.html": "x", "my file.png": "x"},
+		"index in a folder": {"site/index.html": "x"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			runner, sources, artifacts := newRunner(t, fakeBuilder{})
+			stored, _ := sources.Save(ctx, plainArchive(t, files))
+			outcome, err := runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, &recordedSteps{})
+			if failureCode(err) != "static_contract_invalid" || outcome.Artifact != nil || outcome.Live {
+				t.Fatalf("code %q outcome %+v err %v", failureCode(err), outcome, err)
+			}
+			if removed, _ := artifacts.Sweep(ctx, func(string) bool { return true }); removed != 0 {
+				t.Fatal("rejected site left an artifact")
+			}
+		})
 	}
 }
