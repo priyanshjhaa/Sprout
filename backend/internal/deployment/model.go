@@ -64,6 +64,8 @@ type Repository interface {
 	List(context.Context, Scope) ([]Job, error)
 	Cancel(context.Context, Scope, string) (Job, error)
 	Start(context.Context, Scope, string) error
+	// SetRuntime records how the running build will be served.
+	SetRuntime(ctx context.Context, id, runtime string) error
 	Advance(context.Context, string, string, string) error
 	// Finish records a terminal state. It reports false when the job was already
 	// terminal (cancellation won), in which case nothing, including an artifact,
@@ -85,6 +87,9 @@ type Work struct {
 type Steps interface {
 	Begin(stage string) error
 	Complete(stage string) error
+	// SetRuntime states how the release will be served ("node" or "static"),
+	// as soon as the runner has inspected the source.
+	SetRuntime(runtime string) error
 }
 
 // Outcome is what a run produced. Simulations produce nothing. Provisioned

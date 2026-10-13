@@ -43,7 +43,7 @@ JOIN workspace_memberships m ON m.workspace_id = w.id AND m.user_id = $1
 WHERE w.slug = $3 AND a.id = $4 AND a.lifecycle = 'active'
 AND (m.role = 'owner' OR a.created_by = m.user_id OR (a.access_mode = 'workspace' AND m.role = 'editor')
  OR EXISTS(SELECT 1 FROM application_access_grants g WHERE g.application_id = a.id AND g.user_id = m.user_id AND g.role = 'editor'))
-RETURNING id, application_id, source_connection_id, triggered_by, status, branch, commit_sha, failure_code, duration_ms, created_at, started_at, finished_at, simulated, artifact_id, artifact_sha256, artifact_bytes
+RETURNING id, application_id, source_connection_id, triggered_by, status, branch, commit_sha, failure_code, duration_ms, created_at, started_at, finished_at, simulated, artifact_id, artifact_sha256, artifact_bytes, runtime
 `
 
 type CreateDeploymentParams struct {
@@ -80,6 +80,7 @@ func (q *Queries) CreateDeployment(ctx context.Context, arg CreateDeploymentPara
 		&i.ArtifactID,
 		&i.ArtifactSha256,
 		&i.ArtifactBytes,
+		&i.Runtime,
 	)
 	return i, err
 }
@@ -171,7 +172,7 @@ func (q *Queries) FinishDeploymentStages(ctx context.Context, arg FinishDeployme
 }
 
 const getDeployment = `-- name: GetDeployment :one
-SELECT d.id, d.application_id, d.source_connection_id, d.triggered_by, d.status, d.branch, d.commit_sha, d.failure_code, d.duration_ms, d.created_at, d.started_at, d.finished_at, d.simulated, d.artifact_id, d.artifact_sha256, d.artifact_bytes FROM deployments d
+SELECT d.id, d.application_id, d.source_connection_id, d.triggered_by, d.status, d.branch, d.commit_sha, d.failure_code, d.duration_ms, d.created_at, d.started_at, d.finished_at, d.simulated, d.artifact_id, d.artifact_sha256, d.artifact_bytes, d.runtime FROM deployments d
 JOIN applications a ON a.id = d.application_id
 JOIN workspaces w ON w.id = a.workspace_id
 JOIN workspace_memberships m ON m.workspace_id = w.id AND m.user_id = $1
@@ -215,13 +216,14 @@ func (q *Queries) GetDeployment(ctx context.Context, arg GetDeploymentParams) (D
 		&i.ArtifactID,
 		&i.ArtifactSha256,
 		&i.ArtifactBytes,
+		&i.Runtime,
 	)
 	return i, err
 }
 
 const getLiveRelease = `-- name: GetLiveRelease :one
 SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
- d.artifact_id, d.artifact_sha256, d.artifact_bytes
+ d.artifact_id, d.artifact_sha256, d.artifact_bytes, d.runtime
 FROM applications a
 JOIN workspaces w ON w.id = a.workspace_id
 LEFT JOIN deployments d ON d.application_id = a.id AND d.status = 'live'
@@ -240,6 +242,7 @@ type GetLiveReleaseRow struct {
 	ArtifactID     pgtype.Text          `json:"artifact_id"`
 	ArtifactSha256 pgtype.Text          `json:"artifact_sha256"`
 	ArtifactBytes  pgtype.Int4          `json:"artifact_bytes"`
+	Runtime        pgtype.Text          `json:"runtime"`
 }
 
 // Routing lookup for a public request: no permissions, because live apps are
@@ -254,6 +257,7 @@ func (q *Queries) GetLiveRelease(ctx context.Context, arg GetLiveReleaseParams) 
 		&i.ArtifactID,
 		&i.ArtifactSha256,
 		&i.ArtifactBytes,
+		&i.Runtime,
 	)
 	return i, err
 }
@@ -313,7 +317,7 @@ func (q *Queries) ListDeploymentStages(ctx context.Context, deploymentID pgtype.
 }
 
 const listDeployments = `-- name: ListDeployments :many
-SELECT d.id, d.application_id, d.source_connection_id, d.triggered_by, d.status, d.branch, d.commit_sha, d.failure_code, d.duration_ms, d.created_at, d.started_at, d.finished_at, d.simulated, d.artifact_id, d.artifact_sha256, d.artifact_bytes FROM deployments d
+SELECT d.id, d.application_id, d.source_connection_id, d.triggered_by, d.status, d.branch, d.commit_sha, d.failure_code, d.duration_ms, d.created_at, d.started_at, d.finished_at, d.simulated, d.artifact_id, d.artifact_sha256, d.artifact_bytes, d.runtime FROM deployments d
 JOIN applications a ON a.id = d.application_id
 JOIN workspaces w ON w.id = a.workspace_id
 JOIN workspace_memberships m ON m.workspace_id = w.id AND m.user_id = $1
@@ -361,6 +365,7 @@ func (q *Queries) ListDeployments(ctx context.Context, arg ListDeploymentsParams
 			&i.ArtifactID,
 			&i.ArtifactSha256,
 			&i.ArtifactBytes,
+			&i.Runtime,
 		); err != nil {
 			return nil, err
 		}
@@ -400,7 +405,7 @@ func (q *Queries) ListInProgressDeployments(ctx context.Context) ([]pgtype.UUID,
 
 const listLiveReleases = `-- name: ListLiveReleases :many
 SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
- d.artifact_id, d.artifact_sha256, d.artifact_bytes
+ d.artifact_id, d.artifact_sha256, d.artifact_bytes, d.runtime
 FROM deployments d JOIN applications a ON a.id = d.application_id
 WHERE d.status = 'live'
 `
@@ -412,6 +417,7 @@ type ListLiveReleasesRow struct {
 	ArtifactID     pgtype.Text          `json:"artifact_id"`
 	ArtifactSha256 pgtype.Text          `json:"artifact_sha256"`
 	ArtifactBytes  pgtype.Int4          `json:"artifact_bytes"`
+	Runtime        string               `json:"runtime"`
 }
 
 // Every live release with its application's lifecycle: the reconciler's desired state.
@@ -431,6 +437,7 @@ func (q *Queries) ListLiveReleases(ctx context.Context) ([]ListLiveReleasesRow, 
 			&i.ArtifactID,
 			&i.ArtifactSha256,
 			&i.ArtifactBytes,
+			&i.Runtime,
 		); err != nil {
 			return nil, err
 		}
@@ -468,7 +475,7 @@ func (q *Queries) ListReferencedArtifacts(ctx context.Context) ([]string, error)
 }
 
 const lockDeployment = `-- name: LockDeployment :one
-SELECT id, application_id, source_connection_id, triggered_by, status, branch, commit_sha, failure_code, duration_ms, created_at, started_at, finished_at, simulated, artifact_id, artifact_sha256, artifact_bytes FROM deployments WHERE id = $1 FOR UPDATE
+SELECT id, application_id, source_connection_id, triggered_by, status, branch, commit_sha, failure_code, duration_ms, created_at, started_at, finished_at, simulated, artifact_id, artifact_sha256, artifact_bytes, runtime FROM deployments WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockDeployment(ctx context.Context, id pgtype.UUID) (Deployment, error) {
@@ -491,6 +498,7 @@ func (q *Queries) LockDeployment(ctx context.Context, id pgtype.UUID) (Deploymen
 		&i.ArtifactID,
 		&i.ArtifactSha256,
 		&i.ArtifactBytes,
+		&i.Runtime,
 	)
 	return i, err
 }
@@ -519,6 +527,25 @@ func (q *Queries) RecoverInterruptedDeployments(ctx context.Context) ([]pgtype.U
 		return nil, err
 	}
 	return items, nil
+}
+
+const setDeploymentRuntime = `-- name: SetDeploymentRuntime :execrows
+UPDATE deployments SET runtime = $2 WHERE id = $1 AND status = 'building'
+`
+
+type SetDeploymentRuntimeParams struct {
+	ID      pgtype.UUID `json:"id"`
+	Runtime string      `json:"runtime"`
+}
+
+// The runner states how a release is served as soon as it has inspected the
+// source. Only a deployment that is still building may change it.
+func (q *Queries) SetDeploymentRuntime(ctx context.Context, arg SetDeploymentRuntimeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setDeploymentRuntime, arg.ID, arg.Runtime)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const startDeployment = `-- name: StartDeployment :execrows

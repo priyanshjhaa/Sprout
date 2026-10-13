@@ -12,7 +12,7 @@ const steps: Array<{ name: StepName; label: string; hint: string; icon: LucideIc
   { name: "source", label: "Source", hint: "Your code arrives", icon: Download, from: ["source"] },
   { name: "build", label: "Build", hint: "Built sealed off", icon: Hammer, from: ["build"] },
   { name: "package", label: "Package", hint: "Stored and ready", icon: Box, from: ["package"] },
-  { name: "release", label: "Release", hint: "Started in its own container", icon: Rocket, from: ["provision", "release"] },
+  { name: "release", label: "Release", hint: "Made ready to serve", icon: Rocket, from: ["provision", "release"] },
   { name: "live", label: "Live", hint: "Answers its health check", icon: Globe, from: ["health_check"] },
 ];
 

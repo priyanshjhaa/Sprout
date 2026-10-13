@@ -160,6 +160,8 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 	_, err = repo.Get(ctx, scope, built.ID)
 	expect(err, ErrNotFound)
 	expect(repo.Start(ctx, realScope, built.ID), nil)
+	expect(repo.SetRuntime(ctx, built.ID, "java"), ErrInvalid)
+	expect(repo.SetRuntime(ctx, built.ID, "static"), nil)
 	realStages := append(stages[:], "provision", "release", "health_check")
 	runStages := func(id string, names []string) {
 		for _, stage := range names {
@@ -184,6 +186,21 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 	if live, err := repo.LiveDeployments(ctx); err != nil || !live[built.ID] {
 		t.Fatalf("live set: %v %v", live, err)
 	}
+	// The runtime reaches routing, and a finished deployment can no longer change it.
+	if desired, err := repo.RuntimeDesired(ctx); err != nil {
+		t.Fatal(err)
+	} else {
+		kind := ""
+		for _, route := range desired.Live {
+			if route.Release.DeploymentID == built.ID {
+				kind = route.Runtime
+			}
+		}
+		if kind != "static" {
+			t.Fatalf("live route runtime = %q, want static", kind)
+		}
+	}
+	expect(repo.SetRuntime(ctx, built.ID, "node"), ErrConflict)
 	// A newer release going live demotes this one in the same transaction.
 	next, err := repo.Create(ctx, realScope)
 	if err != nil {

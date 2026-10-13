@@ -71,6 +71,7 @@ func (r *memoryRepository) Start(ctx context.Context, s Scope, id string) error 
 	r.order = append(r.order, s.ApplicationID)
 	return nil
 }
+func (r *memoryRepository) SetRuntime(context.Context, string, string) error { return nil }
 func (r *memoryRepository) Advance(ctx context.Context, id, stage, status string) error {
 	if err := ctx.Err(); err != nil {
 		return err

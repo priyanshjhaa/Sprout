@@ -23,8 +23,9 @@ const failureExplanations: Record<string, string> = {
   source_unavailable: "The uploaded archive was no longer available.",
   process_interrupted: "The server restarted while this was running.",
   job_timeout: "It took longer than the time limit.",
+  static_contract_invalid: "It is neither a Node.js app nor a valid static site. A static site needs index.html at the root, no package.json, and plain file names (letters, numbers, dots, dashes, underscores; no dotfiles).",
   provision_failed: "The built app could not be stored for running.",
-  release_failed: "The app's container could not be started.",
+  release_failed: "The app could not be made ready to serve.",
   health_check_failed: "The app started but did not answer GET /health with 200 within 30 seconds. Make sure it listens on 0.0.0.0 and the PORT environment variable. Any earlier version is still serving.",
   runtime_unavailable: "Sprout could not reach Docker to run the app. Is Docker running?",
 };

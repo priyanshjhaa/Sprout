@@ -1,4 +1,4 @@
-// Package buildjob runs real deployments on the deployment worker: it loads an
+// Package buildjob runs real deployments (Node apps and static sites) on the deployment worker: it loads an
 // uploaded source archive, prepares and validates it, builds it in the sealed
 // Node container, stores the output as an artifact, then provisions, starts and
 // health-checks the release through the runtime driver. Only a release that
@@ -18,6 +18,7 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
 	rt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 	"github.com/priyanshjhaa/Sprout/backend/internal/source"
+	"github.com/priyanshjhaa/Sprout/backend/internal/staticsite"
 )
 
 // Builder turns a prepared source tree into a bounded output archive.
@@ -66,8 +67,19 @@ func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment
 	// The prepared tree exists only inside this callback, so the source and
 	// build stages both run within it; the tree is removed when it returns.
 	var output []byte
+	kind := rt.RuntimeNode
 	_, err = source.WithArchive(ctx, bytes.NewReader(data), func(ctx context.Context, files fs.FS) error {
+		// A package.json makes it a Node app; anything else must be a static site.
+		if _, statErr := fs.Stat(files, "package.json"); statErr != nil {
+			kind = rt.RuntimeStatic
+			built, err := prepareStatic(ctx, files, steps)
+			output = built
+			return err
+		}
 		if err := nodeapp.Validate(ctx, files); err != nil {
+			return err
+		}
+		if err := steps.SetRuntime(rt.RuntimeNode); err != nil {
 			return err
 		}
 		if err := steps.Complete("source"); err != nil {
@@ -99,7 +111,57 @@ func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment
 	if err := steps.Complete("package"); err != nil {
 		return outcome, err
 	}
+	if kind == rt.RuntimeStatic {
+		return goLiveStatic(output, outcome, steps)
+	}
 	return r.goLive(ctx, work, output, outcome, steps)
+}
+
+// prepareStatic validates a static site and packs it. There is nothing to
+// build, so the build stage completes immediately.
+func prepareStatic(ctx context.Context, files fs.FS, steps deployment.Steps) ([]byte, error) {
+	if err := staticsite.Validate(ctx, files); err != nil {
+		return nil, err
+	}
+	if err := steps.SetRuntime(rt.RuntimeStatic); err != nil {
+		return nil, err
+	}
+	if err := steps.Complete("source"); err != nil {
+		return nil, err
+	}
+	if err := steps.Begin("build"); err != nil {
+		return nil, err
+	}
+	packed, err := staticsite.Pack(ctx, files)
+	if err != nil {
+		return nil, err
+	}
+	return packed, steps.Complete("build")
+}
+
+// goLiveStatic finishes a static release. Its files are the stored artifact, so
+// there is nothing to provision or start; the health check proves the stored
+// site can actually be served. It never touches the runtime driver.
+func goLiveStatic(archive []byte, outcome deployment.Outcome, steps deployment.Steps) (deployment.Outcome, error) {
+	for _, stage := range []string{"provision", "release"} {
+		if err := steps.Begin(stage); err != nil {
+			return outcome, err
+		}
+		if err := steps.Complete(stage); err != nil {
+			return outcome, err
+		}
+	}
+	if err := steps.Begin("health_check"); err != nil {
+		return outcome, err
+	}
+	if _, err := staticsite.Load(archive); err != nil {
+		return outcome, &deployment.Failure{Code: "health_check_failed", Err: err}
+	}
+	if err := steps.Complete("health_check"); err != nil {
+		return outcome, err
+	}
+	outcome.Live = true
+	return outcome, nil
 }
 
 // goLive provisions the release, starts it, and waits for it to be healthy.
@@ -208,7 +270,7 @@ var knownFailures = []error{
 	source.ErrInvalid, source.ErrLimit, source.ErrSensitive, source.ErrStorage, source.ErrCleanup,
 	nodeapp.ErrContract, nodeapp.ErrImage, nodeapp.ErrDependencies, nodeapp.ErrBuild,
 	nodeapp.ErrArtifact, nodeapp.ErrArtifactSize, nodeapp.ErrDocker, nodeapp.ErrCleanup,
-	artifact.ErrStorage,
+	staticsite.ErrContract, artifact.ErrStorage,
 }
 
 // Runtime failures are classified where they happen (runtimeFailure and

@@ -30,7 +30,7 @@ A coding agent is a *client* of the deploy API. Sprout does not generate code an
 
 ## 3. Which apps can build (v1), in order
 
-1. **Static sites:** a build that produces `index.html` and has no server. Served directly, with no running process.
+1. **Static sites:** a plain folder with `index.html` at the root and no `package.json`. Served directly from the stored artifact, with no running process. (A site that needs a build step waits for controlled `npm` installs.)
 2. **Node.js web apps:** the current contract (`node-build-contract.md`), extended with real `npm` installs through a controlled registry proxy.
 3. **Python web apps:** through buildpacks (Cloud Native Buildpacks or Railpack, chosen by a short spike).
 
@@ -56,7 +56,7 @@ Sprout is the **control plane**: API, permissions, lifecycle, routing. Applicati
 
 1. Align docs (this document).
 2. **Local runtime:** run a built app in a locked-down container, health-check it, serve it publicly at `{app}.{workspace}.localhost`, and make pause, resume, archive and idle sleep real. *Done: driver, release, health check, live status, public routing, wake on request, idle sleep, and real pause and archive. See `local-runtime-learning.md`.*
-3. Static sites.
+3. Static sites. *Done: a plain folder with `index.html`, served from the stored artifact (see `static-sites-learning.md`). Sites that need a build wait for step 5.*
 4. CLI `sprout deploy` (with CLI authentication designed first), then the MCP `deploy` tool (folder and public GitHub modes).
 5. `npm` installs through a controlled registry proxy.
 6. Python through buildpacks.

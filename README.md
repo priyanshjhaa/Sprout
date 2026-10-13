@@ -198,7 +198,7 @@ The UI should be treated as a product and interaction prototype, not a hosting s
 The next implementation phases are intentionally incremental:
 
 1. ~~Local runtime~~ (done): built apps run in locked-down containers, are health-checked, and are served at `{app}.{workspace}.localhost` with real pause, resume, archive and idle sleep.
-2. Static sites.
+2. ~~Static sites~~ (done): a plain folder with `index.html`, served straight from the stored artifact.
 3. CLI `sprout deploy`, then an MCP `deploy` tool that takes a folder or a GitHub repository.
 4. `npm` installs through a controlled registry proxy.
 5. Python apps through buildpacks.

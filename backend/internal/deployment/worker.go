@@ -270,6 +270,12 @@ type steps struct {
 
 func (s steps) Begin(stage string) error    { return s.advance(stage, "running") }
 func (s steps) Complete(stage string) error { return s.advance(stage, "succeeded") }
+func (s steps) SetRuntime(runtime string) error {
+	if err := s.manager.repository.SetRuntime(s.ctx, s.id, runtime); err != nil {
+		return errProgress
+	}
+	return nil
+}
 func (s steps) advance(stage, status string) error {
 	if err := s.manager.repository.Advance(s.ctx, s.id, stage, status); err != nil {
 		return errProgress

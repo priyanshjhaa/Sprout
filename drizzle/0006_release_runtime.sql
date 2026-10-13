@@ -1,0 +1,2 @@
+ALTER TABLE "deployments" ADD COLUMN "runtime" varchar(16) DEFAULT 'node' NOT NULL;--> statement-breakpoint
+ALTER TABLE "deployments" ADD CONSTRAINT "deployments_runtime_known" CHECK ("deployments"."runtime" in ('node', 'static'));

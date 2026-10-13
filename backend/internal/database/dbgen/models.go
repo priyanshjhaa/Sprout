@@ -652,6 +652,7 @@ type Deployment struct {
 	ArtifactID         pgtype.Text        `json:"artifact_id"`
 	ArtifactSha256     pgtype.Text        `json:"artifact_sha256"`
 	ArtifactBytes      pgtype.Int4        `json:"artifact_bytes"`
+	Runtime            string             `json:"runtime"`
 }
 
 type DeploymentStageEvent struct {

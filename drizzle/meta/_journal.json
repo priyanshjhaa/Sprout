@@ -43,6 +43,13 @@
       "when": 1791547937638,
       "tag": "0005_local_runtime_live",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791899264342,
+      "tag": "0006_release_runtime",
+      "breakpoints": true
     }
   ]
 }

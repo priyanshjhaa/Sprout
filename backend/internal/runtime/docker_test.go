@@ -184,7 +184,7 @@ func TestProxyWakesARealContainer(t *testing.T) {
 
 	// The release volume does not exist: the supervisor must rebuild it from the artifact.
 	supervisor := newSupervisor(t, driver, archiveLoader{exampleArchive(t)}, 2)
-	proxy, err := NewProxy("localhost", func(context.Context, string, string) (Route, error) { return testRoute, nil }, supervisor, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	proxy, err := NewProxy("localhost", func(context.Context, string, string) (Route, error) { return testRoute, nil }, supervisor, archiveLoader{exampleArchive(t)}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatal(err)
 	}
