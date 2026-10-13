@@ -18,13 +18,18 @@ const frontDoors = [
   "A deploy tool for coding agents (MCP) that takes a folder or a GitHub repository (coming soon)",
 ];
 
-// Mirrors the Node.js application contract in node-build-contract.md.
-const contract = [
+// Mirrors node-build-contract.md and static-sites-learning.md.
+const nodeContract = [
   "One npm application with package.json and package-lock.json at the root",
   "Node.js 24 (engines.node: \"24.x\") with build and start scripts",
   "Builds into a dist/ folder; serves /health on PORT",
   "No Dockerfile, node_modules, .env files, or credentials",
-  "Static sites and Python apps are next",
+];
+const staticContract = [
+  "A plain folder with index.html at the root and no package.json",
+  "Plain file names: letters, numbers, dots, dashes and underscores, no dotfiles",
+  "At most 256 files and 8 MiB; an optional 404.html is used for missing pages",
+  "Served as-is, with nothing built or executed. Python apps are next",
 ];
 
 export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
@@ -51,15 +56,19 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
 
       <div className="sp-deploy-more deploy-note">
         {localBuilds
-          ? <p>Local builds are on: an uploaded .tar is built in a sealed container on this machine. Starting it at a public URL comes next.</p>
+          ? <p>Local builds are on: an uploaded .tar is built in a sealed container on this machine (or, for a static site, stored as-is), checked, and given a public URL.</p>
           : <p>Until uploads are enabled, a run is a simulation: no code executes.</p>}
         <details className="deploy-contract">
           <summary>Ways to deploy</summary>
           <ul>{frontDoors.map((door) => <li key={door}>{door}</li>)}</ul>
         </details>
         <details className="deploy-contract">
-          <summary>What Sprout accepts today</summary>
-          <ul>{contract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+          <summary>Node.js apps</summary>
+          <ul>{nodeContract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+        </details>
+        <details className="deploy-contract">
+          <summary>Static sites</summary>
+          <ul>{staticContract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
         </details>
       </div>
 
