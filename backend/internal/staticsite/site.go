@@ -8,6 +8,8 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"io"
 	"io/fs"
@@ -122,6 +124,7 @@ func Pack(ctx context.Context, files fs.FS) ([]byte, error) {
 type File struct {
 	Data        []byte
 	ContentType string
+	ETag        string // strong validator derived from the content
 }
 
 // Site is a static site held in memory, indexed by relative path. It is
@@ -171,7 +174,8 @@ func Load(archive []byte) (*Site, error) {
 		if _, duplicate := site.files[name]; duplicate {
 			return nil, ErrContract
 		}
-		site.files[name] = File{Data: data, ContentType: contentType(name)}
+		sum := sha256.Sum256(data)
+		site.files[name] = File{Data: data, ContentType: contentType(name), ETag: `"` + hex.EncodeToString(sum[:12]) + `"`}
 	}
 	if _, ok := site.files[indexName]; !ok {
 		return nil, ErrContract

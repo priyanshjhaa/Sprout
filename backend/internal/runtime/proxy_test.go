@@ -23,7 +23,7 @@ func newTestProxy(t *testing.T, route Route, lookupErr error) (*Proxy, *scripted
 		}
 		return route, nil
 	}
-	p, err := NewProxy("localhost", lookup, s, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	p, err := NewProxy("localhost", lookup, s, staticArtifacts{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestLookupFailureAndBadGateway(t *testing.T) {
 	driver := newScripted("127.0.0.1:1")
 	driver.startErr = ErrStart
 	s := newSupervisor(t, driver, staticArtifacts{}, 2)
-	bad, _ := NewProxy("localhost", func(context.Context, string, string) (Route, error) { return testRoute, nil }, s, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	bad, _ := NewProxy("localhost", func(context.Context, string, string) (Route, error) { return testRoute, nil }, s, staticArtifacts{}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	recorder := get(bad, "shop.acme.localhost", nil)
 	if recorder.Code != http.StatusBadGateway || strings.Contains(recorder.Body.String(), "runtime_") {
 		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())

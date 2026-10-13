@@ -132,7 +132,7 @@ func realMain() int {
 			return 1
 		}
 		defer supervisor.Close() // joins in-flight starts before the containers are stopped
-		proxy, err := apprt.NewProxy(appConfig.Apps.Domain, deploymentRepository.LiveRoute, supervisor, logger)
+		proxy, err := apprt.NewProxy(appConfig.Apps.Domain, deploymentRepository.LiveRoute, supervisor, artifacts, logger)
 		if err != nil {
 			logger.Error("application proxy configuration invalid")
 			return 1

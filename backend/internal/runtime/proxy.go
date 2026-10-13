@@ -35,15 +35,16 @@ type Proxy struct {
 	domain     string
 	lookup     Lookup
 	supervisor *Supervisor
+	sites      *siteCache
 	logger     *slog.Logger
 }
 
-func NewProxy(domain string, lookup Lookup, supervisor *Supervisor, logger *slog.Logger) (*Proxy, error) {
+func NewProxy(domain string, lookup Lookup, supervisor *Supervisor, artifacts ArtifactLoader, logger *slog.Logger) (*Proxy, error) {
 	domain = strings.ToLower(strings.Trim(domain, "."))
-	if domain == "" || lookup == nil || supervisor == nil || logger == nil {
+	if domain == "" || lookup == nil || supervisor == nil || artifacts == nil || logger == nil {
 		return nil, ErrInvalid
 	}
-	return &Proxy{domain: domain, lookup: lookup, supervisor: supervisor, logger: logger}, nil
+	return &Proxy{domain: domain, lookup: lookup, supervisor: supervisor, sites: newSiteCache(artifacts), logger: logger}, nil
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +72,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	case !route.Live:
 		notice(w, http.StatusNotFound, "Not deployed", "This application has not been deployed yet.")
+		return
+	}
+	if route.Runtime == RuntimeStatic {
+		p.serveStatic(w, r, route)
 		return
 	}
 	endpoint, err := p.supervisor.Ensure(r.Context(), route)
