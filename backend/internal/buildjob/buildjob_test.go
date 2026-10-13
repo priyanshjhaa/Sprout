@@ -107,12 +107,17 @@ type fakeBuilder struct {
 func (b fakeBuilder) BuildFiles(context.Context, fs.FS) ([]byte, error) { return b.output, b.err }
 
 type recordedSteps struct {
-	events []string
-	failOn string
+	runtimes []string
+	events   []string
+	failOn   string
 }
 
 func (s *recordedSteps) Begin(stage string) error    { return s.record("begin " + stage) }
 func (s *recordedSteps) Complete(stage string) error { return s.record("complete " + stage) }
+func (s *recordedSteps) SetRuntime(runtime string) error {
+	s.runtimes = append(s.runtimes, runtime)
+	return nil
+}
 func (s *recordedSteps) record(event string) error {
 	if event == s.failOn {
 		return errors.New("progress persistence failed")

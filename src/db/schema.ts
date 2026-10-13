@@ -172,6 +172,9 @@ export const deployments = pgTable(
     artifactId: varchar("artifact_id", { length: 32 }),
     artifactSha256: varchar("artifact_sha256", { length: 64 }),
     artifactBytes: integer("artifact_bytes"),
+    // How the release is served: a Node process in a container, or static files
+    // read straight from the artifact. Set by the runner once it has inspected the source.
+    runtime: varchar("runtime", { length: 16 }).default("node").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -186,6 +189,7 @@ export const deployments = pgTable(
     uniqueIndex("deployments_one_live_per_app").on(table.applicationId)
       .where(sql`${table.status} = 'live'`),
     check("deployments_simulation_not_live", sql`not ${table.simulated} or ${table.status} <> 'live'`),
+    check("deployments_runtime_known", sql`${table.runtime} in ('node', 'static')`),
     check("deployments_duration_nonnegative", sql`${table.durationMs} is null or ${table.durationMs} >= 0`),
     // NULL satisfies a CHECK, so each artifact column is tested for presence explicitly.
     check(

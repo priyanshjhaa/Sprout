@@ -521,6 +521,10 @@ func (r *SQLRepository) LiveRoute(ctx context.Context, workspaceSlug, applicatio
 	route := runtime.Route{Release: runtime.Release{ApplicationID: row.ApplicationID.String()}, Lifecycle: string(row.Lifecycle)}
 	if row.DeploymentID.Valid && row.ArtifactID.Valid && row.ArtifactSha256.Valid && row.ArtifactBytes.Valid {
 		route.Live = true
+		route.Runtime = runtime.RuntimeNode
+		if row.Runtime.Valid {
+			route.Runtime = row.Runtime.String
+		}
 		route.Release.DeploymentID = row.DeploymentID.String()
 		route.Artifact = artifact.Descriptor{ID: row.ArtifactID.String, SHA256: row.ArtifactSha256.String, Size: int64(row.ArtifactBytes.Int32)}
 	}
@@ -542,6 +546,7 @@ func (r *SQLRepository) RuntimeDesired(ctx context.Context) (runtime.Desired, er
 			Release:   runtime.Release{ApplicationID: row.ApplicationID.String(), DeploymentID: row.DeploymentID.String()},
 			Lifecycle: string(row.Lifecycle),
 			Live:      true,
+			Runtime:   row.Runtime,
 		})
 	}
 	ids, err := q.ListInProgressDeployments(ctx)
@@ -552,4 +557,27 @@ func (r *SQLRepository) RuntimeDesired(ctx context.Context) (runtime.Desired, er
 		desired.InProgress = append(desired.InProgress, id.String())
 	}
 	return desired, nil
+}
+
+// SetRuntime records how a building deployment will be served. The database
+// also restricts the value, but rejecting here keeps the error a domain error.
+func (r *SQLRepository) SetRuntime(ctx context.Context, id, kind string) error {
+	if kind != runtime.RuntimeNode && kind != runtime.RuntimeStatic {
+		return ErrInvalid
+	}
+	if err := r.CheckOwnership(ctx); err != nil {
+		return err
+	}
+	jobID, err := parseID(id)
+	if err != nil {
+		return err
+	}
+	count, err := dbgen.New(r.pool).SetDeploymentRuntime(ctx, dbgen.SetDeploymentRuntimeParams{ID: jobID, Runtime: kind})
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return ErrConflict
+	}
+	return nil
 }

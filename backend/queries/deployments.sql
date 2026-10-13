@@ -86,7 +86,7 @@ RETURNING id, artifact_id;
 -- public. The lifecycle lets the caller answer paused/archived distinctly.
 -- name: GetLiveRelease :one
 SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
- d.artifact_id, d.artifact_sha256, d.artifact_bytes
+ d.artifact_id, d.artifact_sha256, d.artifact_bytes, d.runtime
 FROM applications a
 JOIN workspaces w ON w.id = a.workspace_id
 LEFT JOIN deployments d ON d.application_id = a.id AND d.status = 'live'
@@ -95,7 +95,7 @@ WHERE w.slug = sqlc.arg(workspace_slug) AND a.slug = sqlc.arg(application_slug);
 -- Every live release with its application's lifecycle: the reconciler's desired state.
 -- name: ListLiveReleases :many
 SELECT a.id AS application_id, a.lifecycle, d.id AS deployment_id,
- d.artifact_id, d.artifact_sha256, d.artifact_bytes
+ d.artifact_id, d.artifact_sha256, d.artifact_bytes, d.runtime
 FROM deployments d JOIN applications a ON a.id = d.application_id
 WHERE d.status = 'live';
 
@@ -109,3 +109,8 @@ VALUES ($1, 'provision'), ($1, 'release'), ($1, 'health_check');
 -- before the deployment is live and must not be reclaimed as orphans.
 -- name: ListInProgressDeployments :many
 SELECT id FROM deployments WHERE status IN ('queued', 'building') AND NOT simulated;
+
+-- The runner states how a release is served as soon as it has inspected the
+-- source. Only a deployment that is still building may change it.
+-- name: SetDeploymentRuntime :execrows
+UPDATE deployments SET runtime = $2 WHERE id = $1 AND status = 'building';
