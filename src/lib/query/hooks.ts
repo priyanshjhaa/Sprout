@@ -22,6 +22,11 @@ export const useInvitations = (slug: string, isOwner: boolean) => {
   return useQuery({ queryKey: queryKeys.invitations(userId, slug), queryFn: async () => api.getInvitations(slug, await getToken()), enabled: isLoaded && isSignedIn && isOwner });
 };
 
+export const useTokens = () => {
+  const { getToken, isLoaded, isSignedIn, userId } = useAuth();
+  return useQuery({ queryKey: queryKeys.tokens(userId), queryFn: async () => api.getTokens(await getToken()), enabled: isLoaded && isSignedIn });
+};
+
 export const useWorkspace = (slug: string) => {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   return useQuery({

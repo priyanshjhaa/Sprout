@@ -61,6 +61,7 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
         <details className="deploy-contract">
           <summary>Ways to deploy</summary>
           <ul>{frontDoors.map((door) => <li key={door}>{door}</li>)}</ul>
+          <p>The CLI and coding agents sign in with an <Link href={`/workspace/${workspaceSlug}/tokens`}>access token</Link>.</p>
         </details>
         <details className="deploy-contract">
           <summary>Node.js apps</summary>
