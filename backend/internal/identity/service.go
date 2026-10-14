@@ -36,6 +36,7 @@ type ProfileProvider interface {
 
 type Repository interface {
 	Find(context.Context, string) (Principal, error)
+	FindByUserID(context.Context, string) (Principal, error)
 	Create(context.Context, string, Profile) (Principal, error)
 	GetWorkspace(context.Context, string, string) (Workspace, error)
 }
@@ -70,6 +71,16 @@ func (service *Service) Resolve(ctx context.Context, subject string) (Principal,
 		return Principal{}, ErrIncompleteProfile
 	}
 	return service.repository.Create(ctx, subject, profile)
+}
+
+// ResolveUser loads the principal for a user ID already established by a
+// personal access token. Unlike Resolve it never creates a user: a token can
+// only exist for someone who already signed in.
+func (service *Service) ResolveUser(ctx context.Context, userID string) (Principal, error) {
+	if strings.TrimSpace(userID) == "" {
+		return Principal{}, ErrNotFound
+	}
+	return service.repository.FindByUserID(ctx, userID)
 }
 
 func (service *Service) GetWorkspace(ctx context.Context, slug, userID string) (Workspace, error) {

@@ -38,6 +38,28 @@ func (repository *SQLRepository) Find(ctx context.Context, subject string) (Prin
 	return principalFromRows(user.ID, user.Email, user.DisplayName, workspace.ID, workspace.Slug, workspace.Name), nil
 }
 
+func (repository *SQLRepository) FindByUserID(ctx context.Context, userID string) (Principal, error) {
+	var id pgtype.UUID
+	if err := id.Scan(userID); err != nil || !id.Valid {
+		return Principal{}, ErrNotFound
+	}
+	user, err := repository.queries.GetUserByID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Principal{}, ErrNotFound
+	}
+	if err != nil {
+		return Principal{}, err
+	}
+	workspace, err := repository.queries.GetHomeWorkspace(ctx, user.ID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Principal{}, ErrNoWorkspace
+	}
+	if err != nil {
+		return Principal{}, err
+	}
+	return principalFromRows(user.ID, user.Email, user.DisplayName, workspace.ID, workspace.Slug, workspace.Name), nil
+}
+
 func (repository *SQLRepository) Create(ctx context.Context, subject string, profile Profile) (Principal, error) {
 	tx, err := repository.pool.Begin(ctx)
 	if err != nil {

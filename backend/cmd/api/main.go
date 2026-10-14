@@ -12,6 +12,7 @@ import (
 
 	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/go-chi/chi/v5"
+	"github.com/priyanshjhaa/Sprout/backend/internal/apitoken"
 	"github.com/priyanshjhaa/Sprout/backend/internal/application"
 	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 	"github.com/priyanshjhaa/Sprout/backend/internal/buildjob"
@@ -175,15 +176,17 @@ func realMain() int {
 	sharingService := sharing.NewService(queries)
 	teamService := team.NewService(pool, identity.ClerkProfileProvider{})
 	clerk.SetKey(appConfig.ClerkSecretKey)
+	tokenService := apitoken.NewService(apitoken.NewSQLRepository(queries))
 	identityService := identity.NewService(identity.ClerkProfileProvider{}, identity.NewSQLRepository(pool))
 	router := httpapi.NewRouter(logger, readiness, appConfig.WebOrigin)
 	router.Route("/api/v1", func(api chi.Router) {
-		api.Use(httpapi.AuthenticationMiddleware(identityService, logger, appConfig.WebOrigin))
+		api.Use(httpapi.AuthenticationMiddleware(identityService, tokenService, logger, appConfig.WebOrigin))
 		httpapi.RegisterIdentityRoutes(api, identityService, logger)
 		httpapi.RegisterCapabilityRoutes(api, httpapi.Capabilities{LocalBuilds: appConfig.LocalBuilds.Enabled})
 		httpapi.RegisterApplicationRoutes(api, service, logger, appURL)
 		httpapi.RegisterSharingRoutes(api, sharingService, logger)
 		httpapi.RegisterTeamRoutes(api, teamService, logger)
+		httpapi.RegisterTokenRoutes(api, tokenService, logger)
 		httpapi.RegisterDeploymentSimulationRoutes(api, worker, logger)
 		httpapi.RegisterDeploymentStreamRoutes(api, worker, logger, ctx)
 		if appConfig.LocalBuilds.Enabled {

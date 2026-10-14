@@ -33,6 +33,25 @@ func (q *Queries) GetHomeWorkspace(ctx context.Context, userID pgtype.UUID) (Get
 	return i, err
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, email, display_name FROM users WHERE id = $1
+`
+
+type GetUserByIDRow struct {
+	ID          pgtype.UUID `json:"id"`
+	Email       string      `json:"email"`
+	DisplayName string      `json:"display_name"`
+}
+
+// A user by ID, for authenticating a personal access token (which names a user,
+// not a Clerk subject).
+func (q *Queries) GetUserByID(ctx context.Context, userID pgtype.UUID) (GetUserByIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserByID, userID)
+	var i GetUserByIDRow
+	err := row.Scan(&i.ID, &i.Email, &i.DisplayName)
+	return i, err
+}
+
 const getUserByIdentity = `-- name: GetUserByIdentity :one
 SELECT id, email, display_name
 FROM users
