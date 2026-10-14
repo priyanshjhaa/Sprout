@@ -50,6 +50,13 @@
       "when": 1791899264342,
       "tag": "0006_release_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791955136869,
+      "tag": "0007_api_tokens",
+      "breakpoints": true
     }
   ]
 }
