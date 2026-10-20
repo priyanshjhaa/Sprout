@@ -9,14 +9,6 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down",
-    "db:status": "docker compose ps",
-    "db:logs": "docker compose logs -f postgres",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:seed": "docker compose exec -T postgres psql -U sprout -d sprout < backend/dev/seed.sql",
-    "db:check": "drizzle-kit check",
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
@@ -24,22 +16,16 @@
     "@tanstack/query-sync-storage-persister": "^5.104.1",
     "@tanstack/react-query": "latest",
     "@tanstack/react-query-persist-client": "^5.104.1",
-    "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.45.2",
     "lucide-react": "latest",
     "next": "latest",
-    "pg": "^8.23.0",
     "react": "latest",
-    "react-dom": "latest",
-    "server-only": "^0.0.1"
+    "react-dom": "latest"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "latest",
     "@types/node": "latest",
-    "@types/pg": "^8.23.1",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "drizzle-kit": "^0.31.10",
     "eslint": "latest",
     "eslint-config-next": "latest",
     "postcss": "latest",

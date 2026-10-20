@@ -1,0 +1,24 @@
+{
+  "name": "sprout-database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The PostgreSQL schema and migrations. Drizzle is the only schema owner; the Go service reads the migrated schema through sqlc.",
+  "scripts": {
+    "up": "docker compose -f ../../compose.yaml up -d postgres",
+    "down": "docker compose -f ../../compose.yaml down",
+    "status": "docker compose -f ../../compose.yaml ps",
+    "logs": "docker compose -f ../../compose.yaml logs -f postgres",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "check": "drizzle-kit check",
+    "seed": "docker compose -f ../../compose.yaml exec -T postgres psql -U sprout -d sprout < ../dev/seed.sql"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
+  }
+}
