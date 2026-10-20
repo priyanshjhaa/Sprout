@@ -59,7 +59,7 @@ When a static release replaces a running Node release, the reconcile loop remove
 
 ```sh
 cd backend && set -a && . ../.env && set +a && go test -p 1 ./... -race
-npm run test:stream && ./node_modules/.bin/tsc --noEmit && npm run lint
+(cd frontend && npm test && npm run typecheck && npm run lint)
 ```
 
 Tests cover the contract (missing index, nested index, `package.json`, dotfiles, spaces, Unicode, encodings, overlong and too-deep names, cancellation), malicious artifacts (traversal, absolute paths, symlinks, hard links, devices, duplicates, oversized files and totals, garbage), content types, conditional, `HEAD` and range requests, write methods, traversal attempts, lifecycle responses, cache bounds and failure healing, and that a static deployment never calls the runtime driver. A temporary live static deployment was also served through the running API and checked with `curl` (200, 304, 405, 404, then 503 when paused and 410 when archived).

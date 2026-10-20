@@ -48,7 +48,7 @@ Token management gets a second lock: its handlers also demand a session. A token
 
 ```sh
 cd backend && set -a && . ../.env && set +a && go test -p 1 ./... -race
-npm test && ./node_modules/.bin/tsc --noEmit && npm run lint
+(cd frontend && npm test && npm run typecheck && npm run lint)
 ```
 
 Tests cover token shape and entropy, that only a hash is stored and listings never contain the secret, name and lifetime validation, the active-token cap and what frees a slot, authentication of valid, malformed, unknown, revoked and expired tokens (and that malformed ones never reach the database), owner-only revocation, the SQL lifecycle against PostgreSQL, the 12 allowed operations, about 25 refused ones including traversal and segment tricks, the 401-before-403 ordering, the exact-prefix rule, infrastructure failures, and the session-only token endpoints. The running API was also exercised with real database rows: a valid token read the account but received `403` for token management, members and invitations, while revoked, expired and garbage tokens received `401`.

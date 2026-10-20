@@ -433,7 +433,7 @@ Components should not import mock fixtures directly. They should call typed quer
 ## 10. Proposed source organization
 
 ```text
-src/
+frontend/src/
   app/
     (marketing)/
     (auth)/

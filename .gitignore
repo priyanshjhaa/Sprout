@@ -1,12 +1,12 @@
 # dependencies
-/node_modules
+node_modules
 
 # next.js
-/.next/
-/out/
+.next/
+/frontend/out/
 
 # production
-/build
+/frontend/build
 
 # local files
 .DS_Store
@@ -21,4 +21,3 @@ pnpm-debug.log*
 
 # typescript
 *.tsbuildinfo
-

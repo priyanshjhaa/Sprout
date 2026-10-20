@@ -47,12 +47,12 @@ Two Go request handlers can run at the same time. A PostgreSQL row lock makes te
 Run from the repository root:
 
 ```bash
-npm run db:up
-npm run db:migrate
-npm run db:check
-npm run typecheck
-npm run lint
-npm run build
+(cd backend/database && npm run up)
+(cd backend/database && npm run migrate)
+(cd backend/database && npm run check)
+(cd frontend && npm run typecheck)
+(cd frontend && npm run lint)
+(cd frontend && npm run build)
 ```
 
 Then from `backend/` (use your existing ignored local environment; never paste its values into chat):
@@ -71,7 +71,7 @@ GOCACHE=/private/tmp/sprout-go-cache go run ./cmd/api
 
 ### Manual two-account check
 
-1. Start the frontend with `npm run dev`; use the origin configured in `SPROUT_WEB_ORIGIN` (normally `http://localhost:3000`).
+1. Start the frontend with `npm run dev` (in `frontend/`); use the origin configured in `SPROUT_WEB_ORIGIN` (normally `http://localhost:3000`).
 2. As owner, open Team and invite the second account's verified primary email as Viewer. Copy the link before navigating away; it is not recoverable from storage.
 3. Open it in a separate browser profile. Sign in/up and confirm you return to the invitation page. Click Join workspace; confirm you arrive in the shared workspace, not the personal one.
 4. Use the workspace picker to move between personal and shared workspaces.

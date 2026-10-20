@@ -62,30 +62,44 @@ The frontend uses an explicit API boundary. Components consume typed TanStack Qu
 
 ## Getting started
 
+Repository layout:
+
+```text
+frontend/     The Next.js app: landing page and dashboard
+backend/      The Go API and runtime
+  database/   PostgreSQL schema and migrations (Drizzle is the only schema owner)
+docs/         Design records and per-milestone learning notes
+compose.yaml  Local PostgreSQL
+.env          One ignored configuration file at the root, shared by frontend and backend
+```
+
 Requirements:
 
 - Node.js 20 or newer
 - npm
 - Go 1.27.x for backend development
 - `sqlc` 1.31.x for generating typed Go queries
+- Docker, for PostgreSQL and the local application runtime
 
 Install dependencies:
 
 ```bash
-npm install
+(cd frontend && npm install)
+(cd backend/database && npm install)
 ```
 
-Create a Clerk development application and place its publishable key and secret key in the ignored `.env.local` file, using `.env.example` as a guide. Keep the secret out of `NEXT_PUBLIC_` variables and commits.
+Create a Clerk development application and place its publishable key and secret key in the ignored `.env` file at the repository root, using `.env.example` as a guide. Keep the secret out of `NEXT_PUBLIC_` variables and commits.
 
 Start and migrate PostgreSQL. The optional seed adds an `acme` example workspace for local database experiments; new Clerk users receive their own personal workspace automatically.
 
 ```bash
-npm run db:up
-npm run db:migrate
-# Optional: npm run db:seed
+cd backend/database
+npm run up
+npm run migrate
+# Optional: npm run seed
 ```
 
-Load the ignored local configuration into the shell that starts Go:
+From the repository root, load the ignored local configuration into the shell that starts Go:
 
 ```bash
 set -a
@@ -105,7 +119,7 @@ go vet ./...
 go run ./cmd/api
 ```
 
-The API listens on `http://127.0.0.1:8080`. In another terminal, run `npm run dev` from the repository root and open [http://localhost:3000](http://localhost:3000). Verify the API liveness endpoint with:
+The API listens on `http://127.0.0.1:8080`. In another terminal, run `npm run dev` from `frontend/` and open [http://localhost:3000](http://localhost:3000). Verify the API liveness endpoint with:
 
 ```bash
 curl http://127.0.0.1:8080/health/live
@@ -117,7 +131,7 @@ The API supports `/api/v1/me`, a membership-scoped workspace lookup, and listing
 
 Press `Ctrl+C` in the server terminal to perform a graceful shutdown.
 
-For database work, follow the [local PostgreSQL setup](./local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.
+For database work, follow the [local PostgreSQL setup](docs/local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.
 
 Useful demo routes:
 
@@ -133,17 +147,27 @@ Useful demo routes:
 
 ## Project commands
 
+From `frontend/`:
+
 ```bash
 npm run dev        # Start the development server
 npm run build      # Create a production build
 npm run start      # Run the production build
 npm run lint       # Run ESLint
 npm run typecheck  # Run TypeScript without emitting files
-npm run db:up      # Start the local PostgreSQL container
-npm run db:status  # Check PostgreSQL container health
-npm run db:migrate # Apply pending Drizzle migrations
-npm run db:seed    # Add idempotent local demo records
-npm run db:down    # Stop PostgreSQL without deleting its data
+npm test           # Run the browser-side unit tests
+```
+
+From `backend/database/`:
+
+```bash
+npm run up         # Start the local PostgreSQL container
+npm run status     # Check PostgreSQL container health
+npm run generate   # Generate a migration after editing schema.ts
+npm run migrate    # Apply pending Drizzle migrations
+npm run check      # Verify the migration history
+npm run seed       # Add idempotent local demo records
+npm run down       # Stop PostgreSQL without deleting its data
 ```
 
 The production build currently uses Next.js with webpack because the restricted development environment used for this prototype does not permit one of Turbopack's internal CSS worker operations.
@@ -151,7 +175,7 @@ The production build currently uses Next.js with webpack because the restricted 
 ## Source structure
 
 ```text
-src/
+frontend/src/
 ├── app/                  Next.js routes and layouts
 ├── components/
 │   ├── access/           Sharing and roles
@@ -167,7 +191,7 @@ src/
 └── types/                Frontend domain types
 ```
 
-The Go backend lives in `backend/`. Its `cmd/api` package is the executable entrypoint. Drizzle remains the only schema and migration owner; reviewed SQL in `backend/queries` is converted by `sqlc` into typed query methods used through the bounded `pgx` connection pool.
+The Go backend lives in `backend/`. Its `cmd/api` package is the executable entrypoint. Drizzle (`backend/database`) remains the only schema and migration owner; reviewed SQL in `backend/queries` is converted by `sqlc` into typed query methods used through the bounded `pgx` connection pool.
 
 ## Design principles
 
@@ -214,13 +238,13 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 - [Deployment strategy: scope, inputs, and hosting](./deployment-strategy.md)
 - [Frontend implementation plan](./frontend-implementation.md)
 - [Go backend development and learning plan](./backend-development-learning-plan.md)
-- [Backend systems story: why it is built this way](./backend-systems-story.md)
-- [Authorization policy](./authorization-policy.md)
-- [Workspace invitations: learning and verification](./workspace-invitations-learning.md)
-- [Bounded deployment simulations: learning and verification](./deployment-worker-learning.md)
-- [Live simulation progress: streaming and learning](./deployment-streaming-learning.md)
-- [Source preparation: filesystem safety and learning](./source-preparation-learning.md)
-- [Node.js application build contract](./node-build-contract.md)
-- [Database design](./database-design.md)
-- [Local PostgreSQL setup](./local-postgres.md)
+- [Backend systems story: why it is built this way](docs/backend-systems-story.md)
+- [Authorization policy](docs/authorization-policy.md)
+- [Workspace invitations: learning and verification](docs/workspace-invitations-learning.md)
+- [Bounded deployment simulations: learning and verification](docs/deployment-worker-learning.md)
+- [Live simulation progress: streaming and learning](docs/deployment-streaming-learning.md)
+- [Source preparation: filesystem safety and learning](docs/source-preparation-learning.md)
+- [Node.js application build contract](docs/node-build-contract.md)
+- [Database design](docs/database-design.md)
+- [Local PostgreSQL setup](docs/local-postgres.md)
 - [Repository implementation guidance](./AGENTS.md)

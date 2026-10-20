@@ -90,10 +90,10 @@ cd backend
 set -a; . ../.env; set +a
 go test -p 1 ./...
 SPROUT_DOCKER_TEST=1 go test -p 1 ./internal/runtime ./internal/buildjob ./internal/nodeapp ./cmd/sourcecheck -count=1
-npm run test:stream && npx tsc --noEmit && npm run lint
+(cd frontend && npm test && npm run typecheck && npm run lint)
 ```
 
-Run Docker tests with `-p 1`: the packages share one Docker daemon, and the leftover-container checks see each other's containers when run in parallel. The tests cover the container flags, an invalid or unpinned input, redirect refusal, timeouts, each failure code, cleanup after failure, retirement of only the same application's old releases, the demote-then-promote transaction, and a real example app going live and being fully removed.
+Stop the local API before running the Docker tests: its reconcile loop removes any Sprout-labelled Docker resource the database does not know about, which includes the tests' fixtures, so a running API makes them fail at random. Run Docker tests with `-p 1`: the packages share one Docker daemon, and the leftover-container checks see each other's containers when run in parallel. The tests cover the container flags, an invalid or unpinned input, redirect refusal, timeouts, each failure code, cleanup after failure, retirement of only the same application's old releases, the demote-then-promote transaction, and a real example app going live and being fully removed.
 
 To try it by hand, start the API with local builds on and open an app's URL after a deploy (local development only; uploaded code runs in Docker on this machine):
 

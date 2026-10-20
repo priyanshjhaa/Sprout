@@ -76,12 +76,12 @@ The existing dashboard deployment tab still uses its previous adapter. No simula
 From the repository root:
 
 ```bash
-npm run db:up
-npm run db:migrate
-npm run db:check
-npm run typecheck
-npm run lint
-npm run build
+(cd backend/database && npm run up)
+(cd backend/database && npm run migrate)
+(cd backend/database && npm run check)
+(cd frontend && npm run typecheck)
+(cd frontend && npm run lint)
+(cd frontend && npm run build)
 ```
 
 From `backend/`, load your existing ignored local environment without printing it:

@@ -37,7 +37,7 @@ The workspace overview accepts a drop anywhere on the page (create an app named 
 ## Verification
 
 ```sh
-npm test && ./node_modules/.bin/tsc --noEmit && npm run lint
+(cd frontend && npm test && npm run typecheck && npm run lint)
 cd backend && go test ./internal/staticsite -run Browser
 ```
 

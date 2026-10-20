@@ -5,7 +5,7 @@ This setup runs PostgreSQL in Docker for local development. The database port is
 ## Prerequisites
 
 - Docker Desktop or another Docker installation with Compose support
-- Node.js dependencies installed with `npm install`
+- Node.js dependencies installed with `npm install` in `backend/database`
 
 ## 1. Create the untracked environment file
 
@@ -26,7 +26,7 @@ Never commit `.env`. The repository ignores `.env*` except for `.env.example`.
 ## 2. Start PostgreSQL
 
 ```bash
-npm run db:up
+(cd backend/database && npm run up)
 ```
 
 The first run may download `postgres:16-alpine` and can take a little longer.
@@ -34,13 +34,13 @@ The first run may download `postgres:16-alpine` and can take a little longer.
 ## 3. Verify container health
 
 ```bash
-npm run db:status
+(cd backend/database && npm run status)
 ```
 
 The `postgres` service should report `healthy`. If it does not, inspect its output:
 
 ```bash
-npm run db:logs
+(cd backend/database && npm run logs)
 ```
 
 Press `Ctrl+C` to leave the log stream without stopping PostgreSQL.
@@ -48,7 +48,7 @@ Press `Ctrl+C` to leave the log stream without stopping PostgreSQL.
 ## 4. Apply the Drizzle migration
 
 ```bash
-npm run db:migrate
+(cd backend/database && npm run migrate)
 ```
 
 Drizzle records applied migrations separately, so running the command again should not recreate existing tables.
@@ -105,7 +105,7 @@ Exit PostgreSQL with:
 ## 6. Stop PostgreSQL
 
 ```bash
-npm run db:down
+(cd backend/database && npm run down)
 ```
 
 This stops the container but preserves database contents in the `sprout_postgres_data` Docker volume.
@@ -118,7 +118,7 @@ Only run this when you intentionally want to delete all local Sprout database da
 docker compose down --volumes
 ```
 
-After a reset, start PostgreSQL and run `npm run db:migrate` again.
+After a reset, start PostgreSQL and run `npm run migrate` (in `backend/database`) again.
 
 ## Common issues
 
@@ -137,4 +137,4 @@ PostgreSQL initializes its user and password only when the data volume is first 
 
 ### Migration cannot connect
 
-Check `npm run db:status`, confirm the service is healthy, and make sure the username, password, database, and port in `DATABASE_URL` match the Compose settings.
+Check `npm run status` (in `backend/database`), confirm the service is healthy, and make sure the username, password, database, and port in `DATABASE_URL` match the Compose settings.

@@ -618,7 +618,7 @@ paths:
         Requires application edit permission, an active application, and a free
         queue slot; these are checked before the body is read. The body is a plain,
         uncompressed tar of at most 16 MiB that follows the Node.js application
-        contract (node-build-contract.md). Stages: source (extract and validate),
+        contract (docs/node-build-contract.md). Stages: source (extract and validate),
         build (sealed Docker build), package (store the output). The uploaded
         archive is deleted when the job ends, whatever its outcome. Failures use
         stable codes such as node_contract_invalid or source_sensitive_path.
