@@ -18,6 +18,10 @@ This initial policy is intentionally narrower than npm. Native dependencies requ
 
 The Go validator is a preflight check, not a reimplementation of npm's dependency resolver. `npm ci` must still validate the complete dependency graph. Integrity strings are checked for shape here; npm must verify downloaded content against them during installation. A registry URL allowlist is not an egress firewall or a guarantee that package code is safe.
 
+## Why a Node.js app was refused
+
+A refusal names the rule that failed, using a stable code (never source text): `node_build_dependencies_unsupported` (the app declares npm packages, which Sprout cannot install yet; this is reported first), `node_contract_engine` (`engines.node` must be `24.x`), `node_contract_private`, `node_contract_scripts` (a `build` and a `start` script), `node_contract_manifest`, `node_contract_lockfile`, `node_contract_workspaces`, and `node_contract_files`. `node_contract_invalid` is the generic form. The dashboard explains each in plain language, and when a folder is dropped it checks `package.json` in the browser first.
+
 ## Platform-owned commands
 
 The sealed build runner executes the dependency and build rows. The runtime row runs in the separate runtime container described in [local runtime](./local-runtime-learning.md):

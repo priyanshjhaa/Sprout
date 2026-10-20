@@ -76,6 +76,10 @@ func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment
 			output = built
 			return err
 		}
+		// Packages are the blocker that matters most today, so say so first.
+		if err := nodeapp.CheckPackages(files); err != nil {
+			return err
+		}
 		if err := nodeapp.Validate(ctx, files); err != nil {
 			return err
 		}
@@ -281,6 +285,11 @@ var knownFailures = []error{
 func classify(err error) error {
 	if errors.Is(err, artifact.ErrMissing) || errors.Is(err, artifact.ErrCorrupt) {
 		return &deployment.Failure{Code: "source_unavailable", Err: err}
+	}
+	// A contract failure names the rule that failed (a stable, user-safe code).
+	var contract *nodeapp.ContractError
+	if errors.As(err, &contract) {
+		return &deployment.Failure{Code: contract.Code, Err: err}
 	}
 	for _, known := range knownFailures {
 		if errors.Is(err, known) {

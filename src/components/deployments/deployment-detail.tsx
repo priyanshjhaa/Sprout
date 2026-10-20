@@ -11,18 +11,25 @@ import { useBuildActions, useSimulation, useSimulationActions } from "@/lib/quer
 
 // Plain-language explanations for the stable failure codes a build can end with.
 const failureExplanations: Record<string, string> = {
-  node_contract_invalid: "The archive doesn't follow the Node.js app contract: check package.json, the lockfile, and the build and start scripts.",
-  node_build_dependencies_unsupported: "Only apps without third-party dependencies can build for now.",
+  node_contract_invalid: "The folder doesn't follow the Node.js app rules: check package.json, the lockfile, and the build and start scripts.",
+  node_build_dependencies_unsupported: "This app uses npm packages, and Sprout can't install packages yet. Plain websites, and Node.js apps that use no packages, work today.",
   node_build_failed: "The app's build script failed.",
   node_build_artifact_invalid: "The build didn't produce a usable dist/ folder.",
   node_build_artifact_too_large: "The build output is larger than the limit.",
   node_build_docker_unavailable: "Docker or the pinned Node image isn't available on this machine.",
-  source_archive_invalid: "The upload isn't a plain, uncompressed .tar archive.",
-  source_limit_exceeded: "The archive has too many files or is too large once extracted.",
-  source_sensitive_path: "The archive contains a sensitive file such as .env, .git or a key. Remove it and upload again.",
-  source_unavailable: "The uploaded archive was no longer available.",
+  source_archive_invalid: "The upload wasn't a readable archive. Drop the folder again; if you chose a .tar file, it must be a plain, uncompressed one.",
+  source_limit_exceeded: "The folder has too many files or is too large (up to 256 files and 8 MiB).",
+  source_sensitive_path: "The folder contains a sensitive file such as a key or .env. Dropping the folder leaves those out for you; if you used a .tar, remove it and upload again.",
+  source_unavailable: "The upload was no longer available. Deploy again.",
   process_interrupted: "The server restarted while this was running.",
   job_timeout: "It took longer than the time limit.",
+  node_contract_engine: "package.json needs \"engines\": { \"node\": \"24.x\" } so Sprout knows which Node.js version to use.",
+  node_contract_private: "package.json needs \"private\": true.",
+  node_contract_scripts: "package.json needs both a \"build\" script and a \"start\" script.",
+  node_contract_manifest: "package.json is missing, unreadable, or has no name and version.",
+  node_contract_lockfile: "package-lock.json is missing or doesn't match package.json. Run \"npm install\" and include the file.",
+  node_contract_workspaces: "Workspaces (monorepos) aren't supported yet.",
+  node_contract_files: "The folder contains files Sprout doesn't accept in a Node.js app (such as a Dockerfile or a symlink).",
   static_contract_invalid: "It is neither a Node.js app nor a valid static site. A static site needs index.html at the root, no package.json, and plain file names (letters, numbers, dots, dashes, underscores; no dotfiles).",
   provision_failed: "The built app could not be stored for running.",
   release_failed: "The app could not be made ready to serve.",
@@ -54,16 +61,17 @@ export function DeploymentDetail({ workspaceSlug, appId, deploymentId, kind }: {
           {isActiveSimulation(job) && <button className="button button-secondary" type="button" disabled={action.isPending} onClick={() => action.cancel(job.id)}>{action.isPending ? "Cancelling…" : "Cancel"}</button>}
         </header>
         {action.isError && <p className="simulation-notice" role="alert">{action.error?.message}</p>}
-        <p className="simulation-note" role="status" aria-live="polite">{isActiveSimulation(job) ? query.streamState === "live" ? "Receiving live progress" : query.streamState === "reconnecting" ? "Reconnecting — the worker continues in the background" : "Connecting to live progress…" : `${isBuild ? "Build" : "Run"} ${job.status}.`}</p>
+        <p className="simulation-note" role="status" aria-live="polite">{isActiveSimulation(job) ? query.streamState === "live" ? "Receiving live progress" : query.streamState === "reconnecting" ? "Reconnecting — the worker continues in the background" : "Connecting to live progress…" : job.status === "live" ? "This deployment is live." : `${isBuild ? "Build" : "Run"} ${job.status}.`}</p>
         <div className={`sp-run sp-run-${job.status}`}><Pipeline stages={job.stages} simulated={!isBuild} /></div>
         {job.failureCode && <p className="simulation-notice">{failureExplanations[job.failureCode] ?? "It did not finish."} <code>{job.failureCode}</code></p>}
-        {isBuild && job.status === "live" && <p className="simulation-notice"><Check size={14} /> Live{application?.liveUrl
-          ? <> at <a href={application.liveUrl} target="_blank" rel="noreferrer">{application.liveUrl} <ExternalLink size={12} aria-hidden="true" /></a></>
-          : "."} Anyone with the link can open it.</p>}
-        {isBuild && job.status === "succeeded" && <p className="simulation-notice"><Check size={14} /> Built and stored. A newer version is live, or this one has not been started.</p>}
+        {/* One paragraph inside the notice: the notice is a grid, so loose inline pieces would each become a row. */}
+        {isBuild && job.status === "live" && <div className="simulation-notice sp-notice-flow"><p><Check className="sp-inline-icon" size={14} /> Live{application?.liveUrl
+          ? <> at <a href={application.liveUrl} target="_blank" rel="noreferrer">{application.liveUrl}<ExternalLink className="sp-inline-icon sp-inline-icon-after" size={12} aria-hidden="true" /></a>.</>
+          : "."} Anyone with the link can open it.</p></div>}
+        {isBuild && job.status === "succeeded" && <div className="simulation-notice sp-notice-flow"><p><Check className="sp-inline-icon" size={14} /> Built and stored. A newer version is live, or this one has not been started.</p></div>}
         <p className="simulation-note">{isBuild
-          ? <><Hammer size={13} /> Built in a sealed container on this machine. Leaving this page does not stop it.</>
-          : <><FlaskConical size={13} /> Simulated run: no code executes. Leaving this page does not stop it.</>}</p>
+          ? <><Hammer className="sp-inline-icon" size={13} /> Built in a sealed container on this machine. Leaving this page does not stop it.</>
+          : <><FlaskConical className="sp-inline-icon" size={13} /> Simulated run: no code executes. Leaving this page does not stop it.</>}</p>
       </>}
     </section>
   );

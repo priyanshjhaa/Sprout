@@ -17,6 +17,27 @@ import (
 
 var ErrContract = errors.New("node_contract_invalid")
 
+// ContractError is an ErrContract that says which rule failed. Code is a stable,
+// user-safe identifier (never source text), so the dashboard can explain the
+// problem. errors.Is(err, ErrContract) still holds for every one of them.
+type ContractError struct{ Code string }
+
+func (e *ContractError) Error() string        { return e.Code }
+func (e *ContractError) Is(target error) bool { return target == ErrContract }
+
+func broke(code string) error { return &ContractError{Code: code} }
+
+// The rule that failed, as reported to the user.
+const (
+	reasonManifest   = "node_contract_manifest"   // package.json missing, unreadable, or incomplete
+	reasonPrivate    = "node_contract_private"    // "private": true is required
+	reasonEngine     = "node_contract_engine"     // engines.node must be "24.x"
+	reasonWorkspaces = "node_contract_workspaces" // workspaces are not supported
+	reasonScripts    = "node_contract_scripts"    // build and start scripts are required
+	reasonLockfile   = "node_contract_lockfile"   // package-lock.json missing or inconsistent
+	reasonFiles      = "node_contract_files"      // files Sprout does not accept in the source
+)
+
 type Manifest struct {
 	Name                 string            `json:"name"`
 	Version              string            `json:"version"`
@@ -59,35 +80,41 @@ func Validate(ctx context.Context, files fs.FS) error {
 	var manifest Manifest
 	var lock lockfile
 	if err := readJSON(files, "package.json", 256<<10, &manifest); err != nil {
-		return ErrContract
+		return broke(reasonManifest)
 	}
 	if err := readJSON(files, "package-lock.json", 1<<20, &lock); err != nil {
-		return ErrContract
+		return broke(reasonLockfile)
 	}
-	if manifest.Name == "" || manifest.Version == "" || !manifest.Private || manifest.Engines["node"] != "24.x" || len(manifest.Workspaces) != 0 ||
-		(manifest.PackageManager != "" && !strings.HasPrefix(manifest.PackageManager, "npm@")) {
-		return ErrContract
+	switch {
+	case manifest.Name == "" || manifest.Version == "" || (manifest.PackageManager != "" && !strings.HasPrefix(manifest.PackageManager, "npm@")):
+		return broke(reasonManifest)
+	case !manifest.Private:
+		return broke(reasonPrivate)
+	case manifest.Engines["node"] != "24.x":
+		return broke(reasonEngine)
+	case len(manifest.Workspaces) != 0:
+		return broke(reasonWorkspaces)
 	}
 	for _, name := range []string{"build", "start"} {
 		if command := strings.TrimSpace(manifest.Scripts[name]); command == "" || len(command) > 2048 {
-			return ErrContract
+			return broke(reasonScripts)
 		}
 	}
 	if lock.LockfileVersion != 3 || lock.Name != manifest.Name || lock.Version != manifest.Version || len(lock.Packages) > 4096 {
-		return ErrContract
+		return broke(reasonLockfile)
 	}
 	root, ok := lock.Packages[""]
 	if !ok || root.Name != manifest.Name || root.Version != manifest.Version || root.Link || root.Resolved != "" ||
 		!sameDependencies(root.Dependencies, manifest.Dependencies) || !sameDependencies(root.DevDependencies, manifest.DevDependencies) || !sameDependencies(root.OptionalDependencies, manifest.OptionalDependencies) {
-		return ErrContract
+		return broke(reasonLockfile)
 	}
 	for _, dependencies := range []map[string]string{manifest.Dependencies, manifest.DevDependencies, manifest.OptionalDependencies} {
 		for name, version := range dependencies {
 			if !packageName(name) || version == "" || strings.ContainsAny(version, ":/@\\\r\n") {
-				return ErrContract
+				return broke(reasonLockfile)
 			}
 			if _, ok := lock.Packages["node_modules/"+name]; !ok {
-				return ErrContract
+				return broke(reasonLockfile)
 			}
 		}
 	}
@@ -99,35 +126,35 @@ func Validate(ctx context.Context, files fs.FS) error {
 			continue
 		}
 		if !packagePath(name) || pkg.Link || pkg.Version == "" {
-			return ErrContract
+			return broke(reasonLockfile)
 		}
 		location, err := url.Parse(pkg.Resolved)
 		if err != nil || location.Scheme != "https" || location.Host != "registry.npmjs.org" || location.User != nil || location.RawQuery != "" || location.Fragment != "" || location.Opaque != "" || !strings.HasSuffix(location.Path, ".tgz") {
-			return ErrContract
+			return broke(reasonLockfile)
 		}
 		digest, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(pkg.Integrity, "sha512-"))
 		if err != nil || !strings.HasPrefix(pkg.Integrity, "sha512-") || len(digest) != 64 {
-			return ErrContract
+			return broke(reasonLockfile)
 		}
 	}
 	count := 0
 	err := fs.WalkDir(files, ".", func(name string, entry fs.DirEntry, err error) error {
 		if err != nil {
-			return ErrContract
+			return broke(reasonFiles)
 		}
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 		count++
 		if count > 4096 {
-			return ErrContract
+			return broke(reasonFiles)
 		}
 		if entry.Type()&fs.ModeSymlink != 0 {
-			return ErrContract
+			return broke(reasonFiles)
 		}
 		for _, part := range strings.Split(strings.ToLower(name), "/") {
 			if part == "node_modules" || part == ".next" || part == "dist" || part == ".npmrc" || part == ".yarnrc" || part == ".yarnrc.yml" || part == "yarn.lock" || part == "pnpm-lock.yaml" || part == ".dockerignore" || part == "dockerfile" || strings.HasSuffix(part, ".dockerfile") {
-				return ErrContract
+				return broke(reasonFiles)
 			}
 		}
 		return nil
@@ -199,4 +226,19 @@ func packagePath(name string) bool {
 		}
 	}
 	return true
+}
+
+// CheckPackages reports ErrDependencies when the app declares any npm packages.
+// Sprout cannot install packages yet, so this is the most important thing to
+// tell someone: it is checked before the finer contract rules. An unreadable
+// manifest is left for Validate to describe.
+func CheckPackages(files fs.FS) error {
+	var manifest Manifest
+	if err := readJSON(files, "package.json", 256<<10, &manifest); err != nil {
+		return nil
+	}
+	if len(manifest.Dependencies) != 0 || len(manifest.DevDependencies) != 0 || len(manifest.OptionalDependencies) != 0 {
+		return ErrDependencies
+	}
+	return nil
 }

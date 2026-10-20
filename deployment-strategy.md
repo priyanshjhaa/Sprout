@@ -24,7 +24,7 @@ Front doors, in order:
 2. **MCP `deploy` tool:** coding agents deploy through the same API. One tool accepts either
    - a **local folder**, packed and uploaded like the CLI, or
    - a **GitHub repository and commit**. Sprout downloads that commit's tarball. Public repositories come first; private repositories need a GitHub App later.
-3. **Dashboard upload:** a secondary door, useful for testing.
+3. **Dashboard:** drop or choose a folder and Sprout packs it in the browser (a ready-made `.tar` also works), so nobody needs to know what an archive is. See `folder-deploy-learning.md`.
 
 A coding agent is a *client* of the deploy API. Sprout does not generate code and does not accept chat transcripts as input.
 
