@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { builds } from "@/lib/api/simulations";
 import { chooseSource, problemMessage, skippedNote, sourceBlob, suggestedName, summarise, type Chosen } from "@/lib/chosen-source";
+import { Readiness, useReadiness } from "@/components/deploy/readiness";
 import { readDropped } from "@/lib/read-dropped";
 import { queryKeys } from "@/lib/query/keys";
 import { useCreateApplication } from "@/lib/query/hooks";
@@ -31,6 +32,7 @@ export function DropToDeploy({ workspaceSlug }: { workspaceSlug: string }) {
   const [name, setName] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const warnings = useReadiness(chosen);
 
   useEffect(() => {
     if (!enabled) return;
@@ -94,6 +96,7 @@ export function DropToDeploy({ workspaceSlug }: { workspaceSlug: string }) {
           {reading && <p className="sp-drop-file" role="status">Reading your folder…</p>}
           {chosen && <p className="sp-drop-file"><FolderUp size={16} /> <strong>{summarise(chosen)}</strong></p>}
           {note && <small>{note}</small>}
+          <Readiness problems={warnings} />
           {chosen && <>
             <label>Name this app<input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} disabled={busy} autoFocus /></label>
             <small>URL name: <code>{slugify(name) || "set from the name"}</code></small>
@@ -101,7 +104,7 @@ export function DropToDeploy({ workspaceSlug }: { workspaceSlug: string }) {
           {problem && <p className="deploy-error" role="alert">{problem}</p>}
           <div className="sp-drop-actions">
             <button type="button" className="sp-button sp-button-outline" onClick={() => dialog.current?.close()} disabled={busy}>{chosen ? "Cancel" : "Close"}</button>
-            {chosen && <button className="sp-button sp-button-solid" disabled={busy || !name.trim() || !slugify(name) || !!problem}><Sprout size={15} /> {busy ? "Planting…" : "Create and deploy"}</button>}
+            {chosen && <button className="sp-button sp-button-solid" disabled={busy || !name.trim() || !slugify(name) || !!problem}><Sprout size={15} /> {busy ? "Planting…" : warnings.length > 0 ? "Deploy anyway" : "Create and deploy"}</button>}
           </div>
         </form>
       </dialog>

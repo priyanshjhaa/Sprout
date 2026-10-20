@@ -128,8 +128,10 @@ export function prepareFolder(picked: SourceFile[]): PreparedFolder {
   if (kind === null) {
     const near = roots.find((name) => /^index\.html?$/i.test(name));
     const found = [...new Set(entries.map((entry) => entry.segments[0]))];
+    const built = ["dist", "build", "out"].find((dir) => entries.some((entry) => entry.segments.length === 2 && entry.segments[0] === dir && entry.segments[1] === "index.html"));
     throw new FolderProblem(
       (near ? `Rename "${near}" to exactly "index.html". ` : "")
+      + (built ? `This looks like a project whose finished website is in the "${built}" folder: drop that folder instead. ` : "")
       + `Sprout needs an index.html (for a website) or a package.json (for a Node.js app) at the top of the folder. I found: ${listNames(found)}.`,
     );
   }

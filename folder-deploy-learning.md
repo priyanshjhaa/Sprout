@@ -22,6 +22,14 @@ The browser is a helpful assistant; the server is the authority. The browser rea
 
 **Read the drop synchronously.** Browsers empty a drag's items as soon as the handler yields, so the folder is read from inside the drop event before anything is awaited. The reader walks `FileSystemEntry` objects, fetching entries in batches until a folder is exhausted.
 
+## Saying so before it fails
+
+A real project (a Next.js app with a database, 17 packages and no `engines` field) was dropped during testing. The upload worked, then the run failed with "check package.json, the lockfile, and the build and start scripts": true, useless, and the real reason (Sprout cannot install packages yet) was never named. Two changes came from that.
+
+**The server names the rule.** A Node.js contract failure now carries a specific, stable code (`node_contract_engine`, `_private`, `_scripts`, `_manifest`, `_lockfile`, `_workspaces`, `_files`). The codes are fixed identifiers, never source text, and `node_contract_invalid` remains as the generic ancestor so existing checks keep working. Packages are checked first, because they are the one blocker no edit to `package.json` can fix: the app is refused with `node_build_dependencies_unsupported`, and the dashboard explains it in plain words.
+
+**The browser says it before upload.** When a dropped folder is a Node.js app, the browser reads its `package.json` and shows a heads-up: packages first and alone ("this app uses 17 (next, react, …)"), otherwise each unmet rule in words ("package.json needs `"engines": { "node": "24.x" }`"). If the project has a finished website in `dist`, `build` or `out`, it says to drop that folder instead. It never blocks (the button becomes "Deploy anyway"), because these checks only mirror the server's, which stays the authority.
+
 ## Where it appears
 
 The workspace overview accepts a drop anywhere on the page (create an app named after the folder, then deploy). The Deploy page and an app's Deployments tab have a visible drop zone, a **Choose a folder** button, and a small "or pick a .tar file" link. A ready-made `.tar` still works, unchanged. A zip gets a clear message ("Unzip it and drop the folder inside") because reading zips in the browser needs its own careful decoder.

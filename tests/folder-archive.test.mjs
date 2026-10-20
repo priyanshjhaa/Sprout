@@ -54,6 +54,8 @@ test("it says what it found when there is nothing to deploy, and hints at near m
   assert.throws(() => prepareFolder([file("notes/readme.txt"), file("notes/todo.txt")]), /index\.html.*package\.json.*readme\.txt/);
   assert.throws(() => prepareFolder([file("site/Index.html")]), /Rename "Index.html" to exactly "index.html"/);
   assert.throws(() => prepareFolder([file("site/home/index.html"), file("site/other.html")]), /at the top of the folder/);
+  // A project whose finished website is in dist/: point at that folder.
+  assert.throws(() => prepareFolder([file("proj/README.md"), file("proj/dist/index.html"), file("proj/src/a.js")]), /finished website is in the "dist" folder: drop that folder instead/);
 });
 
 test("limits are explained before any upload", () => {

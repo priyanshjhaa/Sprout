@@ -12,7 +12,7 @@ import { useBuildActions, useSimulation, useSimulationActions } from "@/lib/quer
 // Plain-language explanations for the stable failure codes a build can end with.
 const failureExplanations: Record<string, string> = {
   node_contract_invalid: "The folder doesn't follow the Node.js app rules: check package.json, the lockfile, and the build and start scripts.",
-  node_build_dependencies_unsupported: "Only apps without third-party dependencies can build for now.",
+  node_build_dependencies_unsupported: "This app uses npm packages, and Sprout can't install packages yet. Plain websites, and Node.js apps that use no packages, work today.",
   node_build_failed: "The app's build script failed.",
   node_build_artifact_invalid: "The build didn't produce a usable dist/ folder.",
   node_build_artifact_too_large: "The build output is larger than the limit.",
@@ -23,6 +23,13 @@ const failureExplanations: Record<string, string> = {
   source_unavailable: "The upload was no longer available. Deploy again.",
   process_interrupted: "The server restarted while this was running.",
   job_timeout: "It took longer than the time limit.",
+  node_contract_engine: "package.json needs \"engines\": { \"node\": \"24.x\" } so Sprout knows which Node.js version to use.",
+  node_contract_private: "package.json needs \"private\": true.",
+  node_contract_scripts: "package.json needs both a \"build\" script and a \"start\" script.",
+  node_contract_manifest: "package.json is missing, unreadable, or has no name and version.",
+  node_contract_lockfile: "package-lock.json is missing or doesn't match package.json. Run \"npm install\" and include the file.",
+  node_contract_workspaces: "Workspaces (monorepos) aren't supported yet.",
+  node_contract_files: "The folder contains files Sprout doesn't accept in a Node.js app (such as a Dockerfile or a symlink).",
   static_contract_invalid: "It is neither a Node.js app nor a valid static site. A static site needs index.html at the root, no package.json, and plain file names (letters, numbers, dots, dashes, underscores; no dotfiles).",
   provision_failed: "The built app could not be stored for running.",
   release_failed: "The app could not be made ready to serve.",

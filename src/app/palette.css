@@ -46,3 +46,6 @@
 .sp-chosen-line { display: flex; align-items: center; gap: 8px; color: var(--sp-moss-deep); }
 .sp-chosen small { color: var(--muted); font-size: 12.5px; }
 .sp-chosen-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 4px; }
+.sp-heads-up { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid rgba(184, 115, 53, 0.45); border-radius: 14px; background: rgba(184, 115, 53, 0.1); color: var(--ink); font-size: 13px; }
+.sp-heads-up strong { display: flex; align-items: center; gap: 6px; color: var(--sp-amber); font-size: 13px; }
+.sp-heads-up ul { display: grid; gap: 4px; margin: 0; padding-left: 18px; }

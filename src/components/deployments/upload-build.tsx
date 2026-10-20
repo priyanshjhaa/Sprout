@@ -3,6 +3,7 @@
 import { FileArchive, FolderUp, Rocket } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Readiness, useReadiness } from "@/components/deploy/readiness";
 import { SourcePicker } from "@/components/deploy/source-picker";
 import { problemMessage, skippedNote, sourceBlob, summarise, type Chosen } from "@/lib/chosen-source";
 import { useBuildActions } from "@/lib/query/simulations";
@@ -17,6 +18,7 @@ export function UploadBuild({ workspaceSlug, appId, disabled = false, compact = 
   const [reading, setReading] = useState(false);
   const [packing, setPacking] = useState(false);
   const busy = packing || action.isPending;
+  const warnings = useReadiness(chosen);
 
   async function deploy() {
     if (!chosen) return;
@@ -41,9 +43,10 @@ export function UploadBuild({ workspaceSlug, appId, disabled = false, compact = 
         <div className="sp-chosen" role="status">
           <span className="sp-chosen-line">{chosen.kind === "folder" ? <FolderUp size={16} /> : <FileArchive size={16} />} <strong>{summarise(chosen)}</strong></span>
           {note && <small>{note}</small>}
+          <Readiness problems={warnings} />
           <div className="sp-chosen-actions">
             <button className="sp-button sp-button-solid" type="button" disabled={disabled || busy} onClick={() => void deploy()}>
-              <Rocket size={14} /> {busy ? "Deploying…" : "Deploy it"}
+              <Rocket size={14} /> {busy ? "Deploying…" : warnings.length > 0 ? "Deploy anyway" : "Deploy it"}
             </button>
             <button className="sp-dropzone-link" type="button" disabled={busy} onClick={() => { setChosen(null); setProblem(null); }}>Choose something else</button>
           </div>
