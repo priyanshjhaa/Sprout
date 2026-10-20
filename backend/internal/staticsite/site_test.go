@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io/fs"
+	"os"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -147,5 +149,44 @@ func TestLoadRejectsMaliciousArchives(t *testing.T) {
 	}
 	if _, err := Load(build(many...)); !errors.Is(err, source.ErrLimit) {
 		t.Errorf("total size not bounded: %v", err)
+	}
+}
+
+// testdata/folder-packed.tar is what the dashboard's browser-side packer produces
+// for a dropped folder (tests/folder-archive.test.mjs regenerates and checks it).
+// The real extractor and the static contract must accept exactly those bytes, or
+// "drop a folder" would fail at the server for every user.
+func TestBrowserPackedFolderIsAcceptedAndServable(t *testing.T) {
+	data, err := os.ReadFile("testdata/folder-packed.tar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var packed []byte
+	summary, err := source.WithArchive(context.Background(), bytes.NewReader(data), func(ctx context.Context, files fs.FS) error {
+		if err := Validate(ctx, files); err != nil {
+			return err
+		}
+		packed, err = Pack(ctx, files)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("the server rejected the browser's archive: %v", err)
+	}
+	if summary.Files != 5 {
+		t.Fatalf("files = %d, want 5 (the .DS_Store must never have been packed)", summary.Files)
+	}
+	site, err := Load(packed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	long := "/assets/" + strings.Repeat("a", 40) + "/" + strings.Repeat("b", 40) + "/" + strings.Repeat("c", 30) + ".txt"
+	for path, want := range map[string]string{"/": "<h1>Home</h1>", "/about/": "<h1>About</h1>", "/css/site.css": "h1{color:green}", "/404.html": "<h1>Missing</h1>", long: "deep file"} {
+		file, ok := site.Lookup(path)
+		if !ok || string(file.Data) != want {
+			t.Errorf("Lookup(%q) = %q %v, want %q", path, file.Data, ok, want)
+		}
+	}
+	if _, ok := site.Lookup("/.DS_Store"); ok {
+		t.Error("junk file was served")
 	}
 }
