@@ -15,6 +15,17 @@ interface ApplicationResponse {
   updatedAt: string;
 }
 
+// A personal access token as the API describes it: never the secret itself.
+export interface AccessToken {
+  id: string;
+  name: string;
+  hint: string;
+  createdAt: string;
+  expiresAt: string;
+  lastUsedAt: string | null;
+  expired: boolean;
+}
+
 interface ApplicationListResponse {
   applications: ApplicationResponse[];
 }
@@ -99,6 +110,8 @@ export async function request<T>(path: string, token: string | null, options: Re
     );
   }
 
+  // A successful DELETE answers 204 with no body.
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
@@ -168,6 +181,16 @@ const applicationAPI = {
   },
   removeMember(slug: string, id: string, token: string | null): Promise<{ ok: boolean }> {
     return request(`/api/v1/workspaces/${encodeURIComponent(slug)}/members/${encodeURIComponent(id)}`, token, { method: "DELETE" });
+  },
+  async getTokens(token: string | null): Promise<AccessToken[]> {
+    return (await request<{ tokens: AccessToken[] }>("/api/v1/tokens", token)).tokens;
+  },
+  // The secret is in the response once; callers must keep it out of any cache.
+  createToken(input: { name: string; expiresInDays: number }, token: string | null): Promise<AccessToken & { token: string }> {
+    return request("/api/v1/tokens", token, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  },
+  revokeToken(id: string, token: string | null): Promise<void> {
+    return request(`/api/v1/tokens/${encodeURIComponent(id)}`, token, { method: "DELETE" });
   },
   getMe(token: string | null): Promise<MeResponse> {
     return request<MeResponse>("/api/v1/me", token);

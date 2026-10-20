@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, CornerDownLeft, LayoutDashboard, Rocket, Search, Users } from "lucide-react";
+import { Boxes, CornerDownLeft, KeyRound, LayoutDashboard, Rocket, Search, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useApplications } from "@/lib/query/hooks";
@@ -21,6 +21,7 @@ export function CommandPalette({ workspaceSlug }: { workspaceSlug: string }) {
     { id: "overview", label: "Overview", hint: "Go to", href: base, icon: LayoutDashboard },
     { id: "apps", label: "All apps", hint: "Go to", href: `${base}/apps`, icon: Boxes },
     { id: "team", label: "Team", hint: "Go to", href: `${base}/team`, icon: Users },
+    { id: "tokens", label: "Access tokens", hint: "For the CLI and agents", href: `${base}/tokens`, icon: KeyRound },
     ...(apps ?? []).map((app) => ({ id: app.id, label: app.name, hint: app.status === "running" ? "Live app" : "App", href: `${base}/apps/${app.id}`, icon: Boxes })),
   ], [apps, base]);
   const results = useMemo(() => {

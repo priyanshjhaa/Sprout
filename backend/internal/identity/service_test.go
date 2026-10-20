@@ -26,6 +26,10 @@ func (repository *stubRepository) Find(context.Context, string) (Principal, erro
 	return repository.findResult, repository.findError
 }
 
+func (repository *stubRepository) FindByUserID(context.Context, string) (Principal, error) {
+	return Principal{}, ErrNotFound
+}
+
 func (repository *stubRepository) Create(ctx context.Context, subject string, profile Profile) (Principal, error) {
 	return repository.createFunc(ctx, subject, profile)
 }

@@ -603,6 +603,18 @@ type AgentRunEvent struct {
 	FinishedAt    pgtype.Timestamptz `json:"finished_at"`
 }
 
+type ApiToken struct {
+	ID         pgtype.UUID        `json:"id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	Name       string             `json:"name"`
+	TokenHash  string             `json:"token_hash"`
+	Hint       string             `json:"hint"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
+}
+
 type Application struct {
 	ID              pgtype.UUID           `json:"id"`
 	WorkspaceID     pgtype.UUID           `json:"workspace_id"`

@@ -15,5 +15,6 @@ export const queryKeys = {
     ["user", userId, "workspace", slug, "app", appId, "builds", id] as const,
   capabilities: (userId: string | null | undefined) => ["user", userId, "capabilities"] as const,
   access: (userId: string | null | undefined, slug: string, appId: string) => ["user", userId, "workspace", slug, "app", appId, "access"] as const,
+  tokens: (userId: string | null | undefined) => ["user", userId, "tokens"] as const,
   members: (userId: string | null | undefined, slug: string) => ["user", userId, "workspace", slug, "members"] as const,
 };

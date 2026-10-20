@@ -36,3 +36,8 @@ FROM workspaces AS workspace
 JOIN workspace_memberships AS membership ON membership.workspace_id = workspace.id
 WHERE workspace.slug = sqlc.arg(workspace_slug)
   AND membership.user_id = sqlc.arg(user_id);
+
+-- A user by ID, for authenticating a personal access token (which names a user,
+-- not a Clerk subject).
+-- name: GetUserByID :one
+SELECT id, email, display_name FROM users WHERE id = sqlc.arg(user_id);

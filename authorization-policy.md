@@ -34,6 +34,19 @@ This policy governs Sprout's control-plane API. Authentication and authorization
 - Downgrading workspace role does not erase explicit application grants or creator privileges. Review application access separately. A removed creator has no access; if later re-invited, creator privileges apply again.
 - No email delivery or deployed-application URL authorization is included. See [verification and learning notes](./workspace-invitations-learning.md).
 
+## Personal access tokens
+
+A personal access token (`sprout_pat_…`) authenticates as its owner, so every rule above still applies to what the owner can do. A token is further limited to an allowlist of operations, and everything else is refused with `403 token_not_permitted`.
+
+| Allowed for a token | Never allowed for a token |
+| --- | --- |
+| Read the account, its workspaces and applications | Manage members, roles or invitations |
+| Create applications | Change application access mode or grants |
+| Create, read, cancel and follow deployments | Pause, resume, archive or rename an application |
+| Read capabilities | Create, list or revoke tokens (needs a browser session) |
+
+The allowlist is deny-by-default: a new route is closed to tokens until it is deliberately added. See [access tokens](./access-tokens-learning.md).
+
 ## Request trace and learning checkpoint
 
 Browser session → Clerk verifies identity → Go resolves the local user → SQL checks workspace membership and application scope → service applies the operation rule → SQL performs the read or write → response. In NestJS this might be split between guards and services; in Django between middleware, permissions, and views. In Go the checks are explicit dependencies, and a middleware identity alone is never enough.

@@ -63,6 +63,32 @@ export const users = pgTable(
   ],
 );
 
+// Personal access tokens let the CLI, CI and coding agents call the deploy API
+// as a user. Only a SHA-256 hash of the token is stored: the token itself carries
+// 256 random bits, so a fast hash is enough, and it is shown once at creation.
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 80 }).notNull(),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    // The last characters of the token, so a person can recognise which one it is.
+    hint: varchar("hint", { length: 4 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("api_tokens_hash_unique").on(table.tokenHash),
+    index("api_tokens_user_idx").on(table.userId, table.createdAt),
+    check("api_tokens_hash_format", sql`${table.tokenHash} ~ '^[0-9a-f]{64}$'`),
+    check("api_tokens_name_present", sql`length(trim(${table.name})) > 0`),
+    check("api_tokens_expiry_after_creation", sql`${table.expiresAt} > ${table.createdAt}`),
+  ],
+);
+
 export const workspaces = pgTable(
   "workspaces",
   {

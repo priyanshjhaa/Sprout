@@ -10,6 +10,7 @@ tags:
   - name: Applications
   - name: Identity
   - name: Sharing
+  - name: Tokens
 paths:
   /api/v1/me:
     get:
@@ -17,6 +18,7 @@ paths:
       summary: Resolve the signed-in user and home workspace
       security:
         - clerkSession: []
+        - accessToken: []
       responses:
         "200":
           description: Signed-in Sprout identity
@@ -34,7 +36,7 @@ paths:
     get:
       summary: Optional features this API process offers
       description: Clients ask here rather than inferring features from 404s. localBuilds is true only when SPROUT_ENABLE_LOCAL_BUILDS=1.
-      security: [{ clerkSession: [] }]
+      security: [{ clerkSession: [] }, { accessToken: [] }]
       responses:
         "200":
           description: Feature flags for this process
@@ -55,6 +57,7 @@ paths:
       summary: Get a workspace through verified membership
       security:
         - clerkSession: []
+        - accessToken: []
       responses:
         "200":
           description: Workspace available to the member
@@ -74,6 +77,7 @@ paths:
       summary: List applications available to the workspace member
       security:
         - clerkSession: []
+        - accessToken: []
       responses:
         "200":
           description: Applications in most-recently-updated order
@@ -92,6 +96,7 @@ paths:
       summary: Create an application in the workspace
       security:
         - clerkSession: []
+        - accessToken: []
       requestBody:
         required: true
         content:
@@ -130,6 +135,7 @@ paths:
       summary: Get one application available to the workspace member
       security:
         - clerkSession: []
+        - accessToken: []
       responses:
         "200":
           description: Application details
@@ -300,7 +306,7 @@ paths:
     get:
       tags: [Identity]
       summary: List workspaces the authenticated user belongs to
-      security: [{ clerkSession: [] }]
+      security: [{ clerkSession: [] }, { accessToken: [] }]
       responses:
         "200":
           description: Membership-scoped workspaces
@@ -616,7 +622,7 @@ paths:
         build (sealed Docker build), package (store the output). The uploaded
         archive is deleted when the job ends, whatever its outcome. Failures use
         stable codes such as node_contract_invalid or source_sensitive_path.
-      security: [{ clerkSession: [] }]
+      security: [{ clerkSession: [] }, { accessToken: [] }]
       requestBody:
         required: true
         content:
@@ -653,7 +659,7 @@ paths:
         "500": { $ref: "#/components/responses/InternalError" }
     get:
       summary: List the latest 50 real builds for an application the actor can view
-      security: [{ clerkSession: [] }]
+      security: [{ clerkSession: [] }, { accessToken: [] }]
       responses:
         "200":
           description: Newest-first builds with typed stages; never simulations
@@ -678,7 +684,7 @@ paths:
       - $ref: "#/components/parameters/SimulationId"
     get:
       summary: Inspect a real build through current application permissions
-      security: [{ clerkSession: [] }]
+      security: [{ clerkSession: [] }, { accessToken: [] }]
       responses:
         "200":
           description: Build state and ordered source/build/package stages
@@ -697,7 +703,7 @@ paths:
     post:
       summary: Cancel a queued or running build (application editors only)
       description: Cancellation is persisted first; the build container is then stopped and removed, and any output is deleted.
-      security: [{ clerkSession: [] }]
+      security: [{ clerkSession: [] }, { accessToken: [] }]
       requestBody: { $ref: "#/components/requestBodies/EmptySimulationInput" }
       responses:
         "200":
@@ -726,7 +732,7 @@ paths:
     get:
       summary: Stream authorized build snapshots with server-sent events
       description: Same contract as the simulation events stream, for real builds.
-      security: [{ clerkSession: [] }]
+      security: [{ clerkSession: [] }, { accessToken: [] }]
       responses:
         "200":
           description: SSE progress, complete, unavailable events and heartbeat comments
@@ -742,6 +748,72 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorEnvelope" }
         "500": { $ref: "#/components/responses/InternalError" }
+  /api/v1/tokens:
+    get:
+      tags: [Tokens]
+      summary: List your personal access tokens
+      description: Needs a browser session; an access token cannot list tokens. Secrets are never included.
+      security: [{ clerkSession: [] }]
+      responses:
+        "200":
+          description: Your unrevoked tokens, newest first. Expired ones stay listed so they can be removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [tokens]
+                properties:
+                  tokens:
+                    type: array
+                    items: { $ref: "#/components/schemas/AccessToken" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Tokens]
+      summary: Create a personal access token
+      description: |
+        Needs a browser session. The secret is returned once, in `token`, and cannot be retrieved
+        again; only its hash is stored. The response is not cacheable. At most 20 tokens may be
+        active at once.
+      security: [{ clerkSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+                expiresInDays: { type: integer, minimum: 1, maximum: 365, description: "Defaults to 90." }
+      responses:
+        "201":
+          description: The token and its secret
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreatedAccessToken" }
+        "400": { description: Invalid name or expiry }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: The maximum number of active tokens is reached (token_limit_reached) }
+  /api/v1/tokens/{tokenId}:
+    delete:
+      tags: [Tokens]
+      summary: Revoke a personal access token
+      description: Needs a browser session. Revocation takes effect on the next request.
+      security: [{ clerkSession: [] }]
+      parameters:
+        - name: tokenId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Revoked }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: No such token owned by you }
 components:
   requestBodies:
     EmptySimulationInput:
@@ -750,6 +822,15 @@ components:
         application/json:
           schema: { type: object, additionalProperties: false }
   securitySchemes:
+    accessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: sprout_pat_…
+      description: |
+        A personal access token created in the dashboard, for the CLI, CI and coding agents.
+        It acts as its owner but only on the operations that list this scheme; every other
+        operation (team, invitations, access grants, lifecycle changes, and token management
+        itself) refuses tokens with 403 token_not_permitted.
     clerkSession:
       type: http
       scheme: bearer
@@ -777,6 +858,25 @@ components:
         type: string
         format: uuid
   schemas:
+    AccessToken:
+      type: object
+      additionalProperties: false
+      required: [id, name, hint, createdAt, expiresAt, lastUsedAt, expired]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        hint: { type: string, description: The last four characters of the secret, to tell tokens apart. }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        lastUsedAt: { type: [string, "null"], format: date-time }
+        expired: { type: boolean }
+    CreatedAccessToken:
+      allOf:
+        - $ref: "#/components/schemas/AccessToken"
+        - type: object
+          required: [token]
+          properties:
+            token: { type: string, description: "The secret (sprout_pat_…). Shown only in this response." }
     DeploymentSimulation:
       type: object
       additionalProperties: false
