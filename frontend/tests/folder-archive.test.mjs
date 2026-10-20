@@ -153,7 +153,7 @@ test("the packer's output matches the fixture the Go server is tested against", 
     file("demo/index.html", "<h1>Home</h1>"), file("demo/about/index.html", "<h1>About</h1>"), file("demo/css/site.css", "h1{color:green}"),
     file("demo/404.html", "<h1>Missing</h1>"), file(`demo/${long}`, "deep file"), file("demo/.DS_Store", "junk"),
   ]).files);
-  const fixture = new URL("../backend/internal/staticsite/testdata/folder-packed.tar", import.meta.url);
+  const fixture = new URL("../../backend/internal/staticsite/testdata/folder-packed.tar", import.meta.url);
   if (process.env.UPDATE_FIXTURE === "1") {
     mkdirSync(new URL(".", fixture), { recursive: true });
     writeFileSync(fixture, data);
