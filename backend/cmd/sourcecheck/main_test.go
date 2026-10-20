@@ -88,7 +88,9 @@ func TestSourcecheckNodeContract(t *testing.T) {
 		if valid && (code != 0 || !strings.Contains(out.String(), `"files":4`)) {
 			t.Fatalf("code=%d error=%s", code, &diagnostics)
 		}
-		if !valid && (code != 1 || diagnostics.String() != "node_contract_invalid\n" || out.Len() != 0) {
+		// The failure names the rule (here: no name or version) as a fixed code, and
+		// never echoes anything from the upload, such as the script text.
+		if !valid && (code != 1 || diagnostics.String() != "node_contract_manifest\n" || out.Len() != 0 || strings.Contains(diagnostics.String(), "secret-command")) {
 			t.Fatalf("unsafe failure: code=%d %s", code, &diagnostics)
 		}
 	}
