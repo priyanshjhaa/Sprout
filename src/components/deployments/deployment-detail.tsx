@@ -61,16 +61,17 @@ export function DeploymentDetail({ workspaceSlug, appId, deploymentId, kind }: {
           {isActiveSimulation(job) && <button className="button button-secondary" type="button" disabled={action.isPending} onClick={() => action.cancel(job.id)}>{action.isPending ? "Cancelling…" : "Cancel"}</button>}
         </header>
         {action.isError && <p className="simulation-notice" role="alert">{action.error?.message}</p>}
-        <p className="simulation-note" role="status" aria-live="polite">{isActiveSimulation(job) ? query.streamState === "live" ? "Receiving live progress" : query.streamState === "reconnecting" ? "Reconnecting — the worker continues in the background" : "Connecting to live progress…" : `${isBuild ? "Build" : "Run"} ${job.status}.`}</p>
+        <p className="simulation-note" role="status" aria-live="polite">{isActiveSimulation(job) ? query.streamState === "live" ? "Receiving live progress" : query.streamState === "reconnecting" ? "Reconnecting — the worker continues in the background" : "Connecting to live progress…" : job.status === "live" ? "This deployment is live." : `${isBuild ? "Build" : "Run"} ${job.status}.`}</p>
         <div className={`sp-run sp-run-${job.status}`}><Pipeline stages={job.stages} simulated={!isBuild} /></div>
         {job.failureCode && <p className="simulation-notice">{failureExplanations[job.failureCode] ?? "It did not finish."} <code>{job.failureCode}</code></p>}
-        {isBuild && job.status === "live" && <p className="simulation-notice"><Check size={14} /> Live{application?.liveUrl
-          ? <> at <a href={application.liveUrl} target="_blank" rel="noreferrer">{application.liveUrl} <ExternalLink size={12} aria-hidden="true" /></a></>
-          : "."} Anyone with the link can open it.</p>}
-        {isBuild && job.status === "succeeded" && <p className="simulation-notice"><Check size={14} /> Built and stored. A newer version is live, or this one has not been started.</p>}
+        {/* One paragraph inside the notice: the notice is a grid, so loose inline pieces would each become a row. */}
+        {isBuild && job.status === "live" && <div className="simulation-notice sp-notice-flow"><p><Check className="sp-inline-icon" size={14} /> Live{application?.liveUrl
+          ? <> at <a href={application.liveUrl} target="_blank" rel="noreferrer">{application.liveUrl}<ExternalLink className="sp-inline-icon sp-inline-icon-after" size={12} aria-hidden="true" /></a>.</>
+          : "."} Anyone with the link can open it.</p></div>}
+        {isBuild && job.status === "succeeded" && <div className="simulation-notice sp-notice-flow"><p><Check className="sp-inline-icon" size={14} /> Built and stored. A newer version is live, or this one has not been started.</p></div>}
         <p className="simulation-note">{isBuild
-          ? <><Hammer size={13} /> Built in a sealed container on this machine. Leaving this page does not stop it.</>
-          : <><FlaskConical size={13} /> Simulated run: no code executes. Leaving this page does not stop it.</>}</p>
+          ? <><Hammer className="sp-inline-icon" size={13} /> Built in a sealed container on this machine. Leaving this page does not stop it.</>
+          : <><FlaskConical className="sp-inline-icon" size={13} /> Simulated run: no code executes. Leaving this page does not stop it.</>}</p>
       </>}
     </section>
   );

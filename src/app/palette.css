@@ -49,3 +49,10 @@
 .sp-heads-up { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid rgba(184, 115, 53, 0.45); border-radius: 14px; background: rgba(184, 115, 53, 0.1); color: var(--ink); font-size: 13px; }
 .sp-heads-up strong { display: flex; align-items: center; gap: 6px; color: var(--sp-amber); font-size: 13px; }
 .sp-heads-up ul { display: grid; gap: 4px; margin: 0; padding-left: 18px; }
+
+/* An icon that sits in a line of text. Icons are block-level by default, which
+   would put them on a line of their own. */
+.sp-inline-icon { display: inline; vertical-align: -2px; margin-right: 6px; }
+.sp-inline-icon-after { margin: 0 0 0 5px; }
+/* A notice that is one flowing sentence, not a heading and a paragraph in a grid. */
+.sp-main .simulation-notice.sp-notice-flow { display: block; }
