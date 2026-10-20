@@ -13,7 +13,7 @@ import type { Application } from "@/types/domain";
 
 // The planned front doors, all calling the same deploy API (deployment-strategy.md).
 const frontDoors = [
-  "Upload a .tar here (available when local builds are on)",
+  "Drop or choose your site's folder in this dashboard (when local builds are on). A ready-made .tar works too",
   "sprout deploy from your terminal (coming soon)",
   "A deploy tool for coding agents (MCP) that takes a folder or a GitHub repository (coming soon)",
 ];
@@ -26,7 +26,7 @@ const nodeContract = [
   "No Dockerfile, node_modules, .env files, or credentials",
 ];
 const staticContract = [
-  "A plain folder with index.html at the root and no package.json",
+  "A folder with an index.html at the top and no package.json (hidden files are left out for you)",
   "Plain file names: letters, numbers, dots, dashes and underscores, no dotfiles",
   "At most 256 files and 8 MiB; an optional 404.html is used for missing pages",
   "Served as-is, with nothing built or executed. Python apps are next",
@@ -48,7 +48,7 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
       </header>
 
       <section className="sp-panel deploy-card" aria-live="polite">
-        <p className="sp-panel-step"><b>{application ? 2 : 1}</b> {application ? "Send the source" : "Name your application"}</p>
+        <p className="sp-panel-step"><b>{application ? 2 : 1}</b> {application ? "Give Sprout your site" : "Name your application"}</p>
         {application
           ? <RunDeployment workspaceSlug={workspaceSlug} application={application} localBuilds={localBuilds} onReset={() => setApplication(null)} />
           : <CreateApplicationForm workspaceSlug={workspaceSlug} onCreated={setApplication} />}
@@ -56,7 +56,7 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
 
       <div className="sp-deploy-more deploy-note">
         {localBuilds
-          ? <p>Local builds are on: an uploaded .tar is built in a sealed container on this machine (or, for a static site, stored as-is), checked, and given a public URL.</p>
+          ? <p>Drop your site&rsquo;s folder. Sprout packs it for you, builds it in a sealed container on this machine (a plain website is stored as it is), checks it, and gives it a public URL.</p>
           : <p>Until uploads are enabled, a run is a simulation: no code executes.</p>}
         <details className="deploy-contract">
           <summary>Ways to deploy</summary>

@@ -11,16 +11,16 @@ import { useBuildActions, useSimulation, useSimulationActions } from "@/lib/quer
 
 // Plain-language explanations for the stable failure codes a build can end with.
 const failureExplanations: Record<string, string> = {
-  node_contract_invalid: "The archive doesn't follow the Node.js app contract: check package.json, the lockfile, and the build and start scripts.",
+  node_contract_invalid: "The folder doesn't follow the Node.js app rules: check package.json, the lockfile, and the build and start scripts.",
   node_build_dependencies_unsupported: "Only apps without third-party dependencies can build for now.",
   node_build_failed: "The app's build script failed.",
   node_build_artifact_invalid: "The build didn't produce a usable dist/ folder.",
   node_build_artifact_too_large: "The build output is larger than the limit.",
   node_build_docker_unavailable: "Docker or the pinned Node image isn't available on this machine.",
-  source_archive_invalid: "The upload isn't a plain, uncompressed .tar archive.",
-  source_limit_exceeded: "The archive has too many files or is too large once extracted.",
-  source_sensitive_path: "The archive contains a sensitive file such as .env, .git or a key. Remove it and upload again.",
-  source_unavailable: "The uploaded archive was no longer available.",
+  source_archive_invalid: "The upload wasn't a readable archive. Drop the folder again; if you chose a .tar file, it must be a plain, uncompressed one.",
+  source_limit_exceeded: "The folder has too many files or is too large (up to 256 files and 8 MiB).",
+  source_sensitive_path: "The folder contains a sensitive file such as a key or .env. Dropping the folder leaves those out for you; if you used a .tar, remove it and upload again.",
+  source_unavailable: "The upload was no longer available. Deploy again.",
   process_interrupted: "The server restarted while this was running.",
   job_timeout: "It took longer than the time limit.",
   static_contract_invalid: "It is neither a Node.js app nor a valid static site. A static site needs index.html at the root, no package.json, and plain file names (letters, numbers, dots, dashes, underscores; no dotfiles).",

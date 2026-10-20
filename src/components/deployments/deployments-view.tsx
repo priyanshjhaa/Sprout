@@ -39,10 +39,10 @@ function Builds({ workspaceSlug, appId, active }: { workspaceSlug: string; appId
     <div className="deployment-group">
       <div className="deployment-group-heading">
         <h3>Builds</h3>
-        <UploadBuild workspaceSlug={workspaceSlug} appId={appId} disabled={!active || busy} />
+        <UploadBuild workspaceSlug={workspaceSlug} appId={appId} disabled={!active || busy} compact />
       </div>
       <JobList query={query} workspaceSlug={workspaceSlug} appId={appId} kind="build"
-        empty="Upload a .tar of your app to build it." />
+        empty="Choose your site's folder above to deploy it." />
     </div>
   );
 }
