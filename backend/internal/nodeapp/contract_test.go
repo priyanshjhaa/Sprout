@@ -131,3 +131,73 @@ func TestCommittedExample(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// Every failed rule names itself, so the dashboard can say what to fix. The
+// codes are fixed identifiers: they never contain anything from the upload.
+func TestContractFailuresNameTheRule(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*Manifest, *lockfile)
+		code   string
+	}{
+		{"engines missing, like most real projects", func(m *Manifest, _ *lockfile) { m.Engines = nil }, "node_contract_engine"},
+		{"wrong node", func(m *Manifest, _ *lockfile) { m.Engines["node"] = "22.x" }, "node_contract_engine"},
+		{"not private", func(m *Manifest, _ *lockfile) { m.Private = false }, "node_contract_private"},
+		{"missing start", func(m *Manifest, _ *lockfile) { delete(m.Scripts, "start") }, "node_contract_scripts"},
+		{"blank build", func(m *Manifest, _ *lockfile) { m.Scripts["build"] = " " }, "node_contract_scripts"},
+		{"workspaces", func(m *Manifest, _ *lockfile) { m.Workspaces = json.RawMessage(`["packages/*"]`) }, "node_contract_workspaces"},
+		{"no name", func(m *Manifest, _ *lockfile) { m.Name = "" }, "node_contract_manifest"},
+		{"other manager", func(m *Manifest, _ *lockfile) { m.PackageManager = "pnpm@10.0.0" }, "node_contract_manifest"},
+		{"old lockfile", func(_ *Manifest, l *lockfile) { l.LockfileVersion = 2 }, "node_contract_lockfile"},
+		{"lock for another app", func(_ *Manifest, l *lockfile) { l.Name = "another-app" }, "node_contract_lockfile"},
+		{"dependency not in lockfile", func(m *Manifest, _ *lockfile) { m.Dependencies = map[string]string{"left-pad": "1.0.0"} }, "node_contract_lockfile"},
+	} {
+		manifest, lock := sample()
+		tc.change(&manifest, &lock)
+		err := Validate(context.Background(), filesFor(t, manifest, lock))
+		var contract *ContractError
+		if !errors.As(err, &contract) || contract.Code != tc.code || !errors.Is(err, ErrContract) {
+			t.Errorf("%s: err = %v, want code %s", tc.name, err, tc.code)
+		}
+	}
+
+	// A missing or unreadable lockfile and manifest, and forbidden files.
+	manifest, lock := sample()
+	files := filesFor(t, manifest, lock)
+	delete(files, "package-lock.json")
+	if err := Validate(context.Background(), files); !errors.As(err, new(*ContractError)) || err.Error() != "node_contract_lockfile" {
+		t.Errorf("no lockfile: %v", err)
+	}
+	files = filesFor(t, manifest, lock)
+	delete(files, "package.json")
+	if err := Validate(context.Background(), files); err == nil || err.Error() != "node_contract_manifest" {
+		t.Errorf("no manifest: %v", err)
+	}
+	files = filesFor(t, manifest, lock)
+	files["Dockerfile"] = &fstest.MapFile{Data: []byte("FROM scratch")}
+	if err := Validate(context.Background(), files); err == nil || err.Error() != "node_contract_files" {
+		t.Errorf("forbidden file: %v", err)
+	}
+}
+
+func TestCheckPackagesSpotsDependenciesButNotBrokenManifests(t *testing.T) {
+	manifest, lock := sample()
+	if err := CheckPackages(filesFor(t, manifest, lock)); err != nil {
+		t.Fatalf("an app with no packages: %v", err)
+	}
+	for name, change := range map[string]func(*Manifest){
+		"dependencies":          func(m *Manifest) { m.Dependencies = map[string]string{"next": "16.2.7"} },
+		"dev dependencies":      func(m *Manifest) { m.DevDependencies = map[string]string{"typescript": "^5"} },
+		"optional dependencies": func(m *Manifest) { m.OptionalDependencies = map[string]string{"fsevents": "^2"} },
+	} {
+		m, l := sample()
+		change(&m)
+		if err := CheckPackages(filesFor(t, m, l)); !errors.Is(err, ErrDependencies) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	// A manifest it cannot read is Validate's to describe, not this check's.
+	if err := CheckPackages(fstest.MapFS{"package.json": {Data: []byte("{nope")}}); err != nil {
+		t.Errorf("unreadable manifest: %v", err)
+	}
+}

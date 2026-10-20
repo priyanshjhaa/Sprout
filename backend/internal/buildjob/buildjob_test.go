@@ -520,3 +520,25 @@ func TestStaticContractFailures(t *testing.T) {
 		})
 	}
 }
+
+// A real-world project (many packages, no engines field) is told about the
+// packages first: that is the blocker no edit to package.json can fix.
+func TestAppWithPackagesIsToldAboutPackagesFirst(t *testing.T) {
+	ctx := context.Background()
+	manifest := `{"name":"compiq","version":"0.1.0","private":true,"scripts":{"build":"next build","start":"next start"},"dependencies":{"next":"16.2.7","react":"19.2.4"}}`
+	runner, sources, _ := newRunner(t, fakeBuilder{})
+	stored, _ := sources.Save(ctx, plainArchive(t, map[string]string{"package.json": manifest, "package-lock.json": "{}"}))
+	_, err := runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, &recordedSteps{})
+	if failureCode(err) != "node_build_dependencies_unsupported" {
+		t.Fatalf("code = %q, want the packages explanation (not the engines rule)", failureCode(err))
+	}
+	// Without packages, the specific contract rule is what comes back.
+	stored, _ = sources.Save(ctx, plainArchive(t, map[string]string{
+		"package.json":      `{"name":"x","version":"1.0.0","private":true,"scripts":{"build":"a","start":"b"}}`,
+		"package-lock.json": `{"name":"x","version":"1.0.0","lockfileVersion":3,"packages":{"":{"name":"x","version":"1.0.0"}}}`,
+	}))
+	_, err = runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, &recordedSteps{})
+	if failureCode(err) != "node_contract_engine" {
+		t.Fatalf("code = %q, want node_contract_engine", failureCode(err))
+	}
+}
