@@ -24,14 +24,14 @@ Front doors, in order:
 2. **MCP `deploy` tool:** coding agents deploy through the same API. One tool accepts either
    - a **local folder**, packed and uploaded like the CLI, or
    - a **GitHub repository and commit**. Sprout downloads that commit's tarball. Public repositories come first; private repositories need a GitHub App later.
-3. **Dashboard:** drop or choose a folder and Sprout packs it in the browser (a ready-made `.tar` also works), so nobody needs to know what an archive is. See `folder-deploy-learning.md`.
+3. **Dashboard:** drop or choose a folder and Sprout packs it in the browser (a ready-made `.tar` also works), so nobody needs to know what an archive is. See `docs/folder-deploy-learning.md`.
 
 A coding agent is a *client* of the deploy API. Sprout does not generate code and does not accept chat transcripts as input.
 
 ## 3. Which apps can build (v1), in order
 
 1. **Static sites:** a plain folder with `index.html` at the root and no `package.json`. Served directly from the stored artifact, with no running process. (A site that needs a build step waits for controlled `npm` installs.)
-2. **Node.js web apps:** the current contract (`node-build-contract.md`), extended with real `npm` installs through a controlled registry proxy.
+2. **Node.js web apps:** the current contract (`docs/node-build-contract.md`), extended with real `npm` installs through a controlled registry proxy.
 3. **Python web apps:** through buildpacks (Cloud Native Buildpacks or Railpack, chosen by a short spike).
 
 Sprout, not the application, always chooses the build image and the runtime settings. User-supplied Dockerfiles are not accepted.
@@ -55,9 +55,9 @@ Sprout is the **control plane**: API, permissions, lifecycle, routing. Applicati
 ## 5. Roadmap
 
 1. Align docs (this document).
-2. **Local runtime:** run a built app in a locked-down container, health-check it, serve it publicly at `{app}.{workspace}.localhost`, and make pause, resume, archive and idle sleep real. *Done: driver, release, health check, live status, public routing, wake on request, idle sleep, and real pause and archive. See `local-runtime-learning.md`.*
-3. Static sites. *Done: a plain folder with `index.html`, served from the stored artifact (see `static-sites-learning.md`). Sites that need a build wait for step 5.*
-4. CLI `sprout deploy` (CLI authentication is done: personal access tokens, see `access-tokens-learning.md`; the CLI itself is next), then the MCP `deploy` tool (folder and public GitHub modes).
+2. **Local runtime:** run a built app in a locked-down container, health-check it, serve it publicly at `{app}.{workspace}.localhost`, and make pause, resume, archive and idle sleep real. *Done: driver, release, health check, live status, public routing, wake on request, idle sleep, and real pause and archive. See `docs/local-runtime-learning.md`.*
+3. Static sites. *Done: a plain folder with `index.html`, served from the stored artifact (see `docs/static-sites-learning.md`). Sites that need a build wait for step 5.*
+4. CLI `sprout deploy` (CLI authentication is done: personal access tokens, see `docs/access-tokens-learning.md`; the CLI itself is next), then the MCP `deploy` tool (folder and public GitHub modes).
 5. `npm` installs through a controlled registry proxy.
 6. Python through buildpacks.
 7. Hosting trial, then the cloud driver.

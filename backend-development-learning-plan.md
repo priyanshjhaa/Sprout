@@ -57,7 +57,7 @@ The **systems story** explains why the design exists, not how to type it:
 4. **Trade-off:** what the decision costs and what it deliberately leaves unsolved.
 5. **Check:** one question that tests understanding of the system, not the syntax.
 
-The first lesson, covering milestones 0–8, is recorded in [`backend-systems-story.md`](./backend-systems-story.md).
+The first lesson, covering milestones 0–8, is recorded in [`docs/backend-systems-story.md`](docs/backend-systems-story.md).
 
 Each milestone is complete only when:
 
@@ -376,7 +376,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 **Commit:** Use one commit per independently working system capability; never combine build, runtime, proxy, and cleanup into one unreviewable change.
 
-**Progress and order:** source preparation, the Node build contract, the sealed build runner, artifact storage, and real build jobs on the worker are done (see `real-build-jobs-learning.md`). The runtime driver, local Docker driver, release and health-check stages and `live` status are done (see `local-runtime-learning.md`). The public routing proxy on `*.localhost`, wake on request, idle sleep and real pause/resume/archive are done too. Static sites are done too (see `static-sites-learning.md`). Next, in order: the CLI and MCP front doors, then controlled `npm` installs and Python buildpacks. The cloud runtime driver follows a hands-on hosting trial. See `deployment-strategy.md`.
+**Progress and order:** source preparation, the Node build contract, the sealed build runner, artifact storage, and real build jobs on the worker are done (see `docs/real-build-jobs-learning.md`). The runtime driver, local Docker driver, release and health-check stages and `live` status are done (see `docs/local-runtime-learning.md`). The public routing proxy on `*.localhost`, wake on request, idle sleep and real pause/resume/archive are done too. Static sites are done too (see `docs/static-sites-learning.md`). Next, in order: the CLI and MCP front doors, then controlled `npm` installs and Python buildpacks. The cloud runtime driver follows a hands-on hosting trial. See `deployment-strategy.md`.
 
 ### Milestone 9: Production hardening
 
@@ -409,7 +409,7 @@ go test -race ./...
 - Use the migrated local PostgreSQL instance for repository integration tests; tests must isolate their records and clean up deterministically.
 - Test cancellation, timeouts, unavailable dependencies, authorization denials, and conflicts—not only happy paths.
 - Run the race detector whenever concurrent code changes.
-- When an API contract or frontend adapter changes, also run `npm run typecheck`, `npm run lint`, and `npm run build`.
+- When an API contract or frontend adapter changes, also run `npm run typecheck`, `npm run lint`, and `npm run build` from `frontend/`.
 - Manually trace at least one successful and one failed request for every vertical slice.
 
 Tests must not require real credentials, external repositories, or a publicly reachable service unless that integration is the explicit milestone under review.

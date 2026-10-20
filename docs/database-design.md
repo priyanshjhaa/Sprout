@@ -83,9 +83,9 @@ erDiagram
 
 ```bash
 cp .env.example .env
-npm run db:generate
-npm run db:check
-npm run db:migrate
+(cd backend/database && npm run generate)
+(cd backend/database && npm run check)
+(cd backend/database && npm run migrate)
 ```
 
 `DATABASE_URL` must come from an untracked local environment file or the deployment platform's secret store. Never commit a real database URL.

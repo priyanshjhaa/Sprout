@@ -48,7 +48,7 @@ Sprout deploys untrusted small applications safely to a public URL, then lets te
 ## Go backend learning workflow
 
 - Teach backend mechanics through the Sprout capability being implemented; do not turn milestones into standalone syntax lessons.
-- Teach each concept as a systems story: the problem, the history that shaped the usual solution, the decision in Sprout (pointing at the real code), and its trade-off. See `backend-systems-story.md`.
+- Teach each concept as a systems story: the problem, the history that shaped the usual solution, the decision in Sprout (pointing at the real code), and its trade-off. See `docs/backend-systems-story.md`.
 - Use the sequence: mental model, systems story, NestJS/Django comparison, request trace, implementation, verification, explain-back checkpoint, and commit.
 - Keep Drizzle as the only schema and migration owner. The Go service may use `pgx` and `sqlc` against the migrated schema but must not duplicate migrations.
 - Do not start concurrent work without defined ownership, cancellation, capacity, error propagation, and shutdown behavior.

@@ -11,14 +11,14 @@ import { useApplications, useCreateApplication } from "@/lib/query/hooks";
 import { useCapabilities, useSimulationActions } from "@/lib/query/simulations";
 import type { Application } from "@/types/domain";
 
-// The planned front doors, all calling the same deploy API (deployment-strategy.md).
+// The planned front doors, all calling the same deploy API (deployment-strategy.md at the repository root).
 const frontDoors = [
   "Drop or choose your site's folder in this dashboard (when local builds are on). A ready-made .tar works too",
   "sprout deploy from your terminal (coming soon)",
   "A deploy tool for coding agents (MCP) that takes a folder or a GitHub repository (coming soon)",
 ];
 
-// Mirrors node-build-contract.md and static-sites-learning.md.
+// Mirrors docs/node-build-contract.md and docs/static-sites-learning.md.
 const nodeContract = [
   "One npm application with package.json and package-lock.json at the root",
   "Node.js 24 (engines.node: \"24.x\") with build and start scripts",

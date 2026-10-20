@@ -79,10 +79,10 @@ In plain language: TanStack Query is the dashboard's notebook. An ordinary GET w
 Frontend verification (Node 22.18+ or Node 24+ for native TypeScript test loading):
 
 ```sh
-npm run test:stream
-npm run typecheck
-npm run lint
-npm run build
+(cd frontend && npm run test:stream)
+(cd frontend && npm run typecheck)
+(cd frontend && npm run lint)
+(cd frontend && npm run build)
 ```
 
 Stream tests cover split frames, CRLF boundaries, multiline payloads, size limits, fresh-token reconnects, cursor forwarding, terminal completion, unavailable/access errors, bounded retries, abort cleanup, and cross-application response rejection. They use test-only responses, not real Clerk credentials.
