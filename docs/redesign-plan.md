@@ -40,4 +40,13 @@ Motion explains what Sprout does; it is never decoration for its own sake. Every
 7. Letter grid and footer.
 8. Polish: responsive layouts, reduced motion, keyboard focus, removal of the old story styles, lint, typecheck, build, and browser verification.
 
-Sign-in and dashboard stages are planned after the landing ships.
+## Sign-in stages
+
+Built around Cofounder's login: a landscape banner with a glass brand badge and a typed mono tagline, a Sign In / Sign Up pill switch, stacked dark pill buttons for Google and GitHub, an "or" rule, the email field, and a quiet serif sign-off. Clerk still owns authentication; we restyle its components rather than rebuild the flow.
+
+1. Shared landscape scene: the hero's sky, soil, grass, and pollen become one component the auth banner reuses.
+2. Auth shell: banner, badge, typed tagline, mode switch with a sliding thumb, and sign-off, used by sign-in, sign-up, and invitation acceptance.
+3. Clerk restyle: dark pill social and primary buttons, the divider, inputs, and hidden duplicate header and footer links.
+4. Polish: staggered entrance, button shine, reduced motion, mobile, removal of the old auth landscape styles, and browser verification.
+
+Dashboard stages are planned after sign-in ships.
