@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/api";
 import { useInvitations, useMe, useWorkspaceMembers } from "@/lib/query/hooks";
 import { queryKeys } from "@/lib/query/keys";
+import { PageHeader } from "@/components/dashboard/page-header";
 
 type TeamAction = { kind: "invite"; email: string; role: "editor" | "viewer" }
   | { kind: "role"; id: string; role: "editor" | "viewer" }
@@ -47,7 +48,7 @@ export function TeamView({ workspaceSlug }: { workspaceSlug: string }) {
   });
 
   return <main className="dashboard-page compact-page">
-    <header className="page-heading"><h1>Team</h1><p>People in this workspace and what they can do.</p></header>
+    <PageHeader eyebrow="Workspace" title="Team" description="People in this workspace and what they can do." />
     {me.isError && <p role="alert">{me.error.message}</p>}
     {change.isError && <p role="alert">{change.error.message}</p>}
     {notice && <p role="status">{notice}</p>}

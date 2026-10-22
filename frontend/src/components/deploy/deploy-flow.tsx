@@ -10,6 +10,7 @@ import { slugify } from "@/lib/slug";
 import { useApplications, useCreateApplication } from "@/lib/query/hooks";
 import { useCapabilities, useSimulationActions } from "@/lib/query/simulations";
 import type { Application } from "@/types/domain";
+import { PageHeader } from "@/components/dashboard/page-header";
 
 // The planned front doors, all calling the same deploy API (deployment-strategy.md at the repository root).
 const frontDoors = [
@@ -38,12 +39,12 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
 
   return (
     <main className="dashboard-page compact-page sp-deploy">
-      <header className="sp-deploy-hero">
-        <div>
-          <span className="sp-eyebrow">Deploy</span>
-          <h1>From code to a public <em>URL</em>.</h1>
-          <p>Sprout builds it sealed off, checks its health, and only then gives it an address.</p>
-        </div>
+      <header className="sp-deploy-hero dash-deploy-head">
+        <PageHeader
+          eyebrow="Deploy"
+          title="From code to a public URL"
+          description="Sprout builds it sealed off, checks its health, and only then gives it an address."
+        />
         <Pipeline stages={application ? [{ name: "source", status: "running" }] : undefined} />
       </header>
 

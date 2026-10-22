@@ -1362,3 +1362,96 @@ a.dash-chip:hover svg {
   color: var(--lp-ink);
   box-shadow: 0 0 0 1px var(--lp-line);
 }
+
+/* Deploy, Team, and Access tokens */
+.dash .sp-main .compact-page {
+  width: min(860px, 100%);
+}
+
+.dash .sp-main .dash-deploy-head {
+  display: grid;
+  gap: 20px;
+  padding-top: 0;
+}
+
+.dash .sp-main .dash-deploy-head .sp-pipeline,
+.dash .sp-main .sp-deploy-hero .sp-pipeline {
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line), 0 1px 3px rgb(0 0 0 / 0.03);
+  backdrop-filter: none;
+}
+
+.dash .sp-main .sp-step::after {
+  background: var(--lp-green);
+}
+
+.dash .sp-main .sp-dropzone {
+  border: 1.5px dashed rgb(0 0 0 / 0.16);
+  border-radius: 14px;
+  background:
+    radial-gradient(rgb(0 0 0 / 0.06) 1px, transparent 1px) 0 0 / 12px 12px,
+    #fbfbf9;
+  color: var(--lp-ink-soft);
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    transform 300ms var(--lp-ease);
+}
+
+.dash .sp-main .sp-dropzone:hover {
+  border-color: rgb(0 0 0 / 0.28);
+}
+
+.dash .sp-main .sp-dropzone.over {
+  border-color: var(--lp-green);
+  background-color: rgb(47 90 43 / 0.06);
+  transform: scale(1.01);
+}
+
+.dash .sp-main .sp-dropzone.compact {
+  border: 0;
+  background: none;
+}
+
+.dash .sp-main .sp-chosen {
+  border: 0;
+  border-radius: 12px;
+  background: rgb(47 90 43 / 0.05);
+  box-shadow: 0 0 0 1px rgb(47 90 43 / 0.2);
+}
+
+.dash .sp-main .sp-chosen-line {
+  color: var(--lp-green);
+}
+
+.dash .sp-main .sp-heads-up {
+  border: 0;
+  border-radius: 12px;
+  background: rgb(201 138 43 / 0.08);
+  box-shadow: 0 0 0 1px rgb(201 138 43 / 0.3);
+}
+
+.dash .sp-main .sp-heads-up strong {
+  color: #8a5a14;
+}
+
+.dash .sp-main :is(.team-invite-panel, .members-panel) {
+  margin-bottom: 20px;
+}
+
+.dash .sp-main .team-share-link {
+  border-radius: 10px;
+  background: rgb(0 0 0 / 0.03);
+  font-family: var(--font-label), monospace;
+  font-size: 12px;
+}
+
+.dash .sp-main [role="alert"] {
+  color: #8c3f33;
+}
+
+.dash .sp-main [role="status"]:not(.sr-only) {
+  color: var(--lp-ink-soft);
+}

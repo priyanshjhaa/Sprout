@@ -7,6 +7,7 @@ import { useTokens } from "@/lib/query/hooks";
 import { queryKeys } from "@/lib/query/keys";
 import { useSessionAuth as useAuth } from "@/lib/query/session";
 import { describeExpiry, describeLastUsed, displayHint, expiryChoices } from "@/lib/tokens";
+import { PageHeader } from "@/components/dashboard/page-header";
 
 type TokenAction = { kind: "create"; name: string; expiresInDays: number } | { kind: "revoke"; id: string };
 
@@ -39,7 +40,7 @@ export function TokensView() {
   });
 
   return <main className="dashboard-page compact-page">
-    <header className="page-heading"><h1>Access tokens</h1><p>Let the Sprout CLI, CI and coding agents deploy as you, without your password.</p></header>
+    <PageHeader eyebrow="Settings" title="Access tokens" description="Let the Sprout CLI, CI and coding agents deploy as you, without your password." />
     {change.isError && <p role="alert">{change.error.message}</p>}
     {notice && <p role="status">{notice}</p>}
 
