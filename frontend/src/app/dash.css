@@ -626,3 +626,94 @@ a.dash-chip:hover svg {
     padding: 0 16px 40px;
   }
 }
+
+/* Overview hero: copy on the left, the landscape fading in from the right. */
+.dash-hero {
+  position: relative;
+  display: flex;
+  min-height: 260px;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line), 0 2px 10px rgb(0 0 0 / 0.03);
+  isolation: isolate;
+  animation: lp-word 900ms var(--lp-ease) 100ms both;
+}
+
+.dash-hero-art {
+  position: absolute;
+  inset: 0 0 0 34%;
+  z-index: -1;
+  mask-image: linear-gradient(90deg, transparent, #000 45%);
+}
+
+.dash-hero-art .lp-hero-sky,
+.dash-hero-art .lp-hero-ground,
+.dash-hero-art .lp-hero-grass {
+  background-position: center 64%;
+}
+
+.dash-hero-seedling {
+  position: absolute;
+  right: 22%;
+  bottom: 16%;
+  width: 44px;
+  height: 66px;
+}
+
+.dash-hero-copy {
+  display: grid;
+  max-width: 520px;
+  gap: 10px;
+  padding: 36px 40px;
+}
+
+.dash-hero-eyebrow {
+  color: var(--lp-green);
+  font-family: var(--font-label), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  animation: lp-word 800ms var(--lp-ease) 250ms both;
+}
+
+.dash-hero-copy h1 {
+  font-size: clamp(30px, 3.4vw, 40px);
+  line-height: 1.1;
+  animation: lp-word 900ms var(--lp-ease) 330ms both;
+}
+
+.dash-hero-summary {
+  color: var(--lp-ink-soft);
+  font-size: 15.5px;
+  line-height: 1.55;
+  animation: lp-word 900ms var(--lp-ease) 420ms both;
+}
+
+.dash-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  animation: lp-word 900ms var(--lp-ease) 520ms both;
+}
+
+@media (max-width: 720px) {
+  .dash-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dash-hero-art {
+    position: relative;
+    inset: auto;
+    height: 150px;
+    mask-image: linear-gradient(transparent, #000 30%);
+    order: -1;
+  }
+
+  .dash-hero-copy {
+    padding: 8px 22px 26px;
+  }
+}

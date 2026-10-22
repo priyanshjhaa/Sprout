@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowRight, Rocket } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useRef } from "react";
 import { DropToDeploy } from "@/components/dashboard/drop-to-deploy";
+import { WorkspaceHero } from "@/components/dashboard/workspace-hero";
 import { Plant } from "@/components/plant";
 import { StatusPill } from "@/components/status-pill";
 import { useApplications, useWorkspace } from "@/lib/query/hooks";
@@ -58,17 +59,13 @@ export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
   return (
     <main className="dashboard-page sp-home">
       <DropToDeploy workspaceSlug={workspaceSlug} />
-      <section className="sp-hero" aria-labelledby="sp-home-title">
-        <span className="sp-eyebrow">{workspace?.name ?? "Your workspace"}</span>
-        <h1 id="sp-home-title">
-          {isLoading ? "Checking your garden…" : !apps?.length ? <>Plant your first <em>app</em>.</> : live > 0 ? <><em>{live}</em> {live === 1 ? "app is" : "apps are"} live.</> : <>Nothing is <em>live</em> yet.</>}
-        </h1>
-        <p>Send code in, get a healthy public URL out. Sprout builds it sealed off, checks it, and keeps it easy to pause, recover, or retire.</p>
-        <div className="sp-hero-actions">
-          <Link className="sp-button sp-button-solid" href={`${base}/deploy`}><Rocket size={16} /> Deploy an app</Link>
-          {!!apps?.length && <Link className="sp-button sp-button-ghost" href={`${base}/apps`}>All apps <ArrowRight size={15} /></Link>}
-        </div>
-      </section>
+      <WorkspaceHero
+        base={base}
+        workspaceName={workspace?.name ?? "Your workspace"}
+        appCount={apps?.length ?? 0}
+        liveCount={live}
+        isLoading={isLoading}
+      />
 
       <section className="sp-bed" aria-label="Your apps as plants" {...lean}>
         {sorted.length ? (
