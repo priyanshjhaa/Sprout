@@ -4,27 +4,11 @@
 */
 
 .dash {
-  /* Older area styles still read these until each page is restyled. */
-  --sp-soil-900: #241b11;
-  --sp-soil-800: #35281a;
-  --sp-soil-700: #4a3925;
+  /* The pipeline component reads these. */
   --sp-moss: #2f5a2b;
   --sp-moss-deep: #1f3f1d;
-  --sp-sage: #8fbf5a;
-  --sp-sage-soft: #d5e6c0;
   --sp-amber: #c98a2b;
   --sp-cream: #fff;
-  --sp-glow: rgb(47 90 43 / 0.18);
-  --sp-forest-950: var(--sp-soil-900);
-  --sp-forest-900: var(--sp-soil-800);
-  --sp-forest-800: var(--sp-soil-700);
-  --sp-forest-700: var(--sp-moss);
-  --sp-leaf: var(--sp-sage);
-  --sp-leaf-soft: var(--sp-sage-soft);
-  --sp-leaf-deep: var(--sp-moss-deep);
-  --sp-mist: rgb(255 255 255 / 0.78);
-  --sp-mist-faint: rgb(255 255 255 / 0.5);
-  --sp-line-dark: rgb(255 255 255 / 0.12);
   --dash-panel: #fbfbf9;
   --dash-sidebar: 256px;
 
@@ -524,47 +508,17 @@ a.dash-chip:hover svg {
   padding-top: 8px;
 }
 
-/* Older pages pick up the new buttons and type until they are restyled. */
-.dash .sp-button {
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.dash .sp-button-solid,
-.dash .sp-button-glow {
-  border: 1px solid #383838;
-  background:
-    linear-gradient(rgb(32 32 32 / 0.1), rgb(32 32 32 / 0.1)),
-    linear-gradient(#4f4f4f, rgb(32 32 32 / 0.85));
-  color: #fff;
-  box-shadow:
-    inset 0 2px 0 rgb(255 255 255 / 0.24),
-    inset 0 -0.5px 2px rgb(0 0 0 / 0.25),
-    0 2px 6px rgb(0 0 0 / 0.08);
-}
-
-.dash .sp-button-ghost,
-.dash .sp-button-outline {
-  border-color: var(--lp-line);
-  background: #fff;
-}
-
-.dash .sp-eyebrow,
-.dash .sp-eyebrow-dark,
-.dash .eyebrow {
-  color: var(--lp-green);
-  font-family: var(--font-label), monospace;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-}
-
-.dash .page-heading h1,
+/* Workspace headings use the landing's sans at regular weight. */
 .dash h1,
-.dash h2 {
+.dash h2,
+.dash h3 {
   font-family: var(--font-landing), sans-serif;
   font-weight: 400;
   letter-spacing: -0.02em;
+}
+
+.dash .sp-main {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Below 960px the sidebar becomes a drawer behind the menu button. */
@@ -1223,262 +1177,29 @@ a.dash-chip:hover svg {
   animation: lp-word 700ms var(--lp-ease) 150ms both;
 }
 
-/* Older surfaces inside workspace pages, moved onto the same white cards and type. */
-.dash .sp-main :is(
-  .sp-panel,
-  .soft-empty,
-  .members-panel,
-  .settings-panel,
-  .deploy-card,
-  .team-invite-panel,
-  .workspace-access-card,
-  .sp-empty-state,
-  .sp-fact,
-  .sp-row
-) {
-  border: 0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 0 0 1px var(--lp-line), 0 1px 3px rgb(0 0 0 / 0.03);
-  backdrop-filter: none;
-}
-
-.dash .sp-main :is(.soft-empty, .sp-empty-state) {
-  box-shadow: 0 0 0 1px var(--lp-line);
-}
-
-.dash .sp-main a.sp-row:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1), 0 10px 24px rgb(0 0 0 / 0.06);
-}
-
-.dash .sp-main .sp-row::before {
-  border-radius: 12px 0 0 12px;
-}
-
-.dash .sp-main :is(h1, h2, h3, .page-heading h1, .section-heading h2, .sp-empty-state h2, .soft-empty h2, .team-invite-panel h2) {
-  color: var(--lp-ink);
-  font-family: var(--font-landing), sans-serif;
-  font-weight: 400;
-  letter-spacing: -0.02em;
-}
-
-.dash .sp-main .section-heading h2 {
-  font-size: 20px;
-}
-
-.dash .sp-main :is(.section-heading p, .page-heading > p:last-child, .members-panel > header small, .member-row small, .members-panel > footer, .workspace-access-card p, .soft-empty p) {
-  color: var(--lp-ink-faint);
-  font-size: 13px;
-}
-
-.dash .sp-main .members-panel > header span {
-  color: var(--lp-ink-faint);
-  font-family: var(--font-label), monospace;
-  font-size: 11px;
-  font-weight: 400;
-}
-
-.dash .sp-main :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="file"]) {
-  border: 0;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);
-  color: var(--lp-ink);
-  transition: box-shadow 180ms ease;
-}
-
-.dash .sp-main :is(input, select, textarea):focus {
-  outline: 0;
-  box-shadow: 0 0 0 1px var(--lp-green), 0 0 0 4px rgb(47 90 43 / 0.12);
-}
-
-.dash .sp-main .dash-search input,
-.dash .sp-main .dash-search input:focus {
-  box-shadow: none;
-}
-
-.dash .sp-main .status-pill {
-  border: 0;
-  border-radius: 999px;
-  background: rgb(0 0 0 / 0.04);
-  color: var(--lp-ink-soft);
-  font-family: var(--font-label), monospace;
-  font-size: 11px;
-}
-
-.dash .sp-main .status-running {
-  background: rgb(79 154 58 / 0.12);
-  color: #2f6a22;
-}
-
-.dash .sp-main .status-building,
-.dash .sp-main .status-queued {
-  background: rgb(201 138 43 / 0.14);
-  color: #8a5a14;
-}
-
-.dash .sp-main .status-failed {
-  background: rgb(184 95 80 / 0.12);
-  color: #8c3f33;
-}
-
-.dash .sp-main .sp-address code {
-  border-radius: 6px;
-  background: rgb(0 0 0 / 0.04);
-  font-family: var(--font-label), monospace;
-}
-
-.dash .sp-main .sp-monogram {
-  border-radius: 9px;
-  font-family: var(--font-label), monospace;
-  font-weight: 500;
-}
-
-/* Legacy .button styles, matched to the landing buttons. */
-.dash .sp-main .button {
-  min-height: 40px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.dash .sp-main .button-primary {
-  border: 1px solid #383838;
-  background:
-    linear-gradient(rgb(32 32 32 / 0.1), rgb(32 32 32 / 0.1)),
-    linear-gradient(#4f4f4f, rgb(32 32 32 / 0.85));
-  color: #fff;
-  box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.24), 0 2px 6px rgb(0 0 0 / 0.08);
-}
-
-.dash .sp-main .button-secondary {
-  border: 0;
-  background: #fff;
-  color: var(--lp-ink);
-  box-shadow: 0 0 0 1px var(--lp-line);
-}
-
-/* Deploy, Team, and Access tokens */
+/* Page widths and the deploy pipeline card. */
 .dash .sp-main .compact-page {
   width: min(860px, 100%);
 }
 
-.dash .sp-main .dash-deploy-head {
+.dash-deploy-head {
   display: grid;
   gap: 20px;
-  padding-top: 0;
 }
 
-.dash .sp-main .dash-deploy-head .sp-pipeline,
-.dash .sp-main .sp-deploy-hero .sp-pipeline {
-  border: 0;
+.dash-deploy-head .sp-pipeline {
   border-radius: 12px;
+  padding: 24px 16px 20px;
   background: #fff;
   box-shadow: 0 0 0 1px var(--lp-line), 0 1px 3px rgb(0 0 0 / 0.03);
-  backdrop-filter: none;
 }
 
-.dash .sp-main .sp-step::after {
+.dash .sp-step::after {
   background: var(--lp-green);
 }
 
-.dash .sp-main .sp-dropzone {
-  border: 1.5px dashed rgb(0 0 0 / 0.16);
-  border-radius: 14px;
-  background:
-    radial-gradient(rgb(0 0 0 / 0.06) 1px, transparent 1px) 0 0 / 12px 12px,
-    #fbfbf9;
-  color: var(--lp-ink-soft);
-  transition:
-    border-color 200ms ease,
-    background-color 200ms ease,
-    transform 300ms var(--lp-ease);
-}
-
-.dash .sp-main .sp-dropzone:hover {
-  border-color: rgb(0 0 0 / 0.28);
-}
-
-.dash .sp-main .sp-dropzone.over {
-  border-color: var(--lp-green);
-  background-color: rgb(47 90 43 / 0.06);
-  transform: scale(1.01);
-}
-
-.dash .sp-main .sp-dropzone.compact {
-  border: 0;
-  background: none;
-}
-
-.dash .sp-main .sp-chosen {
-  border: 0;
-  border-radius: 12px;
-  background: rgb(47 90 43 / 0.05);
-  box-shadow: 0 0 0 1px rgb(47 90 43 / 0.2);
-}
-
-.dash .sp-main .sp-chosen-line {
-  color: var(--lp-green);
-}
-
-.dash .sp-main .sp-heads-up {
-  border: 0;
-  border-radius: 12px;
-  background: rgb(201 138 43 / 0.08);
-  box-shadow: 0 0 0 1px rgb(201 138 43 / 0.3);
-}
-
-.dash .sp-main .sp-heads-up strong {
-  color: #8a5a14;
-}
-
-.dash .sp-main :is(.team-invite-panel, .members-panel) {
-  margin-bottom: 20px;
-}
-
-.dash .sp-main .team-share-link {
-  border-radius: 10px;
-  background: rgb(0 0 0 / 0.03);
-  font-family: var(--font-label), monospace;
-  font-size: 12px;
-}
-
-.dash .sp-main [role="alert"] {
+.dash [role="alert"]:not(.dash-callout) {
   color: #8c3f33;
-}
-
-.dash .sp-main [role="status"]:not(.sr-only) {
-  color: var(--lp-ink-soft);
-}
-
-/* The app overview's next-step banner, in the landing's quiet green. */
-.dash .sp-main .sp-next {
-  border: 0;
-  border-radius: 12px;
-  background: linear-gradient(100deg, rgb(143 191 90 / 0.16), #fff 65%);
-  box-shadow: 0 0 0 1px rgb(47 90 43 / 0.18);
-}
-
-.dash .sp-main .sp-next-icon {
-  border-radius: 10px;
-  background: linear-gradient(#2a2a2a, #121212);
-  color: #fff;
-}
-
-.dash .sp-main :is(.sp-fact-label, .sp-address-label) {
-  font-family: var(--font-label), monospace;
-  font-weight: 400;
-}
-
-.dash .sp-main .sp-fact-foot a {
-  color: var(--lp-green);
-}
-
-.dash .sp-main .sp-address-button {
-  border: 0;
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 0 0 1px var(--lp-line);
 }
 
 /* App pages: overview, deployments, a deployment, access, settings. */
@@ -2384,5 +2105,377 @@ a.dash-chip:hover svg {
     border-radius: 10px;
     background: #fff;
     box-shadow: 0 0 0 1px var(--lp-line), 0 10px 30px rgb(0 0 0 / 0.1);
+  }
+}
+
+/* Address with copy and open, under an app's name. */
+.dash-address {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 8px;
+  color: var(--lp-ink-faint);
+  font-size: 12.5px;
+}
+
+.dash-address-label {
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dash-address code {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 3px 8px;
+  color: var(--lp-ink);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-address-button {
+  display: inline-flex;
+  height: 26px;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 9px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+  color: var(--lp-ink);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dash-address-button:hover {
+  color: var(--lp-green);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.16);
+}
+
+/* Where people give Sprout their site. */
+.dash-dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  border: 1.5px dashed rgb(0 0 0 / 0.16);
+  border-radius: 14px;
+  padding: 28px 20px;
+  background:
+    radial-gradient(rgb(0 0 0 / 0.06) 1px, transparent 1px) 0 0 / 12px 12px,
+    #fbfbf9;
+  color: var(--lp-ink-soft);
+  text-align: center;
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    transform 300ms var(--lp-ease);
+}
+
+.dash-dropzone:hover {
+  border-color: rgb(0 0 0 / 0.28);
+}
+
+.dash-dropzone.over {
+  border-color: var(--lp-green);
+  background-color: rgb(47 90 43 / 0.06);
+  transform: scale(1.01);
+}
+
+.dash-dropzone > svg {
+  color: var(--lp-green);
+}
+
+.dash-dropzone strong {
+  color: var(--lp-ink);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.dash-dropzone span {
+  font-size: 13.5px;
+}
+
+.dash-dropzone.compact {
+  grid-auto-flow: column;
+  justify-content: end;
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+.dash-dropzone-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.dash-upload {
+  display: grid;
+  gap: 12px;
+}
+
+.dash-chosen {
+  display: grid;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: rgb(47 90 43 / 0.05);
+  box-shadow: inset 0 0 0 1px rgb(47 90 43 / 0.2);
+}
+
+.dash-chosen-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lp-green);
+}
+
+.dash-chosen small {
+  color: var(--lp-ink-faint);
+  font-size: 12.5px;
+}
+
+.dash-chosen-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.dash-readiness strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8a5a14;
+  font-weight: 500;
+}
+
+.dash-readiness ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+/* Forms that sit on one line inside a card: invite, create token. */
+.dash-inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.dash-inline-form label,
+.dash-secret label,
+.dash-deploy-name {
+  display: grid;
+  gap: 6px;
+  color: var(--lp-ink-soft);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.dash :is(.dash-inline-form, .dash-secret, .dash-deploy-form, .dash-confirm, .dash-member, .dash-fields, .sp-drop-dialog) :is(input, select) {
+  min-height: 38px;
+  border: 0;
+  border-radius: 9px;
+  padding: 0 11px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);
+  color: var(--lp-ink);
+  font-size: 14px;
+}
+
+.dash :is(.dash-inline-form, .dash-secret, .dash-deploy-form, .dash-member, .dash-fields) :is(input, select):focus {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--lp-green), 0 0 0 4px rgb(47 90 43 / 0.12);
+}
+
+.dash-secret {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  margin: 0 18px 16px;
+  border-radius: 10px;
+  padding: 12px;
+  background: rgb(201 138 43 / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(201 138 43 / 0.28);
+}
+
+.dash-secret label {
+  min-width: 240px;
+  flex: 1;
+}
+
+.dash-secret input {
+  font-family: var(--font-label), monospace;
+  font-size: 12.5px !important;
+}
+
+.dash-member {
+  flex-wrap: wrap;
+}
+
+.dash-confirm {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgb(184 95 80 / 0.07);
+  animation: lp-word 400ms var(--lp-ease) both;
+}
+
+.dash-confirm p {
+  flex: 1;
+  margin: 0;
+  color: var(--lp-ink-soft);
+  font-size: 13px;
+}
+
+.lp-btn.dash-danger {
+  color: #8c3f33;
+}
+
+/* Deploy page */
+.dash-section-title {
+  margin: 8px 0 0;
+  font-size: 17px;
+}
+
+.dash-deploy-card {
+  gap: 16px;
+  padding: 20px;
+}
+
+.dash-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--lp-ink);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dash-step b {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(#2a2a2a, #121212);
+  color: #fff;
+  font-family: var(--font-label), monospace;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.dash-deploy-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px 12px;
+}
+
+.dash .dash-deploy-form .dash-deploy-name input {
+  min-height: 44px;
+  font-size: 15px;
+}
+
+.dash-deploy-slug {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 10px;
+  color: var(--lp-ink-faint);
+  font-size: 13px;
+}
+
+.dash-deploy-slug strong {
+  color: var(--lp-ink);
+  font-family: var(--font-label), monospace;
+  font-weight: 400;
+}
+
+.dash-deploy-form > .dash-callout {
+  grid-column: 1 / -1;
+}
+
+.dash-deploy-run {
+  display: grid;
+  gap: 12px;
+}
+
+.dash-deploy-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.dash-guides {
+  display: grid;
+  gap: 8px;
+  color: var(--lp-ink-soft);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.dash-guides > p {
+  margin: 0 0 4px;
+}
+
+.dash-guides details {
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+}
+
+.dash-guides summary {
+  padding: 11px 14px;
+  color: var(--lp-ink);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.dash-guides details[open] summary {
+  border-bottom: 1px solid var(--lp-line);
+}
+
+.dash-guides ul,
+.dash-guides details p {
+  margin: 10px 14px 12px;
+}
+
+.dash-guides ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+}
+
+.dash-guides a {
+  color: var(--lp-green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 720px) {
+  .dash-inline-form,
+  .dash-deploy-form {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

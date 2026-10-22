@@ -101,7 +101,7 @@ export function DropToDeploy({ workspaceSlug }: { workspaceSlug: string }) {
             <label>Name this app<input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} disabled={busy} autoFocus /></label>
             <small>URL name: <code>{slugify(name) || "set from the name"}</code></small>
           </>}
-          {problem && <p className="deploy-error" role="alert">{problem}</p>}
+          {problem && <p className="dash-callout dash-callout--error" role="alert">{problem}</p>}
           <div className="sp-drop-actions">
             <button type="button" className="lp-btn lp-btn--light lp-btn--small" onClick={() => dialog.current?.close()} disabled={busy}>{chosen ? "Cancel" : "Close"}</button>
             {chosen && <button className="lp-btn lp-btn--dark lp-btn--small" disabled={busy || !name.trim() || !slugify(name) || !!problem}><Sprout size={15} /> {busy ? "Planting…" : warnings.length > 0 ? "Deploy anyway" : "Create and deploy"}</button>}

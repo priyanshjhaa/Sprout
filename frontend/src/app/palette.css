@@ -215,26 +215,8 @@
   }
 }
 
-/* Where people give Sprout their site: a calm, obvious target for a folder. */
-.sp-dropzone { display: grid; justify-items: center; gap: 8px; padding: 28px 20px; border: 2px dashed var(--line-strong); border-radius: 22px; background: var(--sp-cream); color: var(--muted); text-align: center; transition: border-color 0.15s var(--ease-out), background 0.15s var(--ease-out); }
-.sp-dropzone.over { border-color: var(--sp-moss-deep); background: rgba(104, 118, 66, 0.1); }
-.sp-dropzone strong { color: var(--ink); font-size: 16px; }
-.sp-dropzone span { font-size: 13.5px; }
-.sp-dropzone.compact { grid-auto-flow: column; justify-content: end; padding: 0; border: 0; background: none; }
-.sp-dropzone-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; margin-top: 6px; }
-.sp-dropzone-link { padding: 0; border: 0; background: none; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.sp-dropzone-link:hover:not(:disabled) { color: var(--ink); }
-.sp-chosen { display: grid; gap: 8px; padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: 18px; background: var(--sp-cream); }
-.sp-chosen-line { display: flex; align-items: center; gap: 8px; color: var(--sp-moss-deep); }
-.sp-chosen small { color: var(--muted); font-size: 12.5px; }
-.sp-chosen-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 4px; }
-.sp-heads-up { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid rgba(184, 115, 53, 0.45); border-radius: 14px; background: rgba(184, 115, 53, 0.1); color: var(--ink); font-size: 13px; }
-.sp-heads-up strong { display: flex; align-items: center; gap: 6px; color: var(--sp-amber); font-size: 13px; }
-.sp-heads-up ul { display: grid; gap: 4px; margin: 0; padding-left: 18px; }
-
 /* An icon that sits in a line of text. Icons are block-level by default, which
    would put them on a line of their own. */
 .sp-inline-icon { display: inline; vertical-align: -2px; margin-right: 6px; }
 .sp-inline-icon-after { margin: 0 0 0 5px; }
-/* A notice that is one flowing sentence, not a heading and a paragraph in a grid. */
-.sp-main .simulation-notice.sp-notice-flow { display: block; }
+

@@ -43,17 +43,17 @@ export function SourcePicker({ onChosen, onProblem, onReading, disabled = false,
   };
 
   const buttons = (
-    <div className="sp-dropzone-actions">
-      <button type="button" className="sp-button sp-button-solid" disabled={disabled} onClick={() => folderInput.current?.click()}>
+    <div className="dash-dropzone-actions">
+      <button type="button" className="lp-btn lp-btn--dark lp-btn--small" disabled={disabled} onClick={() => folderInput.current?.click()}>
         <FolderUp size={15} /> Choose a folder
       </button>
-      <button type="button" className="sp-dropzone-link" disabled={disabled} onClick={() => archiveInput.current?.click()}>or pick a .tar file</button>
+      <button type="button" className="dash-text-button" disabled={disabled} onClick={() => archiveInput.current?.click()}>or pick a .tar file</button>
     </div>
   );
 
   return (
     <div
-      className={`sp-dropzone${over ? " over" : ""}${compact ? " compact" : ""}`}
+      className={`dash-dropzone${over ? " over" : ""}${compact ? " compact" : ""}`}
       onDragOver={(event) => { if (!disabled) { event.preventDefault(); setOver(true); } }}
       onDragLeave={() => setOver(false)}
       onDrop={(event) => {

@@ -39,15 +39,14 @@ export function TokensView() {
     },
   });
 
-  return <main className="dashboard-page compact-page">
+  return <main className="dashboard-page compact-page dash-stack">
     <PageHeader eyebrow="Settings" title="Access tokens" description="Let the Sprout CLI, CI and coding agents deploy as you, without your password." />
-    {change.isError && <p role="alert">{change.error.message}</p>}
-    {notice && <p role="status">{notice}</p>}
+    {change.isError && <p className="dash-callout dash-callout--error" role="alert">{change.error.message}</p>}
+    {notice && <p className="dash-callout dash-callout--ok" role="status">{notice}</p>}
 
-    <section className="team-invite-panel">
-      <h2>Create a token</h2>
-      <p>A token can create apps and deploy them, and read your workspace. It cannot manage your team, change who has access, or create other tokens. Revoke it any time.</p>
-      <form className="team-invite-form" onSubmit={(event) => {
+    <section className="dash-panel-card">
+      <div className="dash-panel-card-head"><div><h3>Create a token</h3><p>A token can create apps and deploy them, and read your workspace. It cannot manage your team, change who has access, or create other tokens. Revoke it any time.</p></div></div>
+      <form className="dash-inline-form" onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
         change.mutate({ kind: "create", name: String(data.get("name")).trim(), expiresInDays: Number(data.get("days")) });
@@ -55,33 +54,35 @@ export function TokensView() {
       }}>
         <label>Name<input name="name" required maxLength={80} placeholder="Laptop, GitHub Actions…" disabled={change.isPending} /></label>
         <label>Expires<select name="days" defaultValue="90" disabled={change.isPending}>{expiryChoices.map((choice) => <option key={choice.days} value={choice.days}>{choice.label}</option>)}</select></label>
-        <button className="button button-primary" disabled={change.isPending}>Create token</button>
+        <button className="lp-btn lp-btn--dark lp-btn--small" disabled={change.isPending}>Create token</button>
       </form>
-      {secret && <div className="team-share-link">
+      {secret && <div className="dash-secret">
         <label>Copy this token now — it is shown only once and cannot be retrieved later<input readOnly value={secret} onFocus={(event) => event.target.select()} /></label>
-        <button className="button button-secondary" onClick={async () => {
+        <button className="lp-btn lp-btn--light lp-btn--small" type="button" onClick={async () => {
           try { await navigator.clipboard.writeText(secret); setNotice("Token copied."); }
           catch { setNotice("Select the token above and copy it manually."); }
         }}>Copy token</button>
-        <button className="button button-secondary" onClick={() => setSecret("")}>I have saved it</button>
+        <button className="lp-btn lp-btn--light lp-btn--small" type="button" onClick={() => setSecret("")}>I have saved it</button>
       </div>}
-      <small>Send it as <code>Authorization: Bearer &lt;token&gt;</code>. Treat it like a password: anyone who has it can deploy as you until it expires or you revoke it.</small>
+      <p className="dash-panel-card-foot">Send it as <code>Authorization: Bearer &lt;token&gt;</code>. Treat it like a password: anyone who has it can deploy as you until it expires or you revoke it.</p>
     </section>
 
-    <section className="members-panel">
-      <header><span>Your tokens</span><small>{tokens.data?.length === 1 ? "1 token" : `${tokens.data?.length ?? 0} tokens`}</small></header>
-      {tokens.isLoading && <p className="team-panel-note" role="status">Loading tokens…</p>}
-      {tokens.isError && <p className="team-panel-note" role="alert">{tokens.error.message}</p>}
-      {tokens.data?.length === 0 && <p className="team-panel-note">No tokens yet.</p>}
-      {tokens.data?.map((token) => <div className="member-row team-member-row" key={token.id}>
-        <div><strong>{token.name}</strong><small>{displayHint(token.hint)} · {token.expired ? "Expired" : describeExpiry(token.expiresAt)} · {describeLastUsed(token.lastUsedAt)}</small></div>
-        <button className="button button-secondary" disabled={change.isPending} onClick={() => setRevoking(token.id)}>{token.expired ? "Remove" : "Revoke"}<span className="sr-only"> {token.name}</span></button>
-        {revoking === token.id && <div className="team-remove-confirm" role="group" aria-label={`Confirm revoking ${token.name}`}>
-          <p>{token.expired ? "Remove" : "Revoke"} “{token.name}”? Anything using it loses access immediately.</p>
-          <button className="button button-secondary" disabled={change.isPending} onClick={() => setRevoking(null)}>Cancel</button>
-          <button className="button button-primary" disabled={change.isPending} onClick={() => change.mutate({ kind: "revoke", id: token.id })}>Confirm</button>
-        </div>}
-      </div>)}
+    <section className="dash-panel-card">
+      <div className="dash-panel-card-head"><h3>Your tokens</h3><small>{tokens.data?.length === 1 ? "1 token" : `${tokens.data?.length ?? 0} tokens`}</small></div>
+      {tokens.isLoading && <p className="dash-note" role="status">Loading tokens…</p>}
+      {tokens.isError && <p className="dash-callout dash-callout--error" role="alert">{tokens.error.message}</p>}
+      {tokens.data?.length === 0 && <p className="dash-note">No tokens yet.</p>}
+      <ul className="dash-members">
+        {tokens.data?.map((token, index) => <li className="dash-member" key={token.id} style={{ "--i": index } as React.CSSProperties}>
+          <span className="dash-member-name"><strong>{token.name}</strong><small>{displayHint(token.hint)} · {token.expired ? "Expired" : describeExpiry(token.expiresAt)} · {describeLastUsed(token.lastUsedAt)}</small></span>
+          <button className="lp-btn lp-btn--light lp-btn--small dash-danger" type="button" disabled={change.isPending} onClick={() => setRevoking(token.id)}>{token.expired ? "Remove" : "Revoke"}<span className="sr-only"> {token.name}</span></button>
+          {revoking === token.id && <div className="dash-confirm" role="group" aria-label={`Confirm revoking ${token.name}`}>
+            <p>{token.expired ? "Remove" : "Revoke"} “{token.name}”? Anything using it loses access immediately.</p>
+            <button className="lp-btn lp-btn--light lp-btn--small" type="button" disabled={change.isPending} onClick={() => setRevoking(null)}>Cancel</button>
+            <button className="lp-btn lp-btn--dark lp-btn--small" type="button" disabled={change.isPending} onClick={() => change.mutate({ kind: "revoke", id: token.id })}>Confirm</button>
+          </div>}
+        </li>)}
+      </ul>
     </section>
   </main>;
 }

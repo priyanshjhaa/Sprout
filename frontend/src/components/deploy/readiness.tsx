@@ -22,7 +22,7 @@ export function useReadiness(chosen: Chosen | null): string[] {
 export function Readiness({ problems }: { problems: string[] }) {
   if (problems.length === 0) return null;
   return (
-    <div className="sp-heads-up" role="status">
+    <div className="dash-callout dash-callout--warn dash-readiness" role="status">
       <strong><TriangleAlert size={15} aria-hidden="true" /> Sprout may not be able to run this yet</strong>
       <ul>{problems.map((problem) => <li key={problem}>{problem}</li>)}</ul>
     </div>
