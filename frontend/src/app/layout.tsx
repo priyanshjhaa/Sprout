@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Lora } from "next/font/google";
+import { Geist, IBM_Plex_Mono, JetBrains_Mono, Lora } from "next/font/google";
 import type { ReactNode } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "@/components/providers";
@@ -15,6 +15,7 @@ import "./forms.css";
 import "./type.css";
 import "./seasons.css";
 import "./palette.css";
+import "./landing.css";
 
 const heroFont = Lora({
   subsets: ["latin"],
@@ -31,6 +32,19 @@ const monoFont = JetBrains_Mono({
   variable: "--font-code",
 });
 
+const sansFont = Geist({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-landing",
+});
+
+const labelFont = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-label",
+});
+
 export const metadata: Metadata = {
   title: "Sprout — small apps, live at a public URL",
   description: "Deploy small, purpose-built apps to a public URL without managing the cloud around them.",
@@ -38,7 +52,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${heroFont.variable} ${monoFont.variable}`}>
+    <html lang="en" data-scroll-behavior="smooth" className={`${heroFont.variable} ${monoFont.variable} ${sansFont.variable} ${labelFont.variable}`}>
       <body>
         <ClerkProvider
           signInUrl="/sign-in"
