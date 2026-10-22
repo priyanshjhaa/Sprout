@@ -3,6 +3,7 @@ import { Hero } from "@/components/marketing/hero";
 import { RevealObserver } from "@/components/marketing/reveal-observer";
 import { SiteNav } from "@/components/marketing/site-nav";
 import { Statement } from "@/components/marketing/statement";
+import { WaysIn } from "@/components/marketing/ways-in";
 
 export function LandingPage() {
   return (
@@ -12,6 +13,7 @@ export function LandingPage() {
         <Hero />
         <Statement />
         <Chapters />
+        <WaysIn />
       </main>
       <RevealObserver />
     </div>
