@@ -1,6 +1,7 @@
 import { Hero } from "@/components/marketing/hero";
 import { RevealObserver } from "@/components/marketing/reveal-observer";
 import { SiteNav } from "@/components/marketing/site-nav";
+import { Statement } from "@/components/marketing/statement";
 
 export function LandingPage() {
   return (
@@ -8,6 +9,7 @@ export function LandingPage() {
       <SiteNav />
       <main>
         <Hero />
+        <Statement />
       </main>
       <RevealObserver />
     </div>
