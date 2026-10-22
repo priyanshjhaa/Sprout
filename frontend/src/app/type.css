@@ -1,24 +1,14 @@
-/* Typography: Lora for voice, Inter for work, a quiet monospace for addresses. */
-.sp-frame { --font-mono-ui: var(--font-code), ui-monospace, "SF Mono", Menlo, monospace; font-feature-settings: "cv11", "ss03"; }
+
 
 /* One italic word per headline, as on the homepage. */
 .sp-main h1 em,
 .sp-main h2 em { color: var(--sp-moss-deep); font-style: italic; font-weight: 400; }
 
-.sp-eyebrow,
-.sp-eyebrow-dark { font-size: 11px; letter-spacing: 0.16em; }
-
 /* Numbers line up; technical strings read as technical. */
 .sp-main { font-variant-numeric: tabular-nums; }
 .sp-main code,
-.sp-app-url,
-.sp-card-foot span,
-.sp-url,
 .sp-main .settings-actions span { font-family: var(--font-mono-ui); font-size: 12px; letter-spacing: -0.01em; }
-.sp-app-url { font-size: 12.5px; }
+
 .sp-row-time { font-variant-numeric: tabular-nums; }
-.sp-row-main strong,
-.sp-card h2,
-.sp-bed-label strong { letter-spacing: -0.01em; }
-.sp-bed-label small,
+.sp-row-main strong { letter-spacing: -0.01em; }
 .sp-fact-label { letter-spacing: 0.1em; }

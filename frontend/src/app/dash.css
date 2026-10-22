@@ -1455,3 +1455,33 @@ a.dash-chip:hover svg {
 .dash .sp-main [role="status"]:not(.sr-only) {
   color: var(--lp-ink-soft);
 }
+
+/* The app overview's next-step banner, in the landing's quiet green. */
+.dash .sp-main .sp-next {
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(100deg, rgb(143 191 90 / 0.16), #fff 65%);
+  box-shadow: 0 0 0 1px rgb(47 90 43 / 0.18);
+}
+
+.dash .sp-main .sp-next-icon {
+  border-radius: 10px;
+  background: linear-gradient(#2a2a2a, #121212);
+  color: #fff;
+}
+
+.dash .sp-main :is(.sp-fact-label, .sp-address-label) {
+  font-family: var(--font-label), monospace;
+  font-weight: 400;
+}
+
+.dash .sp-main .sp-fact-foot a {
+  color: var(--lp-green);
+}
+
+.dash .sp-main .sp-address-button {
+  border: 0;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+}

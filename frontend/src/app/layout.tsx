@@ -8,7 +8,6 @@ import "./dashboard.css";
 import "./garden.css";
 import "./pipeline.css";
 import "./deploy.css";
-import "./apps.css";
 import "./app-page.css";
 import "./run.css";
 import "./forms.css";
