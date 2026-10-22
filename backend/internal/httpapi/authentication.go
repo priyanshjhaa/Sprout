@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/clerk/clerk-sdk-go/v2"
@@ -39,9 +40,9 @@ func authenticatedByToken(ctx context.Context) bool {
 // Sprout personal access token (recognised by its prefix) or a Clerk session.
 // A token is restricted to the routes in tokenRoutes.
 func AuthenticationMiddleware(
-	resolver PrincipalResolver, tokens TokenAuthenticator, logger *slog.Logger, webOrigin string,
+	resolver PrincipalResolver, tokens TokenAuthenticator, logger *slog.Logger, webOrigins ...string,
 ) func(http.Handler) http.Handler {
-	session := sessionAuthentication(resolver, logger, webOrigin)
+	session := sessionAuthentication(resolver, logger, webOrigins)
 	token := tokenAuthentication(resolver, tokens, logger)
 	return func(next http.Handler) http.Handler {
 		viaSession, viaToken := session(next), token(next)
@@ -132,10 +133,10 @@ func tokenAuthentication(resolver PrincipalResolver, tokens TokenAuthenticator, 
 }
 
 func sessionAuthentication(
-	resolver PrincipalResolver, logger *slog.Logger, webOrigin string,
+	resolver PrincipalResolver, logger *slog.Logger, webOrigins []string,
 ) func(http.Handler) http.Handler {
 	verify := clerkhttp.WithHeaderAuthorization(
-		clerkhttp.AuthorizedParty(func(party string) bool { return party == webOrigin }),
+		clerkhttp.AuthorizedParty(func(party string) bool { return slices.Contains(webOrigins, party) }),
 		clerkhttp.AuthorizationFailureHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			writeAPIError(w, http.StatusUnauthorized, "authentication_required", "A valid session is required.", requestIDFromContext(r.Context()))
 		})),
