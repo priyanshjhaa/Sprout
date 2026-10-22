@@ -1,109 +1,98 @@
 /* Sign-in, sign-up, and invitation acceptance. Builds on the .lp landing tokens. */
 
+/* A landscape showcase on the left, the form on the right. */
 .auth {
+  display: grid;
+  min-height: 100svh;
+  grid-template-columns: minmax(0, 1.05fr) minmax(400px, 0.95fr);
+}
+
+.auth-showcase {
+  position: sticky;
+  top: 0;
+  display: grid;
+  height: calc(100svh - 60px);
+  min-height: 560px;
+  margin: 30px 0 30px 30px;
+  overflow: hidden;
+  border-radius: 14px;
+  isolation: isolate;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 24px 48px rgb(0 0 0 / 0.12),
+    0 4px 10px rgb(0 0 0 / 0.06);
+  animation: auth-showcase-in 1100ms var(--lp-ease) both;
+}
+
+@keyframes auth-showcase-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.auth-showcase .lp-hero-sky,
+.auth-showcase .lp-hero-ground,
+.auth-showcase .lp-hero-grass {
+  background-position: center 70%;
+}
+
+.auth-panel {
   display: flex;
   min-height: 100svh;
   flex-direction: column;
-}
-
-/* Banner: a strip of the landing landscape that fades into the page. */
-.auth-banner {
-  position: relative;
-  display: flex;
-  height: clamp(220px, 32vh, 290px);
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 14px;
-  overflow: hidden;
-  isolation: isolate;
-  padding-bottom: 36px;
+  padding: 0 24px;
 }
 
-.auth-banner .lp-hero-sky,
-.auth-banner .lp-hero-ground,
-.auth-banner .lp-hero-grass {
-  background-position: center 58%;
+.auth-head {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 48px;
+  text-align: center;
 }
 
-/* Sky, hills, and grass only, masked so the scene dissolves into the page. */
-.auth-banner .lp-hero-ground {
-  display: none;
-}
-
-.auth-banner .lp-hero-scene {
-  mask-image: linear-gradient(#000 40%, transparent 94%);
-}
-
-.auth-badge {
+/* A serif wordmark, as quiet as the rest of the panel. */
+.auth-wordmark {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  border: 1px solid rgb(255 255 255 / 0.6);
-  border-radius: 10px;
-  padding: 6px 16px 6px 12px;
-  background: rgb(255 255 255 / 0.32);
-  box-shadow: 0 1px 1px rgb(0 0 0 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.6);
-  backdrop-filter: blur(6px);
+  gap: 12px;
   color: var(--lp-ink);
-  font-size: 34px;
-  font-weight: 500;
-  letter-spacing: -0.04em;
+  font-family: var(--font-hero), serif;
+  font-size: 40px;
+  letter-spacing: -0.02em;
   line-height: 1.1;
-  animation:
-    lp-word 1000ms var(--lp-ease) 200ms both,
-    lp-float 6s ease-in-out 1400ms infinite alternate;
-  transition: background-color 200ms ease;
+  animation: lp-word 900ms var(--lp-ease) 200ms both;
 }
 
-.auth-badge:hover {
-  background: rgb(255 255 255 / 0.5);
+.auth-wordmark .brand-mark {
+  transform: scale(1.3);
+  transition: transform 500ms var(--lp-ease);
 }
 
-.auth-badge .brand-mark {
-  transform: scale(1.25);
+.auth-wordmark:hover .brand-mark {
+  transform: scale(1.3) rotate(-8deg);
 }
 
-/* The tagline types itself out once, then the caret keeps blinking. */
 .auth-tagline {
-  color: var(--lp-ink-soft);
-  font-family: var(--font-label), monospace;
-  font-size: 14px;
+  color: var(--lp-ink-faint);
+  font-size: 17px;
 }
 
 .auth-tagline span {
   display: inline-block;
-  width: calc(var(--n) * 1ch + 4px);
-  overflow: hidden;
-  border-right: 2px solid var(--lp-green);
-  white-space: nowrap;
-  animation:
-    auth-type 1800ms steps(26, end) 900ms both,
-    auth-caret 900ms step-end infinite;
+  animation: lp-word 900ms var(--lp-ease) 380ms both;
 }
 
-@keyframes auth-type {
-  from {
-    width: 0;
-  }
-}
-
-@keyframes auth-caret {
-  50% {
-    border-color: transparent;
-  }
-}
-
-/* Body */
 .auth-body {
   display: flex;
-  width: min(400px, 100% - 32px);
-  flex: 1;
+  width: min(384px, 100%);
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  margin: 0 auto;
-  padding: 8px 0 72px;
+  padding: 36px 0 28px;
 }
 
 /* Sign In / Sign Up switch with a thumb that slides into place. */
@@ -214,7 +203,8 @@
   display: grid;
   justify-items: center;
   gap: 2px;
-  padding: 0 16px 32px;
+  margin-top: auto;
+  padding: 24px 16px 32px;
   color: rgb(32 32 32 / 0.55);
   font-family: var(--font-hero), serif;
   font-size: 17px;
@@ -226,11 +216,6 @@
   color: rgb(32 32 32 / 0.8);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .auth-tagline span {
-    border-right-color: transparent;
-  }
-}
 
 /* Clerk, restyled. Selectors are scoped under .auth so they outrank Clerk's own styles. */
 .auth .auth-clerk,
@@ -465,4 +450,339 @@
   font-size: 14px;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* Showcase carousel: one slide at a time, centred over the sky. */
+.auth-carousel {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  padding: 48px 40px 28px;
+}
+
+.auth-slides {
+  display: grid;
+  align-items: center;
+}
+
+.auth-slide {
+  display: grid;
+  grid-area: 1 / 1;
+  justify-items: center;
+  gap: 14px;
+  color: var(--lp-ink);
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms var(--lp-ease),
+    transform 700ms var(--lp-ease),
+    visibility 0s 600ms;
+}
+
+.auth-slide[data-active] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 150ms, 150ms, 0s;
+}
+
+.auth-slide h2 {
+  max-width: 16em;
+  font-size: clamp(24px, 2.2vw, 30px);
+  line-height: 1.15;
+}
+
+.auth-slide > p {
+  max-width: 30em;
+  color: var(--lp-ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.auth-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auth-dots button {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgb(255 255 255 / 0.35);
+  cursor: pointer;
+  transition: width 400ms var(--lp-ease), background-color 200ms ease;
+}
+
+.auth-dots button:hover {
+  background: rgb(255 255 255 / 0.6);
+}
+
+/* The active dot stretches and fills while its slide is showing. */
+.auth-dots button[aria-current] {
+  width: 30px;
+}
+
+.auth-dots button[aria-current]::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #fff;
+  content: "";
+  transform-origin: left;
+  animation: auth-dot-fill var(--interval) linear both;
+}
+
+.auth-carousel[data-paused] .auth-dots button::after {
+  animation-play-state: paused;
+}
+
+@keyframes auth-dot-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Small product visuals inside each slide. */
+.auth-visual {
+  width: min(400px, 100%);
+  margin: 18px 0 0;
+  border-radius: 14px;
+  padding: 14px;
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.7), 0 18px 40px rgb(60 50 30 / 0.14);
+  backdrop-filter: blur(10px);
+  list-style: none;
+  text-align: left;
+}
+
+.auth-visual-stages,
+.auth-visual-team {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-visual-stages li,
+.auth-visual-team li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+  font-size: 13.5px;
+}
+
+.auth-slide[data-active] .auth-visual-stages li,
+.auth-slide[data-active] .auth-visual-team li {
+  animation: lp-member 600ms var(--lp-ease) both;
+  animation-delay: calc(400ms + var(--i) * 260ms);
+}
+
+.auth-visual-stages b {
+  display: block;
+  font-weight: 500;
+}
+
+.auth-visual-stages small {
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+}
+
+.auth-visual-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgb(0 0 0 / 0.05);
+}
+
+.auth-visual-check {
+  margin-left: auto;
+  color: #4f9a3a;
+}
+
+.auth-slide[data-active] .auth-visual-check {
+  animation: auth-check 400ms var(--lp-ease) both;
+  animation-delay: calc(900ms + var(--i) * 260ms);
+}
+
+.auth-visual-stages li:nth-child(1) .auth-visual-check {
+  --i: 0;
+}
+
+.auth-visual-stages li:nth-child(2) .auth-visual-check {
+  --i: 1;
+}
+
+.auth-visual-stages li:nth-child(3) .auth-visual-check {
+  --i: 2;
+}
+
+@keyframes auth-check {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+.auth-visual-live {
+  padding: 0;
+  overflow: hidden;
+}
+
+.auth-visual-browser {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 12px;
+  background: rgb(255 255 255 / 0.7);
+  box-shadow: 0 1px 0 var(--lp-line);
+}
+
+.auth-visual-browser i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.12);
+}
+
+.auth-visual-browser span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-inline: auto;
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+}
+
+.auth-visual-live-body {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 26px 20px 28px;
+  background: #fff;
+}
+
+.auth-visual-live-body b {
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.auth-visual-live-body small {
+  color: var(--lp-ink-faint);
+  font-size: 13px;
+}
+
+.auth-visual-badge {
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: rgb(79 154 58 / 0.14);
+  color: #2f6a22;
+  font-family: var(--font-label), monospace;
+  font-size: 11px;
+}
+
+.auth-slide[data-active] .auth-visual-badge {
+  animation: lp-pop 600ms var(--lp-ease) 700ms both;
+}
+
+.auth-visual-sleep {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.auth-visual-sleep i {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: var(--lp-leaf);
+  animation: auth-doze 6s ease-in-out infinite;
+}
+
+@keyframes auth-doze {
+  0%,
+  35% {
+    background: var(--lp-leaf);
+  }
+  45%,
+  80% {
+    background: rgb(0 0 0 / 0.08);
+  }
+  90%,
+  100% {
+    background: var(--lp-leaf);
+  }
+}
+
+.auth-visual-sleep p {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--lp-ink-soft);
+  font-size: 13px;
+}
+
+.auth-visual-team i {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: #dfe8d2;
+  color: var(--lp-green);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.auth-visual-team em {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: rgb(0 0 0 / 0.05);
+  color: var(--lp-ink-soft);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+  font-style: normal;
+}
+
+/* Narrow screens: the showcase becomes a short landscape banner above the form. */
+@media (max-width: 1000px) {
+  .auth {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-showcase {
+    position: relative;
+    height: 180px;
+    min-height: 0;
+    margin: 12px 12px 0;
+  }
+
+  .auth-carousel {
+    display: none;
+  }
+
+  .auth-panel {
+    min-height: 0;
+  }
+
+  .auth-head {
+    margin-top: 0;
+    padding-top: 32px;
+  }
 }
