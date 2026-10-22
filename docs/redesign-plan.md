@@ -49,4 +49,14 @@ Built around Cofounder's login: a landscape banner with a glass brand badge and 
 3. Clerk restyle: dark pill social and primary buttons, the divider, inputs, and hidden duplicate header and footer links.
 4. Polish: staggered entrance, button shine, reduced motion, mobile, removal of the old auth landscape styles, and browser verification.
 
-Dashboard stages are planned after sign-in ships.
+## Dashboard stages
+
+The workspace follows a calm sidebar layout (inspired by the Hearth dashboard concept): a left sidebar with the workspace, search, main navigation, recent apps, settings, and the signed-in user; a slim top bar with a back chip and the Deploy action; a hero card with Sprout's landscape fading in from the right; filter tabs; app cards; and a lifecycle list. Analytics charts and quick stats are left out, as are a theme toggle and notifications, which Sprout does not have. Fonts, colours, and motion follow the landing and sign-in pages.
+
+0. Docs: this section.
+1. Shell: sidebar and top bar replace the old top bar for every workspace page.
+2. Overview hero: the landscape banner card with its entrance motion.
+3. Overview body: filter tabs, app cards with plants, the lifecycle list, and loading, empty, and error states.
+4. Apps and app detail: the apps index and an app's pages on the new cards, tabs, and buttons.
+5. Deploy, Team, Tokens, and Settings in the same style.
+6. Polish: the mobile drawer, reduced motion, removal of the old dashboard styles, build, and verification.
