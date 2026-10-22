@@ -1,3 +1,4 @@
+import { Band } from "@/components/marketing/band";
 import { Chapters } from "@/components/marketing/chapters";
 import { Hero } from "@/components/marketing/hero";
 import { RevealObserver } from "@/components/marketing/reveal-observer";
@@ -14,6 +15,7 @@ export function LandingPage() {
         <Statement />
         <Chapters />
         <WaysIn />
+        <Band />
       </main>
       <RevealObserver />
     </div>
