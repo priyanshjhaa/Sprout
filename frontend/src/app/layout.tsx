@@ -16,6 +16,7 @@ import "./type.css";
 import "./seasons.css";
 import "./palette.css";
 import "./landing.css";
+import "./auth.css";
 
 const heroFont = Lora({
   subsets: ["latin"],

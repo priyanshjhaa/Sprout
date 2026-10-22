@@ -1,0 +1,233 @@
+/* Sign-in, sign-up, and invitation acceptance. Builds on the .lp landing tokens. */
+
+.auth {
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+}
+
+/* Banner: a strip of the landing landscape that fades into the page. */
+.auth-banner {
+  position: relative;
+  display: flex;
+  height: clamp(220px, 32vh, 290px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  overflow: hidden;
+  isolation: isolate;
+  padding-bottom: 36px;
+}
+
+.auth-banner .lp-hero-sky,
+.auth-banner .lp-hero-ground,
+.auth-banner .lp-hero-grass {
+  background-position: center 58%;
+}
+
+/* Sky, hills, and grass only, masked so the scene dissolves into the page. */
+.auth-banner .lp-hero-ground {
+  display: none;
+}
+
+.auth-banner .lp-hero-scene {
+  mask-image: linear-gradient(#000 40%, transparent 94%);
+}
+
+.auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgb(255 255 255 / 0.6);
+  border-radius: 10px;
+  padding: 6px 16px 6px 12px;
+  background: rgb(255 255 255 / 0.32);
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.6);
+  backdrop-filter: blur(6px);
+  color: var(--lp-ink);
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  animation:
+    lp-word 1000ms var(--lp-ease) 200ms both,
+    lp-float 6s ease-in-out 1400ms infinite alternate;
+  transition: background-color 200ms ease;
+}
+
+.auth-badge:hover {
+  background: rgb(255 255 255 / 0.5);
+}
+
+.auth-badge .brand-mark {
+  transform: scale(1.25);
+}
+
+/* The tagline types itself out once, then the caret keeps blinking. */
+.auth-tagline {
+  color: var(--lp-ink-soft);
+  font-family: var(--font-label), monospace;
+  font-size: 14px;
+}
+
+.auth-tagline span {
+  display: inline-block;
+  width: calc(var(--n) * 1ch + 4px);
+  overflow: hidden;
+  border-right: 2px solid var(--lp-green);
+  white-space: nowrap;
+  animation:
+    auth-type 1800ms steps(26, end) 900ms both,
+    auth-caret 900ms step-end infinite;
+}
+
+@keyframes auth-type {
+  from {
+    width: 0;
+  }
+}
+
+@keyframes auth-caret {
+  50% {
+    border-color: transparent;
+  }
+}
+
+/* Body */
+.auth-body {
+  display: flex;
+  width: min(400px, 100% - 32px);
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  margin: 0 auto;
+  padding: 8px 0 72px;
+}
+
+/* Sign In / Sign Up switch with a thumb that slides into place. */
+.auth-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 232px;
+  border-radius: 999px;
+  padding: 3px;
+  background: linear-gradient(#ebebe8, var(--lp-surface));
+  box-shadow:
+    inset 0 -0.5px 0 rgb(0 0 0 / 0.12),
+    inset 0 -1px 2px rgb(0 0 0 / 0.1),
+    inset 0 1px 1px rgb(255 255 255 / 0.24),
+    0 0 0 1px rgb(0 0 0 / 0.05);
+  animation: lp-word 800ms var(--lp-ease) 400ms both;
+}
+
+.auth-switch a {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  color: rgb(32 32 32 / 0.45);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: color 300ms ease;
+}
+
+.auth-switch a[aria-current="page"] {
+  color: rgb(32 32 32 / 0.9);
+}
+
+.auth-switch a:not([aria-current]):hover {
+  color: rgb(32 32 32 / 0.7);
+}
+
+.auth-switch-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: linear-gradient(#fff, var(--lp-surface));
+  box-shadow:
+    inset 0 0.33px 0.67px rgb(255 255 255 / 0.15),
+    0 0.33px 0.4px rgb(0 0 0 / 0.24),
+    0 0.67px 0.67px rgb(255 255 255 / 0.1),
+    0 0 1.34px rgb(0 0 0 / 0.2),
+    0 2px 6px rgb(0 0 0 / 0.06);
+}
+
+.auth-switch[data-mode="sign-up"] .auth-switch-thumb {
+  transform: translateX(100%);
+  animation: auth-thumb-right 520ms var(--lp-ease) 500ms both;
+}
+
+.auth-switch[data-mode="sign-in"] .auth-switch-thumb {
+  animation: auth-thumb-left 520ms var(--lp-ease) 500ms both;
+}
+
+@keyframes auth-thumb-right {
+  from {
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-thumb-left {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+.auth-form {
+  width: 100%;
+  animation: lp-word 900ms var(--lp-ease) 550ms both;
+}
+
+.auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--lp-ink-faint);
+  font-size: 13px;
+  transition: color 160ms ease;
+}
+
+.auth-back:hover {
+  color: var(--lp-ink);
+}
+
+.auth-back svg {
+  transition: transform 200ms var(--lp-ease);
+}
+
+.auth-back:hover svg {
+  transform: translateX(-3px);
+}
+
+/* A quiet serif sign-off at the foot of the page. */
+.auth-signoff {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 0 16px 32px;
+  color: rgb(32 32 32 / 0.55);
+  font-family: var(--font-hero), serif;
+  font-size: 17px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.auth-signoff span:first-child {
+  color: rgb(32 32 32 / 0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-tagline span {
+    border-right-color: transparent;
+  }
+}
