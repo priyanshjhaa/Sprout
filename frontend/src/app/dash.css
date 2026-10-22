@@ -1,0 +1,628 @@
+/*
+  Workspace dashboard: a sidebar on the off-white surface and a lighter panel for
+  the page. Builds on the .lp tokens from landing.css.
+*/
+
+.dash {
+  /* Older area styles still read these until each page is restyled. */
+  --sp-soil-900: #241b11;
+  --sp-soil-800: #35281a;
+  --sp-soil-700: #4a3925;
+  --sp-moss: #2f5a2b;
+  --sp-moss-deep: #1f3f1d;
+  --sp-sage: #8fbf5a;
+  --sp-sage-soft: #d5e6c0;
+  --sp-amber: #c98a2b;
+  --sp-cream: #fff;
+  --sp-glow: rgb(47 90 43 / 0.18);
+  --sp-forest-950: var(--sp-soil-900);
+  --sp-forest-900: var(--sp-soil-800);
+  --sp-forest-800: var(--sp-soil-700);
+  --sp-forest-700: var(--sp-moss);
+  --sp-leaf: var(--sp-sage);
+  --sp-leaf-soft: var(--sp-sage-soft);
+  --sp-leaf-deep: var(--sp-moss-deep);
+  --sp-mist: rgb(255 255 255 / 0.78);
+  --sp-mist-faint: rgb(255 255 255 / 0.5);
+  --sp-line-dark: rgb(255 255 255 / 0.12);
+  --dash-panel: #fbfbf9;
+  --dash-sidebar: 256px;
+
+  display: grid;
+  min-height: 100svh;
+  grid-template-columns: var(--dash-sidebar) minmax(0, 1fr);
+  gap: 0;
+  padding: 10px 10px 10px 0;
+}
+
+/* Sidebar */
+.dash-sidebar {
+  position: sticky;
+  top: 10px;
+  display: flex;
+  height: calc(100svh - 20px);
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 10px 14px 4px;
+  scrollbar-width: thin;
+}
+
+.dash-workspace {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px;
+  animation: lp-word 700ms var(--lp-ease) both;
+}
+
+.dash-logo {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9px;
+  background: linear-gradient(#2a2a2a, #111);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 2px 6px rgb(0 0 0 / 0.18);
+}
+
+.dash-logo .brand-mark {
+  transform: scale(0.85);
+}
+
+.dash-logo .brand-mark span {
+  border-color: rgb(186 226 140 / 0.85);
+  background: rgb(143 191 90 / 0.35);
+}
+
+.dash-logo .brand-mark::after {
+  background: var(--lp-leaf);
+}
+
+.dash-workspace-name {
+  display: grid;
+  min-width: 0;
+}
+
+.dash-workspace-name b {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-workspace-name small {
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dash-switcher {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dash-switcher select {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 30px 7px 10px;
+  background: rgb(0 0 0 / 0.04);
+  color: var(--lp-ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dash-switcher svg {
+  position: absolute;
+  right: 10px;
+  color: var(--lp-ink-faint);
+  pointer-events: none;
+}
+
+/* Search opens the command palette. */
+.dash .sp-search-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line), 0 1px 2px rgb(0 0 0 / 0.03);
+  color: var(--lp-ink-faint);
+  font-size: 13px;
+  cursor: pointer;
+  transition: box-shadow 180ms ease;
+  animation: lp-word 700ms var(--lp-ease) 80ms both;
+}
+
+.dash .sp-search-button:hover {
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.16), 0 1px 2px rgb(0 0 0 / 0.03);
+}
+
+.dash .sp-search-button span {
+  flex: 1;
+  text-align: left;
+}
+
+.dash .sp-search-button kbd {
+  border-radius: 5px;
+  padding: 1px 6px;
+  background: rgb(0 0 0 / 0.05);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+}
+
+.dash-nav {
+  display: grid;
+  gap: 2px;
+}
+
+.dash-nav .lp-mono {
+  margin: 4px 8px 6px;
+  font-size: 10px;
+}
+
+.dash-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--lp-ink-soft);
+  font-size: 14px;
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    transform 200ms var(--lp-ease);
+}
+
+.dash-nav .dash-nav-link {
+  animation: lp-word 700ms var(--lp-ease) both;
+  animation-delay: calc(140ms + var(--i) * 60ms);
+}
+
+.dash-nav-link:hover {
+  background: rgb(0 0 0 / 0.04);
+  color: var(--lp-ink);
+}
+
+.dash-nav-link:active {
+  transform: scale(0.98);
+}
+
+/* The current page is a dark pill, like the primary buttons. */
+.dash-nav-link[aria-current="page"] {
+  background: linear-gradient(#2a2a2a, #121212);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 2px 6px rgb(0 0 0 / 0.16);
+}
+
+.dash-nav-link em {
+  margin-left: auto;
+  border-radius: 5px;
+  padding: 0 6px;
+  background: rgb(0 0 0 / 0.05);
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+  font-style: normal;
+}
+
+.dash-nav-link[aria-current="page"] em {
+  background: rgb(255 255 255 / 0.15);
+  color: rgb(255 255 255 / 0.8);
+}
+
+/* Collapsible groups: recent apps and settings. */
+.dash-group {
+  border-top: 1px solid var(--lp-line);
+  padding-top: 10px;
+}
+
+.dash-group summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--lp-ink);
+  font-size: 13.5px;
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+
+.dash-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.dash-group summary:hover {
+  background: rgb(0 0 0 / 0.03);
+}
+
+.dash-group summary > svg:last-child {
+  margin-left: auto;
+  color: var(--lp-ink-faint);
+  transition: transform 250ms var(--lp-ease);
+}
+
+.dash-group:not([open]) summary > svg:last-child {
+  transform: rotate(-90deg);
+}
+
+.dash-group[open] > :not(summary) {
+  animation: lp-word 450ms var(--lp-ease) both;
+}
+
+/* Recent apps hang off a thin stem, each with its status dot. */
+.dash-recent {
+  display: grid;
+  gap: 1px;
+  margin: 4px 0 0 17px;
+  border-left: 1px solid rgb(0 0 0 / 0.1);
+  padding: 0 0 0 8px;
+  list-style: none;
+}
+
+.dash-recent a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: var(--lp-ink-soft);
+  font-size: 12.5px;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.dash-recent a:hover,
+.dash-recent a[aria-current="page"] {
+  background: rgb(0 0 0 / 0.04);
+  color: var(--lp-ink);
+}
+
+.dash-recent span:not(.sr-only) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-recent i {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.2);
+}
+
+.dash i[data-status="running"] {
+  background: #4f9a3a;
+  box-shadow: 0 0 0 3px rgb(79 154 58 / 0.16);
+}
+
+.dash i[data-status="building"] {
+  background: var(--lp-amber);
+  animation: lp-blink 1.2s ease-in-out infinite;
+}
+
+.dash i[data-status="failed"] {
+  background: #b85f50;
+}
+
+.dash i[data-status="paused"] {
+  background: #6d8fb3;
+}
+
+.dash-recent-empty {
+  margin: 4px 8px 0 18px;
+  color: var(--lp-ink-faint);
+  font-size: 12.5px;
+}
+
+.dash-sidebar-foot {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding-bottom: 6px;
+}
+
+.dash-sidebar-foot .dash-group .dash-nav-link {
+  margin-left: 8px;
+  font-size: 13px;
+}
+
+/* Signed-in user, with account actions behind the chevron. */
+.dash-user {
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line), 0 2px 8px rgb(0 0 0 / 0.04);
+}
+
+.dash-user summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.dash-user summary::-webkit-details-marker {
+  display: none;
+}
+
+.dash-user img,
+.dash-user-fallback {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: #dfe8d2;
+  object-fit: cover;
+}
+
+.dash-user-name {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+
+.dash-user-name b {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dash-user-name b,
+.dash-user-name small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-user-name small {
+  color: var(--lp-ink-faint);
+  font-size: 11px;
+}
+
+.dash-user summary > svg {
+  color: var(--lp-ink-faint);
+  transition: transform 250ms var(--lp-ease);
+}
+
+.dash-user[open] summary > svg {
+  transform: rotate(180deg);
+}
+
+.dash-user-menu {
+  display: grid;
+  gap: 2px;
+  border-top: 1px solid var(--lp-line);
+  padding: 6px;
+  animation: lp-word 400ms var(--lp-ease) both;
+}
+
+.dash-user-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 8px;
+  background: transparent;
+  color: var(--lp-ink-soft);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dash-user-menu button:hover {
+  background: rgb(0 0 0 / 0.04);
+  color: var(--lp-ink);
+}
+
+/* Page panel */
+.dash-panel {
+  min-width: 0;
+  min-height: calc(100svh - 20px);
+  border-radius: 16px;
+  background: var(--dash-panel);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 1px 3px rgb(0 0 0 / 0.04),
+    0 16px 40px rgb(0 0 0 / 0.04);
+  animation: dash-panel-in 800ms var(--lp-ease) both;
+}
+
+@keyframes dash-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.dash-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 16px 16px 0 0;
+  padding: 14px 24px;
+  background: rgb(251 251 249 / 0.86);
+  backdrop-filter: blur(12px);
+}
+
+.dash-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  padding: 6px 12px 6px 10px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+  color: var(--lp-ink-soft);
+  font-family: var(--font-label), monospace;
+  font-size: 12px;
+  transition: box-shadow 160ms ease, color 160ms ease;
+}
+
+a.dash-chip:hover {
+  color: var(--lp-ink);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.16);
+}
+
+a.dash-chip svg {
+  transition: transform 200ms var(--lp-ease);
+}
+
+a.dash-chip:hover svg {
+  transform: translateX(-2px);
+}
+
+.dash-topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-icon-button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+  color: var(--lp-ink-soft);
+  cursor: pointer;
+}
+
+.dash-menu-button,
+.dash-scrim {
+  display: none;
+}
+
+.dash .sp-main {
+  min-height: 0;
+  padding: 0 24px 48px;
+}
+
+.dash .sp-main .dashboard-page {
+  width: min(1120px, 100%);
+  padding-top: 8px;
+}
+
+/* Older pages pick up the new buttons and type until they are restyled. */
+.dash .sp-button {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.dash .sp-button-solid,
+.dash .sp-button-glow {
+  border: 1px solid #383838;
+  background:
+    linear-gradient(rgb(32 32 32 / 0.1), rgb(32 32 32 / 0.1)),
+    linear-gradient(#4f4f4f, rgb(32 32 32 / 0.85));
+  color: #fff;
+  box-shadow:
+    inset 0 2px 0 rgb(255 255 255 / 0.24),
+    inset 0 -0.5px 2px rgb(0 0 0 / 0.25),
+    0 2px 6px rgb(0 0 0 / 0.08);
+}
+
+.dash .sp-button-ghost,
+.dash .sp-button-outline {
+  border-color: var(--lp-line);
+  background: #fff;
+}
+
+.dash .sp-eyebrow,
+.dash .sp-eyebrow-dark,
+.dash .eyebrow {
+  color: var(--lp-green);
+  font-family: var(--font-label), monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+
+.dash .page-heading h1,
+.dash h1,
+.dash h2 {
+  font-family: var(--font-landing), sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* Below 960px the sidebar becomes a drawer behind the menu button. */
+@media (max-width: 960px) {
+  .dash {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+  }
+
+  .dash-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    width: min(300px, 86vw);
+    height: 100svh;
+    background: var(--lp-surface);
+    box-shadow: 12px 0 40px rgb(0 0 0 / 0.12);
+    transform: translateX(-105%);
+    transition: transform 380ms var(--lp-ease);
+  }
+
+  .dash[data-drawer] .dash-sidebar {
+    transform: none;
+  }
+
+  .dash-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    display: block;
+    border: 0;
+    background: rgb(0 0 0 / 0.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+  }
+
+  .dash[data-drawer] .dash-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .dash-menu-button {
+    display: grid;
+  }
+
+  .dash-panel {
+    min-height: 100svh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .dash-topbar {
+    border-radius: 0;
+    padding: 12px 16px;
+  }
+
+  .dash .sp-main {
+    padding: 0 16px 40px;
+  }
+}
