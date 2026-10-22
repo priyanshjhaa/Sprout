@@ -717,3 +717,380 @@ a.dash-chip:hover svg {
     padding: 8px 22px 26px;
   }
 }
+
+/* Overview body */
+.dash-home {
+  display: grid;
+  gap: 22px;
+}
+
+.dash-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-self: start;
+  gap: 2px;
+  border-radius: 10px;
+  padding: 3px;
+  background: rgb(0 0 0 / 0.04);
+  animation: lp-word 800ms var(--lp-ease) 300ms both;
+}
+
+.dash-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 13px;
+  background: transparent;
+  color: var(--lp-ink-faint);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 220ms ease, color 220ms ease, box-shadow 220ms ease;
+}
+
+.dash-tabs button:hover {
+  color: var(--lp-ink);
+}
+
+.dash-tabs button[aria-selected="true"] {
+  background: #fff;
+  color: var(--lp-ink);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.04);
+}
+
+.dash-tabs em {
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+  font-style: normal;
+}
+
+.dash-home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  align-items: start;
+  gap: 24px;
+}
+
+.dash-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dash-section-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 17px;
+}
+
+.dash-section-head span {
+  color: var(--lp-ink-faint);
+  font-size: 12.5px;
+}
+
+/* App cards: a plant for the app's state, then its name, address, and status. */
+.dash-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dash-cards > li {
+  animation: lp-word 700ms var(--lp-ease) both;
+  animation-delay: calc(350ms + var(--i, 0) * 70ms);
+}
+
+.dash-card {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line), 0 1px 3px rgb(0 0 0 / 0.03);
+  color: var(--lp-ink);
+  transition:
+    transform 300ms var(--lp-ease),
+    box-shadow 300ms var(--lp-ease);
+}
+
+.dash-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1), 0 14px 30px rgb(0 0 0 / 0.07);
+}
+
+.dash-card-art {
+  display: grid;
+  height: 130px;
+  place-items: end center;
+  overflow: hidden;
+  background:
+    radial-gradient(rgb(0 0 0 / 0.07) 1px, transparent 1px) 0 0 / 12px 12px,
+    linear-gradient(#f7f7f4, #efefea);
+  box-shadow: inset 0 -1px 0 var(--lp-line);
+}
+
+.dash-card-art .sp-plant {
+  width: 74px;
+  height: 111px;
+  margin-bottom: -14px;
+  transition: transform 500ms var(--lp-ease);
+  transform-origin: 50% 90%;
+}
+
+.dash-card:hover .dash-card-art .sp-plant {
+  transform: scale(1.08) rotate(-2deg);
+}
+
+.dash-card[data-status="running"] .dash-card-art {
+  background:
+    radial-gradient(rgb(47 90 43 / 0.1) 1px, transparent 1px) 0 0 / 12px 12px,
+    linear-gradient(#f4f8ee, #e8f0dd);
+}
+
+.dash-card[data-status="failed"] .dash-card-art {
+  background:
+    radial-gradient(rgb(184 95 80 / 0.12) 1px, transparent 1px) 0 0 / 12px 12px,
+    linear-gradient(#fbf4f1, #f3e6e1);
+}
+
+.dash-card-body {
+  display: grid;
+  flex: 1;
+  align-content: start;
+  gap: 3px;
+  padding: 14px 14px 10px;
+}
+
+.dash-card-body b {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dash-card-url {
+  overflow: hidden;
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-card-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--lp-ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.dash-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--lp-line);
+  padding: 10px 14px;
+}
+
+.dash-card-foot .lp-mono {
+  font-size: 10.5px;
+  text-transform: none;
+}
+
+.dash-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--lp-ink-soft);
+  font-size: 12.5px;
+}
+
+.dash-card-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.2);
+}
+
+.dash-card-new {
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px dashed rgb(0 0 0 / 0.14);
+  background: transparent;
+  box-shadow: none;
+  color: var(--lp-ink-faint);
+  font-size: 14px;
+}
+
+.dash-card-new:hover {
+  border-color: var(--lp-green);
+  background: rgb(47 90 43 / 0.03);
+  box-shadow: none;
+  color: var(--lp-green);
+}
+
+.dash-card-new svg {
+  transition: transform 400ms var(--lp-ease);
+}
+
+.dash-card-new:hover svg {
+  transform: rotate(90deg);
+}
+
+.dash-card-skeleton {
+  height: 240px;
+  background: linear-gradient(90deg, #f3f3f0, #fafaf8, #f3f3f0) 0 0 / 200% 100%;
+  animation: dash-shimmer 1.4s linear infinite;
+}
+
+@keyframes dash-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.dash-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 28px 20px 30px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+  color: var(--lp-ink-soft);
+  text-align: center;
+}
+
+.dash-empty h3 {
+  margin: 0;
+  color: var(--lp-ink);
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.dash-empty p {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.dash-empty .sp-plant {
+  width: 70px;
+  height: 100px;
+}
+
+/* Lifecycle list: each state with its count; choosing one filters the cards. */
+.dash-lifecycle {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  border-radius: 12px;
+  padding: 6px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+  list-style: none;
+}
+
+.dash-lifecycle li {
+  animation: lp-word 600ms var(--lp-ease) both;
+  animation-delay: calc(400ms + var(--i) * 60ms);
+}
+
+.dash-lifecycle button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 10px;
+  background: transparent;
+  color: var(--lp-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.dash-lifecycle button:hover:not(:disabled),
+.dash-lifecycle button[aria-pressed="true"] {
+  background: rgb(0 0 0 / 0.04);
+}
+
+.dash-lifecycle button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.dash-lifecycle-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.04);
+  color: var(--lp-ink-soft);
+}
+
+.dash-lifecycle [data-status="running"] .dash-lifecycle-icon {
+  background: rgb(79 154 58 / 0.12);
+  color: #2f6a22;
+}
+
+.dash-lifecycle [data-status="building"] .dash-lifecycle-icon {
+  background: rgb(201 138 43 / 0.14);
+  color: #8a5a14;
+}
+
+.dash-lifecycle [data-status="failed"] .dash-lifecycle-icon {
+  background: rgb(184 95 80 / 0.12);
+  color: #8c3f33;
+}
+
+.dash-lifecycle-text {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+
+.dash-lifecycle-text b {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.dash-lifecycle-text small {
+  overflow: hidden;
+  color: var(--lp-ink-faint);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-lifecycle button > svg:last-child {
+  color: var(--lp-ink-faint);
+  transition: transform 200ms var(--lp-ease);
+}
+
+.dash-lifecycle button:hover:not(:disabled) > svg:last-child {
+  transform: translateX(2px);
+}
+
+@media (max-width: 1100px) {
+  .dash-home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
