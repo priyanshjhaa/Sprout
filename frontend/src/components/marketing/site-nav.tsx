@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Brand } from "@/components/brand";
 import { ActionLink } from "@/components/marketing/action-link";
@@ -40,9 +39,6 @@ export function SiteNav() {
           </div>
           <div className="lp-nav-group">
             <a href="#ways-in">Ways in</a>
-          </div>
-          <div className="lp-nav-group">
-            <Link href="/sign-in">Sign in</Link>
           </div>
         </nav>
         <ActionLink href="/start" variant={solid ? "dark" : "light"} small>
