@@ -786,3 +786,25 @@
     padding-top: 32px;
   }
 }
+
+/* Clerk's "Last used" hint sits half outside the button corner by default, where the
+   pill's rounded clip cuts it off. Keep the hint, but as a small chip inside the pill. */
+.auth .auth-clerk .cl-lastAuthenticationStrategyBadge {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  left: auto;
+  bottom: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: rgb(255 255 255 / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+  color: rgb(255 255 255 / 0.78);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+  font-weight: 400;
+  line-height: 1.2;
+  transform: translateY(-50%);
+}
