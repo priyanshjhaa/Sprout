@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { useSidebarCollapsed } from "@/components/dashboard/use-sidebar-collapsed";
 import { WorkspaceSidebar } from "@/components/dashboard/workspace-sidebar";
 import { useWorkspace } from "@/lib/query/hooks";
 
@@ -33,6 +34,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   // The drawer remembers which page it was opened on, so navigating closes it.
   const [drawerPath, setDrawerPath] = useState<string | null>(null);
   const drawerOpen = drawerPath === pathname;
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed();
 
   if (workspaceUnavailable) {
     return (
@@ -52,8 +54,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const chip = backChip(pathname, base);
 
   return (
-    <div className="lp dash" data-drawer={drawerOpen || undefined}>
-      <WorkspaceSidebar workspaceSlug={workspaceSlug} />
+    <div className="lp dash" data-drawer={drawerOpen || undefined} data-collapsed={collapsed || undefined}>
+      <WorkspaceSidebar workspaceSlug={workspaceSlug} collapsed={collapsed} onToggle={toggleCollapsed} />
       <button
         type="button"
         className="dash-scrim"

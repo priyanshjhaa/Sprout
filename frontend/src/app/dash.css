@@ -2289,3 +2289,100 @@ a.dash-chip:hover svg {
 .dash-link-list a > svg {
   color: var(--lp-ink-faint);
 }
+
+/* Collapsible sidebar: folded down to icons, labels kept for assistive tech. */
+.dash {
+  transition: grid-template-columns 380ms var(--lp-ease);
+}
+
+.dash-collapse {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  place-items: center;
+  margin-left: auto;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--lp-ink-faint);
+  cursor: pointer;
+}
+
+.dash-collapse:hover {
+  background: rgb(0 0 0 / 0.05);
+  color: var(--lp-ink);
+}
+
+@media (min-width: 961px) {
+  .dash[data-collapsed] {
+    --dash-sidebar: 68px;
+  }
+
+  .dash[data-collapsed] .dash-sidebar {
+    align-items: center;
+    padding-inline: 10px;
+  }
+
+  .dash[data-collapsed] .dash-workspace {
+    flex-direction: column;
+  }
+
+  .dash[data-collapsed] .dash-collapse {
+    margin-left: 0;
+  }
+
+  /* Visually hidden, still announced. */
+  .dash[data-collapsed] :is(.dash-workspace-name, .dash-nav-link span, .sp-search-button span, .sp-search-button kbd, .dash-user-name, .dash-nav .lp-mono) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .dash[data-collapsed] :is(.dash-switcher, .dash-group:not(.dash-sidebar-foot .dash-group), .dash-nav-link em, .dash-user summary > svg) {
+    display: none;
+  }
+
+  .dash[data-collapsed] .dash-sidebar-foot .dash-group {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .dash[data-collapsed] .dash-sidebar-foot .dash-group summary {
+    display: none;
+  }
+
+  .dash[data-collapsed] .dash-sidebar-foot .dash-group > .dash-nav-link {
+    margin-left: 0;
+  }
+
+  .dash[data-collapsed] :is(.dash-nav-link, .sp-search-button) {
+    width: 40px;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .dash[data-collapsed] .dash-user {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .dash[data-collapsed] .dash-user summary {
+    padding: 4px;
+  }
+
+  .dash[data-collapsed] .dash-user-menu {
+    position: absolute;
+    bottom: 56px;
+    left: 10px;
+    z-index: 30;
+    width: 180px;
+    border: 0;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 0 0 1px var(--lp-line), 0 10px 30px rgb(0 0 0 / 0.1);
+  }
+}

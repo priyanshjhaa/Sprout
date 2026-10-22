@@ -1,7 +1,7 @@
 "use client";
 
 import { SignOutButton, useClerk, useUser } from "@clerk/nextjs";
-import { Boxes, ChevronDown, KeyRound, LayoutDashboard, LogOut, Rocket, Settings, UserCog, Users } from "lucide-react";
+import { Boxes, ChevronDown, KeyRound, LayoutDashboard, LogOut, PanelLeftClose, PanelLeftOpen, Rocket, Settings, UserCog, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CommandPalette } from "@/components/dashboard/command-palette";
@@ -17,7 +17,15 @@ const statusLabel: Record<AppStatus, string> = {
   archived: "Archived",
 };
 
-export function WorkspaceSidebar({ workspaceSlug }: { workspaceSlug: string }) {
+export function WorkspaceSidebar({
+  workspaceSlug,
+  collapsed,
+  onToggle,
+}: {
+  workspaceSlug: string;
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const base = `/workspace/${workspaceSlug}`;
@@ -54,6 +62,15 @@ export function WorkspaceSidebar({ workspaceSlug }: { workspaceSlug: string }) {
           <b>{workspace?.name ?? "Your workspace"}</b>
           <small>Sprout workspace</small>
         </span>
+        <button
+          type="button"
+          className="dash-collapse"
+          onClick={onToggle}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelLeftClose size={16} aria-hidden="true" />}
+        </button>
       </div>
 
       {otherWorkspaces.length > 0 && (
@@ -85,6 +102,7 @@ export function WorkspaceSidebar({ workspaceSlug }: { workspaceSlug: string }) {
             key={href}
             href={href}
             className="dash-nav-link"
+            title={collapsed ? label : undefined}
             aria-current={active ? "page" : undefined}
             style={{ "--i": index } as React.CSSProperties}
           >
@@ -120,12 +138,12 @@ export function WorkspaceSidebar({ workspaceSlug }: { workspaceSlug: string }) {
       </details>
 
       <div className="dash-sidebar-foot">
-        <details className="dash-group" open={settingsOpen || undefined}>
+        <details className="dash-group" open={collapsed || settingsOpen || undefined}>
           <summary>
             <Settings size={15} aria-hidden="true" /> Settings <ChevronDown size={14} aria-hidden="true" />
           </summary>
           {settings.map(({ label, href, icon: Icon }) => (
-            <Link key={href} href={href} className="dash-nav-link" aria-current={pathname === href ? "page" : undefined}>
+            <Link key={href} href={href} className="dash-nav-link" title={collapsed ? label : undefined} aria-current={pathname === href ? "page" : undefined}>
               <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
               <span>{label}</span>
             </Link>
