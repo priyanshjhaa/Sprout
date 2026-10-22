@@ -5,6 +5,7 @@ import { ChevronLeft, Menu, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { WorkspaceSidebar } from "@/components/dashboard/workspace-sidebar";
 import { useWorkspace } from "@/lib/query/hooks";
 
@@ -35,16 +36,16 @@ export function DashboardShell({ children }: { children: ReactNode }) {
 
   if (workspaceUnavailable) {
     return (
-      <main className="auth-page">
-        <section className="auth-card">
-          <h1>Workspace unavailable</h1>
+      <AuthShell mode="unavailable">
+        <div className="auth-status">
+          <h2>Workspace unavailable</h2>
           <p>You may no longer have access to this workspace.</p>
-          <Link className="button button-primary" href="/start">Open your workspace</Link>
+          <Link className="lp-btn lp-btn--dark" href="/start">Open your workspace</Link>
           <SignOutButton redirectUrl="/">
-            <button className="button button-secondary" type="button">Sign out</button>
+            <button className="lp-btn lp-btn--light" type="button">Sign out</button>
           </SignOutButton>
-        </section>
-      </main>
+        </div>
+      </AuthShell>
     );
   }
 

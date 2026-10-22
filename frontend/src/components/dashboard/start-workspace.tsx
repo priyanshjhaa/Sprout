@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { api } from "@/lib/api/api";
 import { useQuery } from "@tanstack/react-query";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { queryKeys } from "@/lib/query/keys";
 
 export function StartWorkspace() {
@@ -21,16 +22,21 @@ export function StartWorkspace() {
   }, [data, router]);
 
   return (
-    <main className="auth-page">
-      <section className="auth-card">
-        <p className="eyebrow">Your workspace</p>
-        <h1>{isError ? "We couldn't open your workspace." : "Getting your workspace ready."}</h1>
+    <AuthShell mode="start">
+      <div className="auth-status">
         {isError ? (
-          <button className="button button-primary" type="button" onClick={() => refetch()}>Try again</button>
+          <>
+            <h2>We couldn&apos;t open your workspace.</h2>
+            <p>Sprout could not reach your account just now. You can safely try again.</p>
+            <button className="lp-btn lp-btn--dark" type="button" onClick={() => refetch()}>Try again</button>
+          </>
         ) : (
-          <p>One moment while Sprout checks your account.</p>
+          <>
+            <span className="auth-spinner" aria-hidden="true" />
+            <p role="status">One moment while Sprout checks your account.</p>
+          </>
         )}
-      </section>
-    </main>
+      </div>
+    </AuthShell>
   );
 }

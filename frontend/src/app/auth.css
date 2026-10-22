@@ -808,3 +808,40 @@
   line-height: 1.2;
   transform: translateY(-50%);
 }
+
+/* Status screens in the auth frame: opening a workspace, or one that is out of reach. */
+.auth .auth-status {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  color: var(--lp-ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.auth .auth-status h2 {
+  margin: 0;
+  color: var(--lp-ink);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.auth .auth-status .lp-btn {
+  width: 100%;
+}
+
+.auth-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid rgb(47 90 43 / 0.15);
+  border-top-color: var(--lp-green);
+  border-radius: 50%;
+  animation: auth-spin 800ms linear infinite;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

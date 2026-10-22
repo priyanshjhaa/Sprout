@@ -4,18 +4,22 @@ import type { ReactNode } from "react";
 import { AuthCarousel } from "@/components/auth/auth-carousel";
 import { LandscapeScene } from "@/components/marketing/landscape-scene";
 
-type Mode = "sign-in" | "sign-up" | "invitation";
+type Mode = "sign-in" | "sign-up" | "invitation" | "start" | "unavailable";
 
 const titles: Record<Mode, string> = {
   "sign-in": "Sign in to Sprout",
   "sign-up": "Create your Sprout account",
   invitation: "Accept your invitation",
+  start: "Opening your workspace",
+  unavailable: "Workspace unavailable",
 };
 
 const taglines: Record<Mode, string> = {
   "sign-in": "Your apps are where you left them.",
   "sign-up": "Let's get your app online.",
   invitation: "Your team saved you a seat.",
+  start: "Getting your garden ready.",
+  unavailable: "This workspace is out of reach.",
 };
 
 function ModeSwitch({ mode, invitation }: { mode: "sign-in" | "sign-up"; invitation: boolean }) {
@@ -68,7 +72,7 @@ export function AuthShell({
 
         <main className="auth-body">
           <h1 className="sr-only">{titles[mode]}</h1>
-          {mode !== "invitation" && <ModeSwitch mode={mode} invitation={invitation} />}
+          {(mode === "sign-in" || mode === "sign-up") && <ModeSwitch mode={mode} invitation={invitation} />}
           <section className="auth-form" aria-label={titles[mode]}>
             {children}
           </section>

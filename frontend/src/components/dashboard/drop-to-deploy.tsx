@@ -103,8 +103,8 @@ export function DropToDeploy({ workspaceSlug }: { workspaceSlug: string }) {
           </>}
           {problem && <p className="deploy-error" role="alert">{problem}</p>}
           <div className="sp-drop-actions">
-            <button type="button" className="sp-button sp-button-outline" onClick={() => dialog.current?.close()} disabled={busy}>{chosen ? "Cancel" : "Close"}</button>
-            {chosen && <button className="sp-button sp-button-solid" disabled={busy || !name.trim() || !slugify(name) || !!problem}><Sprout size={15} /> {busy ? "Planting…" : warnings.length > 0 ? "Deploy anyway" : "Create and deploy"}</button>}
+            <button type="button" className="lp-btn lp-btn--light lp-btn--small" onClick={() => dialog.current?.close()} disabled={busy}>{chosen ? "Cancel" : "Close"}</button>
+            {chosen && <button className="lp-btn lp-btn--dark lp-btn--small" disabled={busy || !name.trim() || !slugify(name) || !!problem}><Sprout size={15} /> {busy ? "Planting…" : warnings.length > 0 ? "Deploy anyway" : "Create and deploy"}</button>}
           </div>
         </form>
       </dialog>
