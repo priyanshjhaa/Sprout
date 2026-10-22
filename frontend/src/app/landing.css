@@ -1999,3 +1999,224 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* App types letter grid */
+.lp-types {
+  padding-block: 120px;
+}
+
+.lp-types-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 64px;
+}
+
+.lp-types header {
+  display: grid;
+  gap: 16px;
+}
+
+.lp-types-current {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.lp-types-current b {
+  color: var(--lp-green);
+  font-size: 28px;
+  font-weight: 400;
+  animation: lp-word 600ms var(--lp-ease) both;
+}
+
+.lp-types-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lp-types-list li {
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: rgb(0 0 0 / 0.04);
+  color: var(--lp-ink-soft);
+  font-size: 12.5px;
+}
+
+.lp-letters {
+  display: grid;
+  gap: 2px;
+  padding: 22px;
+  font-family: var(--font-label), monospace;
+  font-size: clamp(12px, 1.5vw, 17px);
+  text-align: center;
+}
+
+.lp-letters-row {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+}
+
+.lp-letters-row span {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 4px;
+  color: rgb(38 35 35 / 0.28);
+  transition:
+    color 300ms ease,
+    background-color 300ms ease,
+    transform 400ms var(--lp-ease);
+}
+
+.lp-letters-row[data-active] span[data-word] {
+  background: var(--lp-green);
+  color: #fff;
+  transform: translateY(-2px);
+  transition-delay: calc(var(--c) * 45ms);
+}
+
+@media (max-width: 960px) {
+  .lp-types-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Footer */
+.lp-footer {
+  padding-top: 96px;
+}
+
+.lp-footer-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 48px;
+  padding-bottom: 72px;
+}
+
+.lp-footer-cta {
+  display: grid;
+  max-width: 440px;
+  justify-items: start;
+  gap: 24px;
+}
+
+.lp-footer-links {
+  display: flex;
+  gap: 64px;
+}
+
+.lp-footer-links div {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.lp-footer-links .lp-mono {
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.lp-footer-links a {
+  color: var(--lp-ink-soft);
+  font-size: 15px;
+  transition: color 160ms ease;
+}
+
+.lp-footer-links a:hover {
+  color: var(--lp-ink);
+}
+
+.lp-footer-ground {
+  position: relative;
+  /* Anchored to the bottom at full width, so the soil line sits at a known height. */
+  height: clamp(260px, 26vw, 480px);
+  background:
+    url("/images/landscape/landscape-grass.webp") center bottom / 100% auto no-repeat,
+    url("/images/landscape/landscape-ground.webp") center bottom / 100% auto no-repeat;
+  background-color: var(--lp-surface);
+  background-blend-mode: multiply;
+}
+
+/* Overrides the generic reveal so the ground stays put while its sprouts grow. */
+.lp .lp-footer-ground[data-reveal] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.lp-footer-sprouts svg {
+  position: absolute;
+  bottom: calc(100vw * 0.158);
+  width: 26px;
+  height: 40px;
+  overflow: visible;
+}
+
+.lp-mini-stem {
+  fill: none;
+  stroke: #5f7f36;
+  stroke-linecap: round;
+  stroke-width: 2.2;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+}
+
+.lp-mini-leaf {
+  fill: #86b04f;
+  transform: scale(0);
+  transform-box: fill-box;
+  transform-origin: 100% 100%;
+}
+
+.lp-mini-leaf--right {
+  fill: #9cc463;
+  transform-origin: 0 100%;
+}
+
+.lp-footer-ground[data-shown] .lp-mini-stem {
+  animation: lp-grow-stem 900ms var(--lp-ease) forwards;
+  animation-delay: calc(var(--i) * 140ms);
+}
+
+.lp-footer-ground[data-shown] .lp-mini-leaf {
+  animation: lp-leaf-open 700ms var(--lp-ease) forwards;
+  animation-delay: calc(var(--i) * 140ms + 700ms);
+}
+
+@keyframes lp-leaf-open {
+  to {
+    transform: scale(1);
+  }
+}
+
+@media (scripting: none), (prefers-reduced-motion: reduce) {
+  .lp-mini-stem {
+    stroke-dashoffset: 0;
+  }
+
+  .lp-mini-leaf {
+    transform: none;
+  }
+}
+
+.lp-footer-bottom {
+  position: absolute;
+  inset: auto 0 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgb(244 240 230 / 0.75);
+  font-size: 13px;
+}
+
+.lp .lp-footer-bottom .brand {
+  color: #f4f0e6;
+}
