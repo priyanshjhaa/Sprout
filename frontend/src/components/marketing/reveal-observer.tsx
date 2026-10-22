@@ -24,10 +24,27 @@ export function RevealObserver() {
       { threshold: 0.2 },
     );
 
-    document.querySelectorAll("[data-reveal]").forEach((element) => reveal.observe(element));
-    document.querySelectorAll("[data-animate]").forEach((element) => play.observe(element));
+    const observeWithin = (root: ParentNode) => {
+      root.querySelectorAll("[data-reveal]:not([data-shown])").forEach((element) => reveal.observe(element));
+      root.querySelectorAll("[data-animate]").forEach((element) => play.observe(element));
+    };
+    observeWithin(document);
+
+    // Sections rendered after this effect (client components, remounts) are picked up too.
+    const added = new MutationObserver((records) => {
+      for (const record of records) {
+        record.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          if (node.matches("[data-reveal]:not([data-shown])")) reveal.observe(node);
+          if (node.matches("[data-animate]")) play.observe(node);
+          observeWithin(node);
+        });
+      }
+    });
+    added.observe(document.body, { childList: true, subtree: true });
 
     return () => {
+      added.disconnect();
       reveal.disconnect();
       play.disconnect();
     };
