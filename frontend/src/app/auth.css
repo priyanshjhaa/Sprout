@@ -1,0 +1,847 @@
+/* Sign-in, sign-up, and invitation acceptance. Builds on the .lp landing tokens. */
+
+/* A landscape showcase on the left, the form on the right. */
+.auth {
+  display: grid;
+  min-height: 100svh;
+  grid-template-columns: minmax(0, 1.05fr) minmax(400px, 0.95fr);
+}
+
+.auth-showcase {
+  position: sticky;
+  top: 0;
+  display: grid;
+  height: calc(100svh - 60px);
+  min-height: 560px;
+  margin: 30px 0 30px 30px;
+  overflow: hidden;
+  border-radius: 14px;
+  isolation: isolate;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.06),
+    0 24px 48px rgb(0 0 0 / 0.12),
+    0 4px 10px rgb(0 0 0 / 0.06);
+  animation: auth-showcase-in 1100ms var(--lp-ease) both;
+}
+
+@keyframes auth-showcase-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.auth-showcase .lp-hero-sky,
+.auth-showcase .lp-hero-ground,
+.auth-showcase .lp-hero-grass {
+  background-position: center 70%;
+}
+
+.auth-panel {
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 24px;
+}
+
+.auth-head {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 48px;
+  text-align: center;
+}
+
+/* A serif wordmark, as quiet as the rest of the panel. */
+.auth-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--lp-ink);
+  font-family: var(--font-hero), serif;
+  font-size: 40px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  animation: lp-word 900ms var(--lp-ease) 200ms both;
+}
+
+.auth-wordmark .brand-mark {
+  transform: scale(1.3);
+  transition: transform 500ms var(--lp-ease);
+}
+
+.auth-wordmark:hover .brand-mark {
+  transform: scale(1.3) rotate(-8deg);
+}
+
+.auth-tagline {
+  color: var(--lp-ink-faint);
+  font-size: 17px;
+}
+
+.auth-tagline span {
+  display: inline-block;
+  animation: lp-word 900ms var(--lp-ease) 380ms both;
+}
+
+.auth-body {
+  display: flex;
+  width: min(384px, 100%);
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 36px 0 28px;
+}
+
+/* Sign In / Sign Up switch with a thumb that slides into place. */
+.auth-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 232px;
+  border-radius: 999px;
+  padding: 3px;
+  background: linear-gradient(#ebebe8, var(--lp-surface));
+  box-shadow:
+    inset 0 -0.5px 0 rgb(0 0 0 / 0.12),
+    inset 0 -1px 2px rgb(0 0 0 / 0.1),
+    inset 0 1px 1px rgb(255 255 255 / 0.24),
+    0 0 0 1px rgb(0 0 0 / 0.05);
+  animation: lp-word 800ms var(--lp-ease) 400ms both;
+}
+
+.auth-switch a {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  color: rgb(32 32 32 / 0.45);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: color 300ms ease;
+}
+
+.auth-switch a[aria-current="page"] {
+  color: rgb(32 32 32 / 0.9);
+}
+
+.auth-switch a:not([aria-current]):hover {
+  color: rgb(32 32 32 / 0.7);
+}
+
+.auth-switch-thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: linear-gradient(#fff, var(--lp-surface));
+  box-shadow:
+    inset 0 0.33px 0.67px rgb(255 255 255 / 0.15),
+    0 0.33px 0.4px rgb(0 0 0 / 0.24),
+    0 0.67px 0.67px rgb(255 255 255 / 0.1),
+    0 0 1.34px rgb(0 0 0 / 0.2),
+    0 2px 6px rgb(0 0 0 / 0.06);
+}
+
+.auth-switch[data-mode="sign-up"] .auth-switch-thumb {
+  transform: translateX(100%);
+  animation: auth-thumb-right 520ms var(--lp-ease) 500ms both;
+}
+
+.auth-switch[data-mode="sign-in"] .auth-switch-thumb {
+  animation: auth-thumb-left 520ms var(--lp-ease) 500ms both;
+}
+
+@keyframes auth-thumb-right {
+  from {
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-thumb-left {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+.auth-form {
+  width: 100%;
+  animation: lp-word 900ms var(--lp-ease) 550ms both;
+}
+
+.auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--lp-ink-faint);
+  font-size: 13px;
+  transition: color 160ms ease;
+}
+
+.auth-back:hover {
+  color: var(--lp-ink);
+}
+
+.auth-back svg {
+  transition: transform 200ms var(--lp-ease);
+}
+
+.auth-back:hover svg {
+  transform: translateX(-3px);
+}
+
+/* A quiet serif sign-off at the foot of the page. */
+.auth-signoff {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin-top: auto;
+  padding: 24px 16px 32px;
+  color: rgb(32 32 32 / 0.55);
+  font-family: var(--font-hero), serif;
+  font-size: 17px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.auth-signoff span:first-child {
+  color: rgb(32 32 32 / 0.8);
+}
+
+
+/* Clerk, restyled. Selectors are scoped under .auth so they outrank Clerk's own styles. */
+.auth .auth-clerk,
+.auth .auth-clerk-box,
+.auth .auth-clerk-card {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth .auth-clerk-card {
+  gap: 20px;
+  padding: 0;
+}
+
+/* On the first step the switch already says where you are. Later steps keep their headings. */
+.auth .cl-signIn-start .cl-header,
+.auth .cl-signUp-start .cl-header,
+.auth .cl-signIn-start .cl-footerAction,
+.auth .cl-signUp-start .cl-footerAction {
+  display: none;
+}
+
+.auth .cl-headerTitle {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* Stacked one per row, like a list of doors. */
+.auth .auth-clerk .auth-socials {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Dark pill buttons with an inset highlight and a stacked drop shadow. */
+.auth .auth-clerk .auth-pill {
+  position: relative;
+  min-height: 52px;
+  overflow: hidden;
+  border: 2px solid #4f4f4f;
+  border-radius: 999px;
+  background: linear-gradient(to top, #0f0f0f, #262626);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.5),
+    inset 0 0 0.4px 1px rgb(255 255 255 / 0.15),
+    0 2px 3px rgb(0 0 0 / 0.2),
+    0 6px 6px rgb(0 0 0 / 0.17),
+    0 14px 8px rgb(0 0 0 / 0.1),
+    0 25px 10px rgb(0 0 0 / 0.03);
+  transition:
+    transform 180ms var(--lp-ease),
+    box-shadow 180ms var(--lp-ease);
+}
+
+.auth .auth-clerk .auth-pill:hover {
+  background: linear-gradient(to top, #161616, #2e2e2e);
+  transform: translateY(-1px);
+}
+
+.auth .auth-clerk .auth-pill:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.4),
+    0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+.auth .auth-clerk .auth-pill:focus-visible {
+  outline: 2px solid var(--lp-green);
+  outline-offset: 3px;
+}
+
+.auth .auth-clerk .auth-pill--primary {
+  border-color: #4f4f4f;
+}
+
+.auth .auth-clerk .auth-pill .cl-socialButtonsBlockButtonText,
+.auth .auth-clerk .auth-pill--primary {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* GitHub's mark is black; flip it so it reads on the dark pill. */
+.auth .cl-socialButtonsProviderIcon__github {
+  filter: invert(1);
+}
+
+.auth .auth-divider {
+  margin-block: 4px;
+}
+
+.auth .auth-divider .cl-dividerLine {
+  background: rgb(0 0 0 / 0.08);
+}
+
+.auth .auth-divider .cl-dividerText {
+  color: rgb(32 32 32 / 0.5);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.auth .auth-label {
+  color: var(--lp-ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.auth .auth-input {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  padding-inline: 16px;
+  background: #fff;
+  color: var(--lp-ink);
+  font-size: 15px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: box-shadow 180ms ease;
+}
+
+.auth .auth-input:hover {
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+.auth .auth-input:focus {
+  box-shadow: 0 0 0 1px var(--lp-green), 0 0 0 4px rgb(47 90 43 / 0.15);
+}
+
+.auth .auth-clerk-footer {
+  background: transparent;
+}
+
+.auth .auth-clerk-footer .cl-footerActionLink {
+  color: var(--lp-green);
+}
+
+/* Clerk renders after hydration, so its pieces rise in one after another. */
+.auth .auth-clerk .auth-socials > * {
+  animation: lp-word 700ms var(--lp-ease) both;
+}
+
+.auth .auth-clerk .auth-socials > :nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.auth .auth-clerk .auth-socials > :nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.auth .auth-clerk .auth-divider {
+  animation: lp-word 700ms var(--lp-ease) 200ms both;
+}
+
+.auth .auth-clerk .cl-form {
+  animation: lp-word 700ms var(--lp-ease) 280ms both;
+}
+
+/* A soft sheen sweeps across a pill on hover. */
+.auth .auth-clerk .auth-pill::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.16) 50%, transparent 65%);
+  content: "";
+  pointer-events: none;
+  transform: translateX(-120%);
+  transition: transform 900ms var(--lp-ease);
+}
+
+.auth .auth-clerk .auth-pill:hover::before {
+  transform: translateX(120%);
+}
+
+/* Invitation acceptance inside the same frame. */
+.auth .invitation-accept {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  color: var(--lp-ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.auth .invitation-accept .eyebrow {
+  margin: 0;
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.auth .invitation-accept h1 {
+  margin: 0 0 4px;
+  color: var(--lp-ink);
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.auth .invitation-accept .button {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.auth .invitation-accept .button-primary {
+  border: 2px solid #4f4f4f;
+  background: linear-gradient(to top, #0f0f0f, #262626);
+  color: #fff;
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.5),
+    0 2px 3px rgb(0 0 0 / 0.2),
+    0 6px 6px rgb(0 0 0 / 0.17),
+    0 14px 8px rgb(0 0 0 / 0.1);
+}
+
+.auth .invitation-accept .button-secondary {
+  border-color: rgb(0 0 0 / 0.1);
+  background: #fff;
+  color: var(--lp-ink);
+}
+
+.auth .invitation-accept > a:last-child {
+  color: var(--lp-green);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Showcase carousel: one slide at a time, centred over the sky. */
+.auth-carousel {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  padding: 48px 40px 28px;
+}
+
+.auth-slides {
+  display: grid;
+  align-items: center;
+}
+
+.auth-slide {
+  display: grid;
+  grid-area: 1 / 1;
+  justify-items: center;
+  gap: 14px;
+  color: var(--lp-ink);
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms var(--lp-ease),
+    transform 700ms var(--lp-ease),
+    visibility 0s 600ms;
+}
+
+.auth-slide[data-active] {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 150ms, 150ms, 0s;
+}
+
+.auth-slide h2 {
+  max-width: 16em;
+  font-size: clamp(24px, 2.2vw, 30px);
+  line-height: 1.15;
+}
+
+.auth-slide > p {
+  max-width: 30em;
+  color: var(--lp-ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.auth-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auth-dots button {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: rgb(255 255 255 / 0.35);
+  cursor: pointer;
+  transition: width 400ms var(--lp-ease), background-color 200ms ease;
+}
+
+.auth-dots button:hover {
+  background: rgb(255 255 255 / 0.6);
+}
+
+/* The active dot stretches and fills while its slide is showing. */
+.auth-dots button[aria-current] {
+  width: 30px;
+}
+
+.auth-dots button[aria-current]::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #fff;
+  content: "";
+  transform-origin: left;
+  animation: auth-dot-fill var(--interval) linear both;
+}
+
+.auth-carousel[data-paused] .auth-dots button::after {
+  animation-play-state: paused;
+}
+
+@keyframes auth-dot-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Small product visuals inside each slide. */
+.auth-visual {
+  width: min(400px, 100%);
+  margin: 18px 0 0;
+  border-radius: 14px;
+  padding: 14px;
+  background: rgb(255 255 255 / 0.62);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.7), 0 18px 40px rgb(60 50 30 / 0.14);
+  backdrop-filter: blur(10px);
+  list-style: none;
+  text-align: left;
+}
+
+.auth-visual-stages,
+.auth-visual-team {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-visual-stages li,
+.auth-visual-team li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+  font-size: 13.5px;
+}
+
+.auth-slide[data-active] .auth-visual-stages li,
+.auth-slide[data-active] .auth-visual-team li {
+  animation: lp-member 600ms var(--lp-ease) both;
+  animation-delay: calc(400ms + var(--i) * 260ms);
+}
+
+.auth-visual-stages b {
+  display: block;
+  font-weight: 500;
+}
+
+.auth-visual-stages small {
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+}
+
+.auth-visual-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgb(0 0 0 / 0.05);
+}
+
+.auth-visual-check {
+  margin-left: auto;
+  color: #4f9a3a;
+}
+
+.auth-slide[data-active] .auth-visual-check {
+  animation: auth-check 400ms var(--lp-ease) both;
+  animation-delay: calc(900ms + var(--i) * 260ms);
+}
+
+.auth-visual-stages li:nth-child(1) .auth-visual-check {
+  --i: 0;
+}
+
+.auth-visual-stages li:nth-child(2) .auth-visual-check {
+  --i: 1;
+}
+
+.auth-visual-stages li:nth-child(3) .auth-visual-check {
+  --i: 2;
+}
+
+@keyframes auth-check {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+.auth-visual-live {
+  padding: 0;
+  overflow: hidden;
+}
+
+.auth-visual-browser {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 12px;
+  background: rgb(255 255 255 / 0.7);
+  box-shadow: 0 1px 0 var(--lp-line);
+}
+
+.auth-visual-browser i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.12);
+}
+
+.auth-visual-browser span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-inline: auto;
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+}
+
+.auth-visual-live-body {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 26px 20px 28px;
+  background: #fff;
+}
+
+.auth-visual-live-body b {
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.auth-visual-live-body small {
+  color: var(--lp-ink-faint);
+  font-size: 13px;
+}
+
+.auth-visual-badge {
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: rgb(79 154 58 / 0.14);
+  color: #2f6a22;
+  font-family: var(--font-label), monospace;
+  font-size: 11px;
+}
+
+.auth-slide[data-active] .auth-visual-badge {
+  animation: lp-pop 600ms var(--lp-ease) 700ms both;
+}
+
+.auth-visual-sleep {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.auth-visual-sleep i {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: var(--lp-leaf);
+  animation: auth-doze 6s ease-in-out infinite;
+}
+
+@keyframes auth-doze {
+  0%,
+  35% {
+    background: var(--lp-leaf);
+  }
+  45%,
+  80% {
+    background: rgb(0 0 0 / 0.08);
+  }
+  90%,
+  100% {
+    background: var(--lp-leaf);
+  }
+}
+
+.auth-visual-sleep p {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--lp-ink-soft);
+  font-size: 13px;
+}
+
+.auth-visual-team i {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  background: #dfe8d2;
+  color: var(--lp-green);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.auth-visual-team em {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: rgb(0 0 0 / 0.05);
+  color: var(--lp-ink-soft);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+  font-style: normal;
+}
+
+/* Narrow screens: the showcase becomes a short landscape banner above the form. */
+@media (max-width: 1000px) {
+  .auth {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-showcase {
+    position: relative;
+    height: 180px;
+    min-height: 0;
+    margin: 12px 12px 0;
+  }
+
+  .auth-carousel {
+    display: none;
+  }
+
+  .auth-panel {
+    min-height: 0;
+  }
+
+  .auth-head {
+    margin-top: 0;
+    padding-top: 32px;
+  }
+}
+
+/* Clerk's "Last used" hint sits half outside the button corner by default, where the
+   pill's rounded clip cuts it off. Keep the hint, but as a small chip inside the pill. */
+.auth .auth-clerk .cl-lastAuthenticationStrategyBadge {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  left: auto;
+  bottom: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: rgb(255 255 255 / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+  color: rgb(255 255 255 / 0.78);
+  font-family: var(--font-label), monospace;
+  font-size: 10.5px;
+  font-weight: 400;
+  line-height: 1.2;
+  transform: translateY(-50%);
+}
+
+/* Status screens in the auth frame: opening a workspace, or one that is out of reach. */
+.auth .auth-status {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  color: var(--lp-ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.auth .auth-status h2 {
+  margin: 0;
+  color: var(--lp-ink);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.auth .auth-status .lp-btn {
+  width: 100%;
+}
+
+.auth-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid rgb(47 90 43 / 0.15);
+  border-top-color: var(--lp-green);
+  border-radius: 50%;
+  animation: auth-spin 800ms linear infinite;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

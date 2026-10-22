@@ -1,7 +1,8 @@
 import { SignUp } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { AuthExperience, authAppearance } from "@/components/auth/auth-experience";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { authAppearance } from "@/components/auth/clerk-appearance";
 
 export default async function SignUpPage({ searchParams }: { searchParams: Promise<{ invitation?: string }> }) {
   const invitation = (await searchParams).invitation === "1";
@@ -10,8 +11,8 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
   if (userId) redirect(destination);
 
   return (
-    <AuthExperience mode="sign-up">
+    <AuthShell mode="sign-up" invitation={invitation}>
       <SignUp routing="path" path="/sign-up" appearance={authAppearance} forceRedirectUrl={destination} signInForceRedirectUrl={destination} signInUrl={invitation ? "/sign-in?invitation=1" : "/sign-in"} />
-    </AuthExperience>
+    </AuthShell>
   );
 }

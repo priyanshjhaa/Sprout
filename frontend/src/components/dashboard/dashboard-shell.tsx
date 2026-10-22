@@ -1,77 +1,94 @@
 "use client";
 
-import { Boxes, LayoutDashboard, Rocket, Sprout, Users } from "lucide-react";
+import { SignOutButton } from "@clerk/nextjs";
+import { ChevronLeft, Menu, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { SignOutButton, UserButton } from "@clerk/nextjs";
-import { useParams, usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
-import { CommandPalette } from "@/components/dashboard/command-palette";
-import { Brand } from "@/components/brand";
-import { useWorkspace, useWorkspaces } from "@/lib/query/hooks";
+import { useParams, usePathname } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { useSidebarCollapsed } from "@/components/dashboard/use-sidebar-collapsed";
+import { WorkspaceSidebar } from "@/components/dashboard/workspace-sidebar";
+import { useWorkspace } from "@/lib/query/hooks";
 
-const navigationItems = [
-  { label: "Overview", path: "", icon: LayoutDashboard },
-  { label: "Apps", path: "apps", icon: Boxes },
-  { label: "Team", path: "team", icon: Users },
-];
+// The chip in the top bar names where you are, and links up a level when you are deeper.
+function backChip(pathname: string, base: string): { label: string; href?: string } {
+  const rest = pathname.slice(base.length).split("/").filter(Boolean);
+  if (rest.length === 0) return { label: "Overview" };
+  if (rest[0] === "apps" && rest.length > 1) return { label: "Apps", href: `${base}/apps` };
+  const labels: Record<string, string> = {
+    apps: "Apps",
+    deploy: "Deploy",
+    team: "Team",
+    tokens: "Access tokens",
+    settings: "Settings",
+  };
+  return { label: labels[rest[0]] ?? "Overview", href: base };
+}
 
 export function DashboardShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const workspaces = useWorkspaces();
   const params = useParams<{ workspaceSlug: string }>();
   const workspaceSlug = params.workspaceSlug ?? "acme";
-  const { data: workspace, isError: workspaceUnavailable } = useWorkspace(workspaceSlug);
-
-  const navigation = (items: typeof navigationItems) =>
-    items.map(({ label, path, icon: Icon }) => {
-      const href = path ? `/workspace/${workspaceSlug}/${path}` : `/workspace/${workspaceSlug}`;
-      const active = pathname === href || (path === "apps" && pathname.startsWith(`${href}/`));
-      return (
-        <Link
-          key={path}
-          className={`sp-bar-link${active ? " active" : ""}`}
-          href={href}
-        >
-          <Icon size={15} strokeWidth={1.9} />
-          <span>{label}</span>
-        </Link>
-      );
-    });
+  const base = `/workspace/${workspaceSlug}`;
+  const { isError: workspaceUnavailable } = useWorkspace(workspaceSlug);
+  // The drawer remembers which page it was opened on, so navigating closes it.
+  const [drawerPath, setDrawerPath] = useState<string | null>(null);
+  const drawerOpen = drawerPath === pathname;
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed();
 
   if (workspaceUnavailable) {
-    return <main className="auth-page"><section className="auth-card"><h1>Workspace unavailable</h1><p>You may no longer have access to this workspace.</p><Link className="button button-primary" href="/start">Open your workspace</Link><SignOutButton redirectUrl="/"><button className="button button-secondary" type="button">Sign out</button></SignOutButton></section></main>;
+    return (
+      <AuthShell mode="unavailable">
+        <div className="auth-status">
+          <h2>Workspace unavailable</h2>
+          <p>You may no longer have access to this workspace.</p>
+          <Link className="lp-btn lp-btn--dark" href="/start">Open your workspace</Link>
+          <SignOutButton redirectUrl="/">
+            <button className="lp-btn lp-btn--light" type="button">Sign out</button>
+          </SignOutButton>
+        </div>
+      </AuthShell>
+    );
   }
 
-  return (
-    <div className="sp-frame">
-      <div className="sp-grain" aria-hidden="true" />
-      <header className="sp-bar">
-        <Brand />
-        <nav className="sp-bar-nav" aria-label="Workspace navigation">
-          {navigation(navigationItems)}
-        </nav>
-        <div className="sp-bar-end">
-          <CommandPalette workspaceSlug={workspaceSlug} />
-          <div className="sp-workspace">
-            <span className="sp-workspace-mark"><Sprout size={15} strokeWidth={2} /></span>
-            <label><span className="sr-only">Switch workspace</span>
-              <select value={workspaceSlug} aria-label="Switch workspace" disabled={workspaces.isLoading || workspaces.isError} onChange={(event) => router.push(`/workspace/${encodeURIComponent(event.target.value)}`)}>
-                {!workspaces.data?.some((item) => item.slug === workspaceSlug) && <option value={workspaceSlug}>{workspace?.name ?? "Your workspace"}</option>}
-                {workspaces.data?.map((item) => <option value={item.slug} key={item.id}>{item.name}</option>)}
-              </select>
-              <small>{workspaces.isError ? "Could not load workspaces" : "Workspace"}</small>
-            </label>
-          </div>
-          <Link className="sp-button sp-button-solid" href={`/workspace/${workspaceSlug}/deploy`}>
-            <Rocket size={15} strokeWidth={2.2} /> Deploy
-          </Link>
-          <UserButton />
-        </div>
-      </header>
+  const chip = backChip(pathname, base);
 
-      <div className="sp-main">
-        {children}
+  return (
+    <div className="lp dash" data-drawer={drawerOpen || undefined} data-collapsed={collapsed || undefined}>
+      <WorkspaceSidebar workspaceSlug={workspaceSlug} collapsed={collapsed} onToggle={toggleCollapsed} />
+      <button
+        type="button"
+        className="dash-scrim"
+        aria-label="Close navigation"
+        tabIndex={drawerOpen ? 0 : -1}
+        onClick={() => setDrawerPath(null)}
+      />
+
+      <div className="dash-panel">
+        <header className="dash-topbar">
+          {chip.href ? (
+            <Link className="dash-chip" href={chip.href}>
+              <ChevronLeft size={14} aria-hidden="true" /> {chip.label}
+            </Link>
+          ) : (
+            <span className="dash-chip" aria-current="page">{chip.label}</span>
+          )}
+          <div className="dash-topbar-end">
+            <Link className="lp-btn lp-btn--dark lp-btn--small" href={`${base}/deploy`}>
+              <Plus size={15} aria-hidden="true" /> Deploy
+            </Link>
+            <button
+              type="button"
+              className="dash-icon-button dash-menu-button"
+              aria-label={drawerOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={drawerOpen}
+              onClick={() => setDrawerPath(drawerOpen ? null : pathname)}
+            >
+              {drawerOpen ? <X size={17} /> : <Menu size={17} />}
+            </button>
+          </div>
+        </header>
+        <div className="sp-main">{children}</div>
       </div>
     </div>
   );

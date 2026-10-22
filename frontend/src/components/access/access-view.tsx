@@ -39,24 +39,24 @@ export function AccessView({ workspaceSlug, appId }: { workspaceSlug: string; ap
   const mode = access.data?.accessMode;
 
   return (
-    <section className="app-section access-view">
-      <header className="section-heading">
+    <section className="dash-stack">
+      <header className="dash-subhead">
         <div><h2>Access</h2><p>Choose who can see and manage this application in Sprout.</p></div>
       </header>
 
-      {access.isLoading && <p className="variable-loading" role="status">Loading access…</p>}
-      {access.isError && <p className="variable-loading" role="alert">{access.error.message}</p>}
-      {change.isError && <p className="variable-loading" role="alert">{change.error.message}</p>}
+      {access.isLoading && <p className="dash-note" role="status">Loading access…</p>}
+      {access.isError && <p className="dash-callout dash-callout--error" role="alert">{access.error.message}</p>}
+      {change.isError && <p className="dash-callout dash-callout--error" role="alert">{change.error.message}</p>}
 
       {access.data && <>
-        <section className="workspace-access-card">
-          <span className="panel-icon"><ShieldCheck size={16} /></span>
+        <section className="dash-setting-row">
+          <span className="dash-next-icon"><ShieldCheck size={16} aria-hidden="true" /></span>
           <div>
             <h3>Workspace access</h3>
             <p>{mode === "workspace" ? "Every member can view its Sprout page. Workspace editors can change it." : "Only the creator, workspace owners, and people granted access can view its Sprout page."}</p>
           </div>
           <button
-            className={`toggle${mode === "workspace" ? " on" : ""}`}
+            className="dash-switch"
             type="button"
             role="switch"
             aria-label="Allow all workspace members to access this application"
@@ -66,18 +66,18 @@ export function AccessView({ workspaceSlug, appId }: { workspaceSlug: string; ap
           ><span /></button>
         </section>
 
-        <section className="members-panel">
-          <header><span>Workspace members</span><small>{members.data?.length ?? 0} people</small></header>
-          <div className="member-list">
-            {members.isLoading && <p className="variable-loading" role="status">Loading members…</p>}
-            {members.isError && <p className="variable-loading" role="alert">{members.error.message}</p>}
-            {members.data?.map((member) => {
+        <section className="dash-panel-card">
+          <div className="dash-panel-card-head"><h3>Workspace members</h3><small>{members.data?.length ?? 0} people</small></div>
+          <ul className="dash-members">
+            {members.isLoading && <li className="dash-note" role="status">Loading members…</li>}
+            {members.isError && <li className="dash-callout dash-callout--error" role="alert">{members.error.message}</li>}
+            {members.data?.map((member, index) => {
               const grant = access.data.grants.find((item) => item.id === member.id);
               const inherited = member.role === "owner" || member.id === access.data.createdBy;
-              return <div className="member-row" key={member.id}>
-                <span className="member-avatar">{initials(member.displayName)}</span>
-                <div><strong>{member.displayName}</strong><small>{member.email}</small></div>
-                {inherited ? <span className="member-inherited">{member.role === "owner" ? "Owner" : "Creator"}</span> :
+              return <li className="dash-member" key={member.id} style={{ "--i": index } as React.CSSProperties}>
+                <span className="dash-avatar" aria-hidden="true">{initials(member.displayName)}</span>
+                <span className="dash-member-name"><strong>{member.displayName}</strong><small>{member.email}</small></span>
+                {inherited ? <span className="dash-role">{member.role === "owner" ? "Owner" : "Creator"}</span> :
                   <select
                     aria-label={`Application access for ${member.displayName}`}
                     value={grant?.role ?? ""}
@@ -92,11 +92,10 @@ export function AccessView({ workspaceSlug, appId }: { workspaceSlug: string; ap
                     <option value="viewer">Viewer</option>
                     <option value="editor">Editor</option>
                   </select>}
-                <span aria-hidden="true" />
-              </div>;
+              </li>;
             })}
-          </div>
-          <footer><Link2 size={12} /> Live apps are public; these controls decide who can see and manage this app in Sprout. Invite new members from the Team page.</footer>
+          </ul>
+          <p className="dash-panel-card-foot"><Link2 size={12} aria-hidden="true" /> Live apps are public; these controls decide who can see and manage this app in Sprout. Invite new members from the Team page.</p>
         </section>
       </>}
     </section>

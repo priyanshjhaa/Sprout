@@ -1,129 +1,156 @@
 "use client";
 
-import { ArrowRight, Rocket } from "lucide-react";
+import { AlertTriangle, Archive, ChevronRight, Globe, Hammer, Moon, Plus, Sprout } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useRef } from "react";
+import { useState } from "react";
 import { DropToDeploy } from "@/components/dashboard/drop-to-deploy";
+import { WorkspaceHero } from "@/components/dashboard/workspace-hero";
+import { AppCard } from "@/components/apps/app-card";
 import { Plant } from "@/components/plant";
-import { StatusPill } from "@/components/status-pill";
 import { useApplications, useWorkspace } from "@/lib/query/hooks";
-import type { AppStatus, Application } from "@/types/domain";
+import type { AppStatus } from "@/types/domain";
 
 // The lifecycle Sprout keeps visible, in the order an app moves through it.
-const phases: Array<{ status: AppStatus; label: string; hint: string }> = [
-  { status: "undeployed", label: "Ready", hint: "created, not deployed" },
-  { status: "building", label: "Building", hint: "being built sealed off" },
-  { status: "running", label: "Live", hint: "serving a public URL" },
-  { status: "failed", label: "Needs attention", hint: "a deployment failed" },
-  { status: "paused", label: "Paused", hint: "on hold" },
-  { status: "archived", label: "Archived", hint: "kept for reference" },
+const phases: Array<{ status: AppStatus; label: string; hint: string; icon: typeof Globe }> = [
+  { status: "running", label: "Live", hint: "Serving a public URL", icon: Globe },
+  { status: "building", label: "Building", hint: "Being built sealed off", icon: Hammer },
+  { status: "failed", label: "Needs attention", hint: "A deployment failed", icon: AlertTriangle },
+  { status: "undeployed", label: "Ready", hint: "Created, not deployed", icon: Sprout },
+  { status: "paused", label: "Paused", hint: "On hold", icon: Moon },
+  { status: "archived", label: "Archived", hint: "Kept for reference", icon: Archive },
 ];
 
 // Apps that need a person come first, then work in motion, then the calm ones.
 const attentionOrder: AppStatus[] = ["failed", "building", "undeployed", "running", "paused", "archived"];
 
-// Plants lean a few degrees toward the pointer, like seedlings toward light.
-function useLean() {
-  const frame = useRef(0);
-  const onPointerMove = useCallback((event: React.PointerEvent<HTMLElement>) => {
-    if (event.pointerType !== "mouse") return;
-    const { currentTarget, clientX } = event;
-    cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(() => {
-      for (const plant of currentTarget.querySelectorAll<HTMLElement>(".sp-bed-plant")) {
-        const box = plant.getBoundingClientRect();
-        const offset = (clientX - (box.left + box.width / 2)) / 220;
-        plant.style.setProperty("--lean", `${Math.max(-7, Math.min(7, offset * 7)).toFixed(2)}deg`);
-      }
-    });
-  }, []);
-  const onPointerLeave = useCallback((event: React.PointerEvent<HTMLElement>) => {
-    cancelAnimationFrame(frame.current);
-    for (const plant of event.currentTarget.querySelectorAll<HTMLElement>(".sp-bed-plant")) plant.style.setProperty("--lean", "0deg");
-  }, []);
-  return { onPointerMove, onPointerLeave };
-}
+type Filter = "all" | AppStatus;
 
 export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
-  const lean = useLean();
   const { data: workspace } = useWorkspace(workspaceSlug);
   // isPending, not isLoading: the query is disabled until Clerk restores the session,
   // and isLoading would read false (and show "no apps") during that gap.
   const { data: apps, isPending: isLoading, isError, refetch } = useApplications(workspaceSlug);
+  const [chosenFilter, setFilter] = useState<Filter>("all");
   const base = `/workspace/${workspaceSlug}`;
   const count = (status: AppStatus) => apps?.filter((app) => app.status === status).length ?? 0;
   const sorted = [...(apps ?? [])].sort((a, b) => attentionOrder.indexOf(a.status) - attentionOrder.indexOf(b.status));
-  const live = count("running");
+  // A state that has run out of apps (the last failure recovered) falls back to all apps.
+  const filter: Filter = chosenFilter !== "all" && count(chosenFilter) === 0 ? "all" : chosenFilter;
+  const shown = filter === "all" ? sorted : sorted.filter((app) => app.status === filter);
+  const tabs: Array<{ id: Filter; label: string }> = [
+    { id: "all", label: "All apps" },
+    ...phases.filter((phase) => count(phase.status) > 0).map((phase) => ({ id: phase.status, label: phase.label })),
+  ];
 
   return (
-    <main className="dashboard-page sp-home">
+    <main className="dashboard-page dash-home">
       <DropToDeploy workspaceSlug={workspaceSlug} />
-      <section className="sp-hero" aria-labelledby="sp-home-title">
-        <span className="sp-eyebrow">{workspace?.name ?? "Your workspace"}</span>
-        <h1 id="sp-home-title">
-          {isLoading ? "Checking your garden…" : !apps?.length ? <>Plant your first <em>app</em>.</> : live > 0 ? <><em>{live}</em> {live === 1 ? "app is" : "apps are"} live.</> : <>Nothing is <em>live</em> yet.</>}
-        </h1>
-        <p>Send code in, get a healthy public URL out. Sprout builds it sealed off, checks it, and keeps it easy to pause, recover, or retire.</p>
-        <div className="sp-hero-actions">
-          <Link className="sp-button sp-button-solid" href={`${base}/deploy`}><Rocket size={16} /> Deploy an app</Link>
-          {!!apps?.length && <Link className="sp-button sp-button-ghost" href={`${base}/apps`}>All apps <ArrowRight size={15} /></Link>}
-        </div>
-      </section>
+      <WorkspaceHero
+        base={base}
+        workspaceName={workspace?.name ?? "Your workspace"}
+        appCount={apps?.length ?? 0}
+        liveCount={count("running")}
+        isLoading={isLoading}
+      />
 
-      <section className="sp-bed" aria-label="Your apps as plants" {...lean}>
-        {sorted.length ? (
-          <ul className="sp-bed-row">
-            {sorted.slice(0, 10).map((app, index) => (
-              <li key={app.id} style={{ "--i": index } as React.CSSProperties}>
-                <Link href={`${base}/apps/${app.id}`} className={`sp-bed-plant sp-bed-${app.status}`} title={`${app.name}: ${app.status}`}>
-                  <Plant status={app.status} />
-                  <span className="sp-bed-label"><strong>{app.name}</strong><small>{phases.find((phase) => phase.status === app.status)?.label}</small></span>
+      {!isLoading && !isError && sorted.length > 0 && (
+        <div className="dash-tabs" role="tablist" aria-label="Filter apps by state">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={filter === tab.id}
+              onClick={() => setFilter(tab.id)}
+            >
+              {tab.label}
+              <em>{tab.id === "all" ? sorted.length : count(tab.id)}</em>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="dash-home-grid">
+        <section className="dash-section" aria-labelledby="dash-apps-title">
+          <header className="dash-section-head">
+            <h2 id="dash-apps-title">
+              <Sprout size={17} aria-hidden="true" /> Your apps
+            </h2>
+            <span>Needs attention first</span>
+          </header>
+
+          {isLoading ? (
+            <ul className="dash-cards" aria-label="Loading applications">
+              {[0, 1, 2].map((item) => (
+                <li key={item} className="dash-card dash-card-skeleton" />
+              ))}
+            </ul>
+          ) : isError ? (
+            <div className="dash-empty">
+              <h3>Applications could not be loaded</h3>
+              <p>You can safely try again.</p>
+              <button className="lp-btn lp-btn--light lp-btn--small" type="button" onClick={() => refetch()}>
+                Try again
+              </button>
+            </div>
+          ) : sorted.length === 0 ? (
+            <div className="dash-empty">
+              <Plant status="undeployed" />
+              <h3>The soil is ready</h3>
+              <p>Drop a folder anywhere on this page, or start from the Deploy page.</p>
+              <Link className="lp-btn lp-btn--dark lp-btn--small" href={`${base}/deploy`}>
+                <Plus size={15} aria-hidden="true" /> Deploy an app
+              </Link>
+            </div>
+          ) : (
+            <ul className="dash-cards">
+              {shown.map((app, index) => (
+                <AppCard key={app.id} app={app} base={base} index={index} />
+              ))}
+              <li>
+                <Link className="dash-card dash-card-new" href={`${base}/deploy`}>
+                  <Plus size={20} aria-hidden="true" />
+                  <span>Deploy another app</span>
                 </Link>
               </li>
-            ))}
+            </ul>
+          )}
+        </section>
+
+        <aside className="dash-section" aria-labelledby="dash-lifecycle-title">
+          <header className="dash-section-head">
+            <h2 id="dash-lifecycle-title">Lifecycle</h2>
+          </header>
+          <ul className="dash-lifecycle">
+            {phases.map((phase, index) => {
+              const Icon = phase.icon;
+              const total = count(phase.status);
+              return (
+                <li key={phase.status} style={{ "--i": index } as React.CSSProperties}>
+                  <button
+                    type="button"
+                    data-status={phase.status}
+                    aria-pressed={filter === phase.status}
+                    disabled={isLoading || total === 0}
+                    onClick={() => setFilter(filter === phase.status ? "all" : phase.status)}
+                  >
+                    <span className="dash-lifecycle-icon">
+                      <Icon size={15} aria-hidden="true" />
+                    </span>
+                    <span className="dash-lifecycle-text">
+                      <b>{phase.label}</b>
+                      <small>
+                        {isLoading ? "–" : total} {total === 1 ? "app" : "apps"} · {phase.hint}
+                      </small>
+                    </span>
+                    <ChevronRight size={14} aria-hidden="true" />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
-        ) : (
-          <div className="sp-bed-empty"><Plant status="undeployed" /><span>{isLoading ? "Looking at the soil…" : "The soil is ready."}</span></div>
-        )}
-        <div className="sp-bed-soil" aria-hidden="true" />
-      </section>
-
-      <ol className="sp-lifecycle" aria-label="Apps by lifecycle state">
-        {phases.map((phase) => (
-          <li className={`sp-phase sp-phase-${phase.status}${count(phase.status) ? " has-apps" : ""}`} key={phase.status} title={phase.hint}>
-            <i aria-hidden="true" /><strong>{isLoading ? "–" : count(phase.status)}</strong><span>{phase.label}</span>
-          </li>
-        ))}
-      </ol>
-
-      {(isLoading || isError || sorted.length > 0) && <section className="sp-garden" aria-labelledby="sp-garden-title">
-        <header className="sp-section-head">
-          <h2 id="sp-garden-title">Your garden</h2>
-          <span>Needs attention first</span>
-        </header>
-
-        {isLoading ? (
-          <div className="sp-rows" aria-label="Loading applications">{[0, 1, 2].map((item) => <div className="sp-row sp-row-skeleton" key={item} />)}</div>
-        ) : isError ? (
-          <div className="sp-empty"><h3>Applications could not be loaded</h3><p>You can safely try again.</p><button className="sp-button sp-button-ghost" onClick={() => refetch()}>Try again</button></div>
-        ) : (
-          <ul className="sp-rows">{sorted.map((app) => <AppRow app={app} base={base} key={app.id} />)}</ul>
-        )}
-      </section>}
+        </aside>
+      </div>
     </main>
-  );
-}
-
-function AppRow({ app, base }: { app: Application; base: string }) {
-  return (
-    <li>
-      <Link className={`sp-row sp-row-${app.status}`} href={`${base}/apps/${app.id}`}>
-        <span className={`sp-monogram accent-${app.accent}`} aria-hidden="true">{app.name.slice(0, 2).toUpperCase()}</span>
-        <span className="sp-row-main"><strong>{app.name}</strong><small className="sp-url">{app.url}</small></span>
-        <StatusPill status={app.status} />
-        <span className="sp-row-time">{app.updatedAt}</span>
-        <ArrowRight size={15} aria-hidden="true" />
-      </Link>
-    </li>
   );
 }

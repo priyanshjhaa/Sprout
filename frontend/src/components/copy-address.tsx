@@ -18,14 +18,14 @@ export function CopyAddress({ url, live }: { url: string; live: boolean }) {
   }
 
   return (
-    <div className="sp-address">
-      <span className="sp-address-label">{live ? "Live at" : "Reserved address"}</span>
+    <div className="dash-address">
+      <span className="dash-address-label">{live ? "Live at" : "Reserved address"}</span>
       <code>{url}</code>
-      <button type="button" className="sp-address-button" onClick={copy} aria-label={`Copy ${url}`}>
+      <button type="button" className="dash-address-button" onClick={copy} aria-label={`Copy ${url}`}>
         {state === "copied" ? <Check size={14} /> : <Copy size={14} />}
         <span>{state === "copied" ? "Copied" : state === "failed" ? "Copy failed" : "Copy"}</span>
       </button>
-      {live && <a className="sp-address-button" href={`https://${url}`} target="_blank" rel="noreferrer"><ExternalLink size={14} /><span>Open</span></a>}
+      {live && <a className="dash-address-button" href={`https://${url}`} target="_blank" rel="noreferrer"><ExternalLink size={14} /><span>Open</span></a>}
       <span className="sr-only" role="status">{state === "copied" ? "Address copied" : ""}</span>
     </div>
   );

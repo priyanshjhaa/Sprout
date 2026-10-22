@@ -1,12 +1,12 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { StatusPill } from "@/components/status-pill";
 import { CopyAddress } from "@/components/copy-address";
 import { Pipeline } from "@/components/pipeline";
+import { Plant } from "@/components/plant";
 import { useApplication } from "@/lib/query/hooks";
 import { useLatestDeployment } from "@/lib/query/simulations";
 
@@ -27,24 +27,33 @@ export function ApplicationShell({ children }: { children: ReactNode }) {
   const latest = useLatestDeployment(workspaceSlug, appId);
 
   return (
-    <main className="dashboard-page application-page sp-app">
-      <Link className="app-back-link" href={`/workspace/${workspaceSlug}/apps`}><ArrowLeft size={14} /> All apps</Link>
-      <header className={`sp-app-hero sp-app-hero-${application?.status ?? "undeployed"}`}>
-        <div className="sp-app-identity">
-          <span className={`sp-monogram sp-monogram-lg accent-${application?.accent ?? "amber"}`}>{application?.name.slice(0, 2).toUpperCase() ?? "··"}</span>
+    <main className="dashboard-page application-page sp-app dash-stack">
+      <header className="dash-app-head" data-status={application?.status ?? "undeployed"}>
+        <div className="dash-app-identity">
+          <span className="dash-app-plant" aria-hidden="true">
+            <Plant status={application?.status ?? "undeployed"} />
+          </span>
           <div>
-            <div className="sp-app-title"><h1>{isLoading ? "Loading application" : application?.name}</h1>{application && <StatusPill status={application.status} />}</div>
+            <p className="dash-hero-eyebrow">App</p>
+            <div className="dash-app-title">
+              <h1>{isLoading ? "Loading application" : application?.name}</h1>
+              {application && <StatusPill status={application.status} />}
+            </div>
             {application && <CopyAddress url={application.url} live={application.status === "running"} />}
           </div>
         </div>
         <Pipeline stages={latest.job?.stages} simulated={latest.kind === "simulation"} />
       </header>
 
-      <nav className="sp-tabs" aria-label="Application navigation">
+      <nav className="dash-tabs" aria-label="Application navigation">
         {tabs.map((tab) => {
           const href = `${base}${tab.path}`;
           const active = tab.path === "" ? pathname === base : pathname.startsWith(href);
-          return <Link className={active ? "active" : ""} href={href} key={tab.label}>{tab.label}</Link>;
+          return (
+            <Link aria-current={active ? "page" : undefined} href={href} key={tab.label}>
+              {tab.label}
+            </Link>
+          );
         })}
       </nav>
       <div className="application-content">{children}</div>

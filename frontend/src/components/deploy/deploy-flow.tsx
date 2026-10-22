@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, Play } from "lucide-react";
+import { ArrowRight, Check, Play, Rocket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -10,6 +10,7 @@ import { slugify } from "@/lib/slug";
 import { useApplications, useCreateApplication } from "@/lib/query/hooks";
 import { useCapabilities, useSimulationActions } from "@/lib/query/simulations";
 import type { Application } from "@/types/domain";
+import { PageHeader } from "@/components/dashboard/page-header";
 
 // The planned front doors, all calling the same deploy API (deployment-strategy.md at the repository root).
 const frontDoors = [
@@ -37,37 +38,37 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
   const localBuilds = useCapabilities().data?.localBuilds === true;
 
   return (
-    <main className="dashboard-page compact-page sp-deploy">
-      <header className="sp-deploy-hero">
-        <div>
-          <span className="sp-eyebrow">Deploy</span>
-          <h1>From code to a public <em>URL</em>.</h1>
-          <p>Sprout builds it sealed off, checks its health, and only then gives it an address.</p>
-        </div>
+    <main className="dashboard-page compact-page dash-stack">
+      <header className="dash-deploy-head">
+        <PageHeader
+          eyebrow="Deploy"
+          title="From code to a public URL"
+          description="Sprout builds it sealed off, checks its health, and only then gives it an address."
+        />
         <Pipeline stages={application ? [{ name: "source", status: "running" }] : undefined} />
       </header>
 
-      <section className="sp-panel deploy-card" aria-live="polite">
-        <p className="sp-panel-step"><b>{application ? 2 : 1}</b> {application ? "Give Sprout your site" : "Name your application"}</p>
+      <section className="dash-panel-card dash-deploy-card" aria-live="polite">
+        <p className="dash-step"><b>{application ? 2 : 1}</b> {application ? "Give Sprout your site" : "Name your application"}</p>
         {application
           ? <RunDeployment workspaceSlug={workspaceSlug} application={application} localBuilds={localBuilds} onReset={() => setApplication(null)} />
           : <CreateApplicationForm workspaceSlug={workspaceSlug} onCreated={setApplication} />}
       </section>
 
-      <div className="sp-deploy-more deploy-note">
+      <div className="dash-guides">
         {localBuilds
           ? <p>Drop your site&rsquo;s folder. Sprout packs it for you, builds it in a sealed container on this machine (a plain website is stored as it is), checks it, and gives it a public URL.</p>
           : <p>Until uploads are enabled, a run is a simulation: no code executes.</p>}
-        <details className="deploy-contract">
+        <details>
           <summary>Ways to deploy</summary>
           <ul>{frontDoors.map((door) => <li key={door}>{door}</li>)}</ul>
           <p>The CLI and coding agents sign in with an <Link href={`/workspace/${workspaceSlug}/tokens`}>access token</Link>.</p>
         </details>
-        <details className="deploy-contract">
+        <details>
           <summary>Node.js apps</summary>
           <ul>{nodeContract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
         </details>
-        <details className="deploy-contract">
+        <details>
           <summary>Static sites</summary>
           <ul>{staticContract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
         </details>
@@ -91,16 +92,16 @@ function CreateApplicationForm({ workspaceSlug, onCreated }: { workspaceSlug: st
   }
 
   return (
-    <form className="deploy-form" onSubmit={submit}>
-      <label className="deploy-name">
+    <form className="dash-deploy-form" onSubmit={submit}>
+      <label className="dash-deploy-name">
         Application name
         <input value={name} onChange={(event) => setName(event.target.value)} required maxLength={120}
           placeholder="Invoice approvals" disabled={create.isPending} autoFocus />
       </label>
-      <button className="sp-button sp-button-solid" disabled={create.isPending || !name.trim() || !effectiveSlug}>
+      <button className="lp-btn lp-btn--dark" disabled={create.isPending || !name.trim() || !effectiveSlug}>
         {create.isPending ? "Creating…" : "Create application"}
       </button>
-      <div className="deploy-slug">
+      <div className="dash-deploy-slug">
         {editingSlug ? (
           <label>
             <span className="sr-only">URL name</span>
@@ -110,11 +111,11 @@ function CreateApplicationForm({ workspaceSlug, onCreated }: { workspaceSlug: st
         ) : (
           <>
             <span>URL name: <strong>{effectiveSlug || "set from the name"}</strong></span>
-            <button type="button" className="text-button" onClick={() => { setSlug(effectiveSlug); setEditingSlug(true); }}>Edit</button>
+            <button type="button" className="dash-text-button" onClick={() => { setSlug(effectiveSlug); setEditingSlug(true); }}>Edit</button>
           </>
         )}
       </div>
-      {create.isError && <p className="deploy-error" role="alert">{create.error.message}</p>}
+      {create.isError && <p className="dash-callout dash-callout--error" role="alert">{create.error.message}</p>}
     </form>
   );
 }
@@ -126,19 +127,19 @@ function RunDeployment({ workspaceSlug, application, localBuilds, onReset }: { w
   const simulate = () => action.mutate(undefined, { onSuccess: (job) => router.push(`${base}/${job.id}`) });
 
   return (
-    <div className="deploy-run">
-      <p className="deploy-created"><Check size={15} aria-hidden="true" /> <strong>{application.name}</strong> is ready to deploy.</p>
+    <div className="dash-deploy-run">
+      <p className="dash-callout dash-callout--ok"><Check size={15} aria-hidden="true" /> <strong>{application.name}</strong> is ready to deploy.</p>
       {localBuilds && <UploadBuild workspaceSlug={workspaceSlug} appId={application.id} />}
-      <div className="deploy-run-actions">
+      <div className="dash-deploy-run-actions">
         {localBuilds
-          ? <button className="text-button" type="button" disabled={action.isPending} onClick={simulate}>{action.isPending ? "Starting…" : "Run a simulation instead"}</button>
-          : <button className="sp-button sp-button-solid" type="button" disabled={action.isPending} onClick={simulate}>
+          ? <button className="dash-text-button" type="button" disabled={action.isPending} onClick={simulate}>{action.isPending ? "Starting…" : "Run a simulation instead"}</button>
+          : <button className="lp-btn lp-btn--dark lp-btn--small" type="button" disabled={action.isPending} onClick={simulate}>
               <Play size={14} /> {action.isPending ? "Starting…" : "Run simulation"}
             </button>}
-        <button className="text-button" type="button" onClick={onReset}>Create another</button>
+        <button className="dash-text-button" type="button" onClick={onReset}>Create another</button>
       </div>
       {action.isError && (
-        <p className="deploy-error" role="alert">
+        <p className="dash-callout dash-callout--error" role="alert">
           {action.error.message} <Link href={base}>Check its deployments</Link> before trying again.
         </p>
       )}
@@ -152,13 +153,15 @@ function RecentApplications({ workspaceSlug }: { workspaceSlug: string }) {
   if (recent.length === 0) return null;
 
   return (
-    <section className="deploy-recent" aria-labelledby="deploy-recent-heading">
-      <h2 id="deploy-recent-heading">Or deploy an existing app</h2>
-      <ul>
-        {recent.map((app) => (
-          <li key={app.id}>
+    <section className="dash-stack" aria-labelledby="deploy-recent-heading">
+      <h2 id="deploy-recent-heading" className="dash-section-title">Or deploy an existing app</h2>
+      <ul className="dash-link-list">
+        {recent.map((app, index) => (
+          <li key={app.id} style={{ "--i": index } as React.CSSProperties}>
             <Link href={`/workspace/${workspaceSlug}/apps/${app.id}/deployments`}>
-              <span>{app.name}</span><ArrowRight size={14} aria-hidden="true" />
+              <span className="dash-next-icon"><Rocket size={15} aria-hidden="true" /></span>
+              <span><strong>{app.name}</strong><small>{app.url}</small></span>
+              <ArrowRight size={14} aria-hidden="true" />
             </Link>
           </li>
         ))}

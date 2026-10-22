@@ -38,28 +38,28 @@ export function UploadBuild({ workspaceSlug, appId, disabled = false, compact = 
 
   const note = chosen ? skippedNote(chosen) : null;
   return (
-    <div className="upload-build">
+    <div className="dash-upload">
       {chosen ? (
-        <div className="sp-chosen" role="status">
-          <span className="sp-chosen-line">{chosen.kind === "folder" ? <FolderUp size={16} /> : <FileArchive size={16} />} <strong>{summarise(chosen)}</strong></span>
+        <div className="dash-chosen" role="status">
+          <span className="dash-chosen-line">{chosen.kind === "folder" ? <FolderUp size={16} /> : <FileArchive size={16} />} <strong>{summarise(chosen)}</strong></span>
           {note && <small>{note}</small>}
           <Readiness problems={warnings} />
-          <div className="sp-chosen-actions">
-            <button className="sp-button sp-button-solid" type="button" disabled={disabled || busy} onClick={() => void deploy()}>
+          <div className="dash-chosen-actions">
+            <button className="lp-btn lp-btn--dark lp-btn--small" type="button" disabled={disabled || busy} onClick={() => void deploy()}>
               <Rocket size={14} /> {busy ? "Deploying…" : warnings.length > 0 ? "Deploy anyway" : "Deploy it"}
             </button>
-            <button className="sp-dropzone-link" type="button" disabled={busy} onClick={() => { setChosen(null); setProblem(null); }}>Choose something else</button>
+            <button className="dash-text-button" type="button" disabled={busy} onClick={() => { setChosen(null); setProblem(null); }}>Choose something else</button>
           </div>
         </div>
       ) : reading ? (
-        <p className="simulation-note" role="status">Reading your folder…</p>
+        <p className="dash-note" role="status">Reading your folder…</p>
       ) : (
         <SourcePicker compact={compact} disabled={disabled}
           onReading={() => { setReading(true); setProblem(null); }}
           onChosen={(next) => { setReading(false); setChosen(next); }}
           onProblem={(message) => { setReading(false); setProblem(message); }} />
       )}
-      {(problem || action.isError) && <p className="deploy-error" role="alert">{problem ?? action.error?.message}</p>}
+      {(problem || action.isError) && <p className="dash-callout dash-callout--error" role="alert">{problem ?? action.error?.message}</p>}
     </div>
   );
 }

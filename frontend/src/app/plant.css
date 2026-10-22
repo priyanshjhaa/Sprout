@@ -1,0 +1,13 @@
+
+
+.sp-plant { width: 100px; height: 150px; overflow: visible; }
+.sp-sway { transform-origin: 40px 100px; animation: sp-sway 5s ease-in-out infinite; }
+.sp-roots { animation: sp-grow 2s ease-in-out infinite; }
+@keyframes sp-sway { 50% { transform: rotate(2.2deg); } }
+@keyframes sp-grow { 50% { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-sway,
+.sp-roots { animation: none; }
+}
+

@@ -1,6 +1,6 @@
-import { AuthExperience } from "@/components/auth/auth-experience";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { InvitationAccept } from "@/components/access/invitation-accept";
 
 export default function InvitationPage() {
-  return <AuthExperience mode="sign-in"><InvitationAccept /></AuthExperience>;
+  return <AuthShell mode="invitation"><InvitationAccept /></AuthShell>;
 }

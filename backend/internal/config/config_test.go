@@ -1,6 +1,7 @@
 package config
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -46,8 +47,8 @@ func TestLoadUsesDefaultAddress(t *testing.T) {
 	if appConfig.DatabaseURL != testDatabaseURL {
 		t.Fatalf("DatabaseURL = %q, want configured URL", appConfig.DatabaseURL)
 	}
-	if appConfig.WebOrigin != DefaultWebOrigin {
-		t.Fatalf("WebOrigin = %q, want %q", appConfig.WebOrigin, DefaultWebOrigin)
+	if !slices.Equal(appConfig.WebOrigins, []string{DefaultWebOrigin}) {
+		t.Fatalf("WebOrigins = %q, want [%q]", appConfig.WebOrigins, DefaultWebOrigin)
 	}
 }
 
@@ -62,8 +63,39 @@ func TestLoadUsesConfiguredWebOrigin(t *testing.T) {
 		t.Fatalf("Load() error = %v", err)
 	}
 
-	if appConfig.WebOrigin != "https://sprout.example" {
-		t.Fatalf("WebOrigin = %q, want https://sprout.example", appConfig.WebOrigin)
+	if !slices.Equal(appConfig.WebOrigins, []string{"https://sprout.example"}) {
+		t.Fatalf("WebOrigins = %q, want [https://sprout.example]", appConfig.WebOrigins)
+	}
+}
+
+func TestLoadAcceptsSeveralWebOrigins(t *testing.T) {
+	t.Parallel()
+
+	appConfig, err := Load(lookup(map[string]string{
+		"DATABASE_URL":      testDatabaseURL,
+		"SPROUT_WEB_ORIGIN": "http://localhost:3000, http://localhost:3001,http://localhost:3000",
+	}))
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	want := []string{"http://localhost:3000", "http://localhost:3001"}
+	if !slices.Equal(appConfig.WebOrigins, want) {
+		t.Fatalf("WebOrigins = %q, want %q", appConfig.WebOrigins, want)
+	}
+}
+
+func TestLoadRejectsAnInvalidOriginInTheList(t *testing.T) {
+	t.Parallel()
+
+	for _, value := range []string{"http://localhost:3000,", "http://localhost:3000,*", "http://localhost:3000, http://localhost:3001/app"} {
+		_, err := Load(lookup(map[string]string{
+			"DATABASE_URL":      testDatabaseURL,
+			"SPROUT_WEB_ORIGIN": value,
+		}))
+		if err == nil || !strings.Contains(err.Error(), "SPROUT_WEB_ORIGIN") {
+			t.Fatalf("Load(%q) error = %v, want SPROUT_WEB_ORIGIN validation error", value, err)
+		}
 	}
 }
 

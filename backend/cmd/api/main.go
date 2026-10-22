@@ -178,9 +178,9 @@ func realMain() int {
 	clerk.SetKey(appConfig.ClerkSecretKey)
 	tokenService := apitoken.NewService(apitoken.NewSQLRepository(queries))
 	identityService := identity.NewService(identity.ClerkProfileProvider{}, identity.NewSQLRepository(pool))
-	router := httpapi.NewRouter(logger, readiness, appConfig.WebOrigin)
+	router := httpapi.NewRouter(logger, readiness, appConfig.WebOrigins...)
 	router.Route("/api/v1", func(api chi.Router) {
-		api.Use(httpapi.AuthenticationMiddleware(identityService, tokenService, logger, appConfig.WebOrigin))
+		api.Use(httpapi.AuthenticationMiddleware(identityService, tokenService, logger, appConfig.WebOrigins...))
 		httpapi.RegisterIdentityRoutes(api, identityService, logger)
 		httpapi.RegisterCapabilityRoutes(api, httpapi.Capabilities{LocalBuilds: appConfig.LocalBuilds.Enabled})
 		httpapi.RegisterApplicationRoutes(api, service, logger, appURL)

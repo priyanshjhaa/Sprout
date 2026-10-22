@@ -1,11 +1,10 @@
-import { redirect } from "next/navigation";
+import { WorkspaceSettings } from "@/components/settings/workspace-settings";
 
-// Not part of the product yet; keep old links landing somewhere useful.
-export default async function WorkspacePage({
+export default async function WorkspaceSettingsPage({
   params,
 }: {
   params: Promise<{ workspaceSlug: string }>;
 }) {
   const { workspaceSlug } = await params;
-  redirect(`/workspace/${workspaceSlug}/apps`);
+  return <WorkspaceSettings workspaceSlug={workspaceSlug} />;
 }

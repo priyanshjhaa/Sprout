@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -19,9 +20,11 @@ const (
 )
 
 type Config struct {
-	APIAddress     string
-	DatabaseURL    string
-	WebOrigin      string
+	APIAddress  string
+	DatabaseURL string
+	// WebOrigins are the browser origins allowed to call the API: CORS answers
+	// them, and Clerk sessions must have been issued to one of them.
+	WebOrigins     []string
 	ClerkSecretKey string
 	// LocalBuilds enables accepting source uploads and running real builds in
 	// Docker on this machine. It is local developer tooling, not a service.
@@ -69,12 +72,9 @@ func Load(lookupEnv LookupEnv) (Config, error) {
 		return Config{}, fmt.Errorf("DATABASE_URL must be a valid PostgreSQL connection URL")
 	}
 
-	webOrigin := DefaultWebOrigin
-	if value, exists := lookupEnv("SPROUT_WEB_ORIGIN"); exists {
-		webOrigin = strings.TrimSpace(value)
-	}
-	if !validWebOrigin(webOrigin) {
-		return Config{}, fmt.Errorf("SPROUT_WEB_ORIGIN must be a valid HTTP origin without a path")
+	webOrigins, err := loadWebOrigins(lookupEnv)
+	if err != nil {
+		return Config{}, err
 	}
 	clerkSecretKey, exists := lookupEnv("CLERK_SECRET_KEY")
 	clerkSecretKey = strings.TrimSpace(clerkSecretKey)
@@ -94,7 +94,7 @@ func Load(lookupEnv LookupEnv) (Config, error) {
 	return Config{
 		APIAddress:     address,
 		DatabaseURL:    databaseURL,
-		WebOrigin:      webOrigin,
+		WebOrigins:     webOrigins,
 		ClerkSecretKey: clerkSecretKey,
 		LocalBuilds:    builds,
 		Apps:           apps,
@@ -166,6 +166,27 @@ func (a Apps) URL(workspaceSlug, applicationSlug string) string {
 		url += ":" + port
 	}
 	return url
+}
+
+// loadWebOrigins reads SPROUT_WEB_ORIGIN as one origin or a comma-separated
+// list, so a second frontend (another branch on another port) can run beside
+// the first. Every entry must be an exact origin; there is no wildcard.
+func loadWebOrigins(lookupEnv func(string) (string, bool)) ([]string, error) {
+	value, exists := lookupEnv("SPROUT_WEB_ORIGIN")
+	if !exists {
+		return []string{DefaultWebOrigin}, nil
+	}
+	var origins []string
+	for _, entry := range strings.Split(value, ",") {
+		origin := strings.TrimSpace(entry)
+		if !validWebOrigin(origin) {
+			return nil, fmt.Errorf("SPROUT_WEB_ORIGIN must be one or more valid HTTP origins without a path, separated by commas")
+		}
+		if !slices.Contains(origins, origin) {
+			origins = append(origins, origin)
+		}
+	}
+	return origins, nil
 }
 
 func validWebOrigin(origin string) bool {

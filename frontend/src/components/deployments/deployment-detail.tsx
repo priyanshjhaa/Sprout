@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ExternalLink, FlaskConical, Hammer } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, FlaskConical, Hammer } from "lucide-react";
 import Link from "next/link";
 import { Pipeline } from "@/components/pipeline";
 import { StatusPill } from "@/components/status-pill";
@@ -48,30 +48,36 @@ export function DeploymentDetail({ workspaceSlug, appId, deploymentId, kind }: {
   const job = query.data;
   const { data: application } = useApplication(workspaceSlug, appId);
   const base = `/workspace/${workspaceSlug}/apps/${appId}/deployments`;
+  const live = job && isActiveSimulation(job);
   return (
-    <section className="app-section deployment-detail simulation-view sp-detail">
-      <Link className="section-back" href={base}>← Deployments</Link>
-      {query.isPending && <p className="simulation-notice" role="status">Loading simulation…</p>}
-      {(query.isError || query.streamError) ? <div className="simulation-notice" role="alert">
+    <section className="dash-stack">
+      <Link className="dash-back" href={base}><ArrowLeft size={14} aria-hidden="true" /> Deployments</Link>
+      {query.isPending && <p className="dash-note" role="status">Loading deployment…</p>}
+      {(query.isError || query.streamError) ? <div className="dash-callout dash-callout--error" role="alert">
         <h2>Progress unavailable</h2><p>{query.streamError ?? query.error?.message}</p>
-        <button className="button button-secondary" disabled={query.isFetching} onClick={() => void query.reconnect()}>Retry connection</button>
+        <button className="lp-btn lp-btn--light lp-btn--small" type="button" disabled={query.isFetching} onClick={() => void query.reconnect()}>Retry connection</button>
       </div> : job && <>
-        <header className="section-heading">
-          <div><div className="deployment-title"><h2>{isBuild ? "Build" : "Run"} {job.id.slice(0, 8)}</h2><StatusPill status={job.status} /></div><p>{new Date(job.createdAt).toLocaleString()}</p></div>
-          {isActiveSimulation(job) && <button className="button button-secondary" type="button" disabled={action.isPending} onClick={() => action.cancel(job.id)}>{action.isPending ? "Cancelling…" : "Cancel"}</button>}
+        <header className="dash-subhead">
+          <div>
+            <div className="dash-subhead-title"><h2>{isBuild ? "Build" : "Run"} <code>{job.id.slice(0, 8)}</code></h2><StatusPill status={job.status} /></div>
+            <p>{new Date(job.createdAt).toLocaleString()}</p>
+          </div>
+          {live && <button className="lp-btn lp-btn--light lp-btn--small" type="button" disabled={action.isPending} onClick={() => action.cancel(job.id)}>{action.isPending ? "Cancelling…" : "Cancel"}</button>}
         </header>
-        {action.isError && <p className="simulation-notice" role="alert">{action.error?.message}</p>}
-        <p className="simulation-note" role="status" aria-live="polite">{isActiveSimulation(job) ? query.streamState === "live" ? "Receiving live progress" : query.streamState === "reconnecting" ? "Reconnecting — the worker continues in the background" : "Connecting to live progress…" : job.status === "live" ? "This deployment is live." : `${isBuild ? "Build" : "Run"} ${job.status}.`}</p>
-        <div className={`sp-run sp-run-${job.status}`}><Pipeline stages={job.stages} simulated={!isBuild} /></div>
-        {job.failureCode && <p className="simulation-notice">{failureExplanations[job.failureCode] ?? "It did not finish."} <code>{job.failureCode}</code></p>}
-        {/* One paragraph inside the notice: the notice is a grid, so loose inline pieces would each become a row. */}
-        {isBuild && job.status === "live" && <div className="simulation-notice sp-notice-flow"><p><Check className="sp-inline-icon" size={14} /> Live{application?.liveUrl
+        {action.isError && <p className="dash-callout dash-callout--error" role="alert">{action.error?.message}</p>}
+        <p className="dash-stream" data-state={live ? query.streamState : "done"} role="status" aria-live="polite">
+          <i aria-hidden="true" />
+          {live ? query.streamState === "live" ? "Receiving live progress" : query.streamState === "reconnecting" ? "Reconnecting — the worker continues in the background" : "Connecting to live progress…" : job.status === "live" ? "This deployment is live." : `${isBuild ? "Build" : "Run"} ${job.status}.`}
+        </p>
+        <div className={`dash-pipeline-card sp-run sp-run-${job.status}`}><Pipeline stages={job.stages} simulated={!isBuild} /></div>
+        {job.failureCode && <div className="dash-callout dash-callout--error"><p>{failureExplanations[job.failureCode] ?? "It did not finish."}</p><code>{job.failureCode}</code></div>}
+        {isBuild && job.status === "live" && <div className="dash-callout dash-callout--ok"><p><Check className="sp-inline-icon" size={14} aria-hidden="true" /> Live{application?.liveUrl
           ? <> at <a href={application.liveUrl} target="_blank" rel="noreferrer">{application.liveUrl}<ExternalLink className="sp-inline-icon sp-inline-icon-after" size={12} aria-hidden="true" /></a>.</>
           : "."} Anyone with the link can open it.</p></div>}
-        {isBuild && job.status === "succeeded" && <div className="simulation-notice sp-notice-flow"><p><Check className="sp-inline-icon" size={14} /> Built and stored. A newer version is live, or this one has not been started.</p></div>}
-        <p className="simulation-note">{isBuild
-          ? <><Hammer className="sp-inline-icon" size={13} /> Built in a sealed container on this machine. Leaving this page does not stop it.</>
-          : <><FlaskConical className="sp-inline-icon" size={13} /> Simulated run: no code executes. Leaving this page does not stop it.</>}</p>
+        {isBuild && job.status === "succeeded" && <div className="dash-callout dash-callout--ok"><p><Check className="sp-inline-icon" size={14} aria-hidden="true" /> Built and stored. A newer version is live, or this one has not been started.</p></div>}
+        <p className="dash-note">{isBuild
+          ? <><Hammer className="sp-inline-icon" size={13} aria-hidden="true" /> Built in a sealed container on this machine. Leaving this page does not stop it.</>
+          : <><FlaskConical className="sp-inline-icon" size={13} aria-hidden="true" /> Simulated run: no code executes. Leaving this page does not stop it.</>}</p>
       </>}
     </section>
   );

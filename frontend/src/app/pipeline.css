@@ -35,3 +35,5 @@
 @media (prefers-reduced-motion: reduce) {
   .sp-step-running .sp-step-node, .sp-step-succeeded .sp-step-node, .sp-step-succeeded::after, .sp-step-failed::after { animation: none; }
 }
+
+@media (max-width: 720px) { .sp-step small { display: none; } }

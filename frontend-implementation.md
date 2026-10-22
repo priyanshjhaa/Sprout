@@ -73,7 +73,7 @@ The interface should feel calm, warm, and comfortable without becoming playful o
 
 Motion should explain creation, deployment, connection, and progress.
 
-- Landing-page motion may be expressive and scroll-driven.
+- Landing-page motion may be expressive, triggered as sections enter the viewport.
 - Dashboard motion should be subtle and functional.
 - Avoid continuous background movement that competes with content.
 - Every essential interaction must work with reduced motion enabled.
@@ -152,82 +152,35 @@ The global navigation is Deploy, Apps, and Team. Workspace activity and workspac
 
 ### 6.1 Interaction model
 
-The landing page must not be a conventional stack of hero, feature, testimonial, and CTA sections.
+The landing page is a sequence of calm, full-width sections in one long semantic document, styled after the layout language recorded in `docs/redesign-plan.md`. There is no sticky scroll-driven stage. Each section reveals itself once as it enters the viewport, and its product mock plays a short, looping illustration of the state it describes.
 
-It should use a long semantic document containing a sticky, viewport-sized visual stage. Scroll progress advances a single continuous product story inside that stage.
+The hero uses Sprout's painted landscape as its full-bleed background and dissolves into the off-white page below it.
 
-```text
-Long semantic document
-        |
-        +-- Sticky 100vh visual stage
-        +-- Story chapters
-        +-- Scroll progress mapped to scene state
-```
+### 6.2 Section sequence
 
-The background is a persistent Sprout cloud environment: a subtle grid or spatial canvas containing application nodes, fine connection lines, restrained glow, and integrated terminal/browser surfaces.
+1. Navigation: brand, a grouped set of section links, and the primary call to action. It becomes a solid bar after the hero.
+2. Hero: what Sprout does in one sentence, a short supporting line, and primary and secondary actions.
+3. Facts strip: short, true statements about isolation, health checks, and idle sleep. No invented customer counts or logos.
+4. Statement: the product boundary in one heading, an animated Deploy mock, and three supporting points.
+5. Chapters: 1.0 Deploy, 2.0 Operate, 3.0 Share, each with four numbered capabilities and an animated mock (build stages, sleep and wake, roles and lifecycle).
+6. Four ways in: Dashboard, CLI, MCP, and coding agents as clients of the same deploy API.
+7. Band: one saturated green section listing what every small app gets.
+8. App types: a letter grid that highlights the kinds of small apps Sprout runs.
+9. Footer: a closing line, links, and the final call to action over the landscape ground.
 
-### 6.2 Story sequence
+### 6.3 Motion
 
-#### Scene 1: The idea
-
-- Begin with a quiet environment and a single application seed/node.
-- Introduce the tension: small software is easy to create but still hard to deploy and share.
-
-#### Scene 2: The application
-
-- Introduce a repository or source-code object.
-- Example application: `invoice-approval`.
-- Show the project as ready to deploy.
-
-#### Scene 3: Deployment
-
-- Move the repository through Build, Container, and Health Check states.
-- Show short, readable build output.
-- Motion must reinforce forward progress.
-
-#### Scene 4: Live application
-
-- Transform the result into an integrated browser preview.
-- Reveal a Sprout application URL.
-- Communicate the repository-to-production outcome.
-
-#### Scene 5: Quiet when idle
-
-- Show the app sleeping when nobody uses it and waking on the next visit.
-- Communicate that many small apps stay cheap to keep online.
-
-#### Scene 6: Online and in good hands
-
-- Show the app reachable at a public URL.
-- Connect workspace members who operate it, with Owner, Editor, and Viewer roles.
-- Communicate that anyone can open it while the team stays in control.
-
-#### Scene 7: The workspace
-
-- Pull back to reveal multiple small applications living in the workspace.
-- Resolve into primary and secondary calls to action.
-
-### 6.3 Suggested scroll ranges
-
-```text
-0.00-0.15  Introduction
-0.15-0.32  Repository appears
-0.32-0.53  Deployment pipeline
-0.53-0.68  Live application
-0.68-0.82  Managed infrastructure
-0.82-0.93  Sharing
-0.93-1.00  Workspace and CTA
-```
-
-These ranges are starting points, not hard-coded design constraints. The final timing should be tuned through browser testing.
+- Reveal-on-scroll uses `IntersectionObserver` and runs once per element.
+- Mock animations are CSS-driven and pause when off screen.
+- Motion explains a state change: building, becoming healthy, sleeping, waking, gaining access.
 
 ### 6.4 Landing-page accessibility and fallback
 
-- Story text must remain real semantic HTML.
+- All section text must remain real semantic HTML.
 - Essential content must not exist only inside a canvas or animation.
 - With `prefers-reduced-motion`, replace transforms with restrained fades or a readable staged layout.
-- On narrow mobile screens, prefer a simplified sticky experience or a sequential story rather than shrinking the desktop scene.
-- Keyboard and assistive-technology users must be able to understand the story in document order.
+- On narrow screens, sections stack into a single column; mocks keep their meaning rather than shrinking the desktop layout.
+- Keyboard and assistive-technology users must be able to understand the page in document order.
 - The page must remain meaningful if JavaScript fails.
 
 ## 7. Authenticated dashboard
