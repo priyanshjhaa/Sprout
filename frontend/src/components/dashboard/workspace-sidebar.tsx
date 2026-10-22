@@ -34,7 +34,6 @@ export function WorkspaceSidebar({ workspaceSlug }: { workspaceSlug: string }) {
     { label: "Team", href: `${base}/team`, icon: Users, active: pathname === `${base}/team` },
   ];
   const settings = [
-    { label: "Workspace settings", href: `${base}/settings`, icon: Settings },
     { label: "Access tokens", href: `${base}/tokens`, icon: KeyRound },
   ];
   const recent = (apps ?? []).filter((app) => app.status !== "archived").slice(0, 6);

@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { DropToDeploy } from "@/components/dashboard/drop-to-deploy";
 import { WorkspaceHero } from "@/components/dashboard/workspace-hero";
+import { AppCard } from "@/components/apps/app-card";
 import { Plant } from "@/components/plant";
 import { useApplications, useWorkspace } from "@/lib/query/hooks";
-import type { AppStatus, Application } from "@/types/domain";
+import type { AppStatus } from "@/types/domain";
 
 // The lifecycle Sprout keeps visible, in the order an app moves through it.
 const phases: Array<{ status: AppStatus; label: string; hint: string; icon: typeof Globe }> = [
@@ -18,8 +19,6 @@ const phases: Array<{ status: AppStatus; label: string; hint: string; icon: type
   { status: "paused", label: "Paused", hint: "On hold", icon: Moon },
   { status: "archived", label: "Archived", hint: "Kept for reference", icon: Archive },
 ];
-
-const labelFor = (status: AppStatus) => phases.find((phase) => phase.status === status)?.label ?? status;
 
 // Apps that need a person come first, then work in motion, then the calm ones.
 const attentionOrder: AppStatus[] = ["failed", "building", "undeployed", "running", "paused", "archived"];
@@ -153,28 +152,5 @@ export function WorkspaceHome({ workspaceSlug }: { workspaceSlug: string }) {
         </aside>
       </div>
     </main>
-  );
-}
-
-function AppCard({ app, base, index }: { app: Application; base: string; index: number }) {
-  return (
-    <li style={{ "--i": index } as React.CSSProperties}>
-      <Link className="dash-card" href={`${base}/apps/${app.id}`} data-status={app.status}>
-        <span className="dash-card-art" aria-hidden="true">
-          <Plant status={app.status} />
-        </span>
-        <span className="dash-card-body">
-          <b>{app.name}</b>
-          <small className="dash-card-url">{app.url}</small>
-          {app.description && <span className="dash-card-description">{app.description}</span>}
-        </span>
-        <span className="dash-card-foot">
-          <span className="dash-card-status">
-            <i data-status={app.status} aria-hidden="true" /> {labelFor(app.status)}
-          </span>
-          <span className="lp-mono">{app.updatedAt}</span>
-        </span>
-      </Link>
-    </li>
   );
 }

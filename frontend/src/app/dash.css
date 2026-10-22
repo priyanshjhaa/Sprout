@@ -735,7 +735,8 @@ a.dash-chip:hover svg {
   animation: lp-word 800ms var(--lp-ease) 300ms both;
 }
 
-.dash-tabs button {
+.dash-tabs button,
+.dash-tabs a {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -749,11 +750,14 @@ a.dash-chip:hover svg {
   transition: background-color 220ms ease, color 220ms ease, box-shadow 220ms ease;
 }
 
-.dash-tabs button:hover {
+.dash-tabs button:hover,
+.dash-tabs a:hover {
   color: var(--lp-ink);
 }
 
-.dash-tabs button[aria-selected="true"] {
+.dash-tabs button[aria-selected="true"],
+.dash-tabs button[aria-pressed="true"],
+.dash-tabs a[aria-current="page"] {
   background: #fff;
   color: var(--lp-ink);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 0 0 1px rgb(0 0 0 / 0.04);
@@ -1093,4 +1097,268 @@ a.dash-chip:hover svg {
   .dash-home-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Shared page structure */
+.dash-stack {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+}
+
+.dash-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  animation: lp-word 800ms var(--lp-ease) 100ms both;
+}
+
+.dash-page-head h1 {
+  margin: 6px 0 0;
+  font-size: clamp(28px, 3vw, 36px);
+  line-height: 1.12;
+}
+
+.dash-page-description {
+  max-width: 560px;
+  margin: 8px 0 0;
+  color: var(--lp-ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.dash-page-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.dash-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  animation: lp-word 800ms var(--lp-ease) 200ms both;
+}
+
+.dash-search {
+  display: flex;
+  width: min(100%, 280px);
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line);
+  color: var(--lp-ink-faint);
+  transition: box-shadow 180ms ease;
+}
+
+.dash-search:focus-within {
+  box-shadow: 0 0 0 1px var(--lp-green), 0 0 0 4px rgb(47 90 43 / 0.12);
+}
+
+.dash-search input {
+  width: 100%;
+  min-height: 38px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--lp-ink);
+  font-size: 13.5px;
+}
+
+/* App header: its plant, name, status, address, and the latest deployment's stages. */
+.dash-app-head {
+  display: grid;
+  gap: 22px;
+  border-radius: 14px;
+  padding: 22px 24px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line), 0 2px 10px rgb(0 0 0 / 0.03);
+  animation: lp-word 800ms var(--lp-ease) 100ms both;
+}
+
+.dash-app-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.dash-app-plant {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  place-items: end center;
+  overflow: hidden;
+  border-radius: 12px;
+  background:
+    radial-gradient(rgb(0 0 0 / 0.07) 1px, transparent 1px) 0 0 / 10px 10px,
+    linear-gradient(#f7f7f4, #efefea);
+}
+
+.dash-app-head[data-status="running"] .dash-app-plant {
+  background:
+    radial-gradient(rgb(47 90 43 / 0.1) 1px, transparent 1px) 0 0 / 10px 10px,
+    linear-gradient(#f4f8ee, #e8f0dd);
+}
+
+.dash-app-plant .sp-plant {
+  width: 50px;
+  height: 75px;
+  margin-bottom: -10px;
+}
+
+.dash-app-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.dash-app-title h1 {
+  margin: 0;
+  font-size: clamp(24px, 2.6vw, 30px);
+}
+
+.dash .application-content {
+  animation: lp-word 700ms var(--lp-ease) 150ms both;
+}
+
+/* Older surfaces inside workspace pages, moved onto the same white cards and type. */
+.dash .sp-main :is(
+  .sp-panel,
+  .soft-empty,
+  .members-panel,
+  .settings-panel,
+  .deploy-card,
+  .team-invite-panel,
+  .workspace-access-card,
+  .sp-empty-state,
+  .sp-fact,
+  .sp-row
+) {
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--lp-line), 0 1px 3px rgb(0 0 0 / 0.03);
+  backdrop-filter: none;
+}
+
+.dash .sp-main :is(.soft-empty, .sp-empty-state) {
+  box-shadow: 0 0 0 1px var(--lp-line);
+}
+
+.dash .sp-main a.sp-row:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1), 0 10px 24px rgb(0 0 0 / 0.06);
+}
+
+.dash .sp-main .sp-row::before {
+  border-radius: 12px 0 0 12px;
+}
+
+.dash .sp-main :is(h1, h2, h3, .page-heading h1, .section-heading h2, .sp-empty-state h2, .soft-empty h2, .team-invite-panel h2) {
+  color: var(--lp-ink);
+  font-family: var(--font-landing), sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.dash .sp-main .section-heading h2 {
+  font-size: 20px;
+}
+
+.dash .sp-main :is(.section-heading p, .page-heading > p:last-child, .members-panel > header small, .member-row small, .members-panel > footer, .workspace-access-card p, .soft-empty p) {
+  color: var(--lp-ink-faint);
+  font-size: 13px;
+}
+
+.dash .sp-main .members-panel > header span {
+  color: var(--lp-ink-faint);
+  font-family: var(--font-label), monospace;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.dash .sp-main :is(input, select, textarea):not([type="checkbox"], [type="radio"], [type="file"]) {
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);
+  color: var(--lp-ink);
+  transition: box-shadow 180ms ease;
+}
+
+.dash .sp-main :is(input, select, textarea):focus {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--lp-green), 0 0 0 4px rgb(47 90 43 / 0.12);
+}
+
+.dash .sp-main .dash-search input,
+.dash .sp-main .dash-search input:focus {
+  box-shadow: none;
+}
+
+.dash .sp-main .status-pill {
+  border: 0;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.04);
+  color: var(--lp-ink-soft);
+  font-family: var(--font-label), monospace;
+  font-size: 11px;
+}
+
+.dash .sp-main .status-running {
+  background: rgb(79 154 58 / 0.12);
+  color: #2f6a22;
+}
+
+.dash .sp-main .status-building,
+.dash .sp-main .status-queued {
+  background: rgb(201 138 43 / 0.14);
+  color: #8a5a14;
+}
+
+.dash .sp-main .status-failed {
+  background: rgb(184 95 80 / 0.12);
+  color: #8c3f33;
+}
+
+.dash .sp-main .sp-address code {
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.04);
+  font-family: var(--font-label), monospace;
+}
+
+.dash .sp-main .sp-monogram {
+  border-radius: 9px;
+  font-family: var(--font-label), monospace;
+  font-weight: 500;
+}
+
+/* Legacy .button styles, matched to the landing buttons. */
+.dash .sp-main .button {
+  min-height: 40px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.dash .sp-main .button-primary {
+  border: 1px solid #383838;
+  background:
+    linear-gradient(rgb(32 32 32 / 0.1), rgb(32 32 32 / 0.1)),
+    linear-gradient(#4f4f4f, rgb(32 32 32 / 0.85));
+  color: #fff;
+  box-shadow: inset 0 2px 0 rgb(255 255 255 / 0.24), 0 2px 6px rgb(0 0 0 / 0.08);
+}
+
+.dash .sp-main .button-secondary {
+  border: 0;
+  background: #fff;
+  color: var(--lp-ink);
+  box-shadow: 0 0 0 1px var(--lp-line);
 }
