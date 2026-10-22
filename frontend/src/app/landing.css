@@ -848,6 +848,7 @@
 }
 
 .lp-window-main {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -984,6 +985,7 @@
 }
 
 .lp-logs p {
+  overflow-wrap: anywhere;
   animation: lp-line 400ms var(--lp-ease) both;
 }
 
@@ -1035,7 +1037,17 @@
   }
 
   .lp-window-body {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lp-window-main {
+    padding: 18px;
+  }
+
+  .lp-url span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .lp-window-side {
@@ -2219,4 +2231,31 @@
 
 .lp .lp-footer-bottom .brand {
   color: #f4f0e6;
+}
+
+/* With reduced motion, looping illustrations rest on their finished state. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-status-cycle span:last-child {
+    opacity: 1;
+  }
+
+  .lp-status-dot {
+    background: #4f9a3a;
+  }
+
+  .lp-marquee ul {
+    flex-shrink: 1;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 12px;
+  }
+
+  .lp-marquee ul + ul {
+    display: none;
+  }
+
+  .lp-marquee {
+    mask-image: none;
+  }
 }
