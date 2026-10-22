@@ -1,18 +1,30 @@
 // Clerk owns authentication; this only restyles its components to match the auth shell.
+// Class names map Clerk's elements onto styles in auth.css.
 export const authAppearance = {
-  options: { elevation: "flush" },
+  options: {
+    elevation: "flush",
+    socialButtonsVariant: "blockButton",
+    socialButtonsPlacement: "top",
+  },
   variables: {
-    colorPrimary: "#687642",
-    colorForeground: "#302b25",
-    colorMutedForeground: "#70675d",
-    colorBackground: "#fffaf2",
-    colorInput: "#fffaf2",
+    colorPrimary: "#2f5a2b",
+    colorForeground: "#171717",
+    colorMutedForeground: "rgb(38 35 35 / 0.6)",
+    colorBackground: "#f5f5f2",
+    colorInput: "#ffffff",
     fontFamily: "inherit",
-    borderRadius: "10px",
+    borderRadius: "12px",
   },
   elements: {
-    rootBox: { width: "100%" },
-    cardBox: { width: "100%" },
-    card: { width: "100%" },
+    rootBox: "auth-clerk",
+    cardBox: "auth-clerk-box",
+    card: "auth-clerk-card",
+    socialButtons: "auth-socials",
+    socialButtonsBlockButton: "auth-pill",
+    dividerRow: "auth-divider",
+    formFieldLabel: "auth-label",
+    formFieldInput: "auth-input",
+    formButtonPrimary: "auth-pill auth-pill--primary",
+    footer: "auth-clerk-footer",
   },
 } as const;

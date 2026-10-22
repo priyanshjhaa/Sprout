@@ -231,3 +231,143 @@
     border-right-color: transparent;
   }
 }
+
+/* Clerk, restyled. Selectors are scoped under .auth so they outrank Clerk's own styles. */
+.auth .auth-clerk,
+.auth .auth-clerk-box,
+.auth .auth-clerk-card {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth .auth-clerk-card {
+  gap: 20px;
+  padding: 0;
+}
+
+/* On the first step the switch already says where you are. Later steps keep their headings. */
+.auth .cl-signIn-start .cl-header,
+.auth .cl-signUp-start .cl-header,
+.auth .cl-signIn-start .cl-footerAction,
+.auth .cl-signUp-start .cl-footerAction {
+  display: none;
+}
+
+.auth .cl-headerTitle {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* Stacked one per row, like a list of doors. */
+.auth .auth-clerk .auth-socials {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Dark pill buttons with an inset highlight and a stacked drop shadow. */
+.auth .auth-clerk .auth-pill {
+  position: relative;
+  min-height: 52px;
+  overflow: hidden;
+  border: 2px solid #4f4f4f;
+  border-radius: 999px;
+  background: linear-gradient(to top, #0f0f0f, #262626);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.5),
+    inset 0 0 0.4px 1px rgb(255 255 255 / 0.15),
+    0 2px 3px rgb(0 0 0 / 0.2),
+    0 6px 6px rgb(0 0 0 / 0.17),
+    0 14px 8px rgb(0 0 0 / 0.1),
+    0 25px 10px rgb(0 0 0 / 0.03);
+  transition:
+    transform 180ms var(--lp-ease),
+    box-shadow 180ms var(--lp-ease);
+}
+
+.auth .auth-clerk .auth-pill:hover {
+  background: linear-gradient(to top, #161616, #2e2e2e);
+  transform: translateY(-1px);
+}
+
+.auth .auth-clerk .auth-pill:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow:
+    inset 0 1.5px 0 rgb(255 255 255 / 0.4),
+    0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+.auth .auth-clerk .auth-pill:focus-visible {
+  outline: 2px solid var(--lp-green);
+  outline-offset: 3px;
+}
+
+.auth .auth-clerk .auth-pill--primary {
+  border-color: #4f4f4f;
+}
+
+.auth .auth-clerk .auth-pill .cl-socialButtonsBlockButtonText,
+.auth .auth-clerk .auth-pill--primary {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* GitHub's mark is black; flip it so it reads on the dark pill. */
+.auth .cl-socialButtonsProviderIcon__github {
+  filter: invert(1);
+}
+
+.auth .auth-divider {
+  margin-block: 4px;
+}
+
+.auth .auth-divider .cl-dividerLine {
+  background: rgb(0 0 0 / 0.08);
+}
+
+.auth .auth-divider .cl-dividerText {
+  color: rgb(32 32 32 / 0.5);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.auth .auth-label {
+  color: var(--lp-ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.auth .auth-input {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  padding-inline: 16px;
+  background: #fff;
+  color: var(--lp-ink);
+  font-size: 15px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.1), 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: box-shadow 180ms ease;
+}
+
+.auth .auth-input:hover {
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.18), 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+.auth .auth-input:focus {
+  box-shadow: 0 0 0 1px var(--lp-green), 0 0 0 4px rgb(47 90 43 / 0.15);
+}
+
+.auth .auth-clerk-footer {
+  background: transparent;
+}
+
+.auth .auth-clerk-footer .cl-footerActionLink {
+  color: var(--lp-green);
+}

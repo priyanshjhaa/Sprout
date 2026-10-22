@@ -60,6 +60,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           signUpUrl="/sign-up"
           signInForceRedirectUrl="/start"
           signUpForceRedirectUrl="/start"
+          localization={{
+            socialButtonsBlockButton: "Continue with {{provider|titleize}}",
+            socialButtonsBlockButtonManyInView: "Continue with {{provider|titleize}}",
+          }}
         >
           <Providers>{children}</Providers>
         </ClerkProvider>
