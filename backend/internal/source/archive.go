@@ -182,6 +182,14 @@ func extract(ctx context.Context, root *os.Root, input io.Reader) (Summary, erro
 	}
 }
 
+// CheckName applies the extractor's rules for a file path to one name, so a
+// client can name the offending file before uploading. It returns ErrInvalid,
+// ErrLimit or ErrSensitive, exactly as extraction would.
+func CheckName(name string) error {
+	_, err := safeName(name, false)
+	return err
+}
+
 func safeName(name string, directory bool) (string, error) {
 	if directory {
 		name = strings.TrimSuffix(name, "/")
