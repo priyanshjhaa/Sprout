@@ -57,7 +57,7 @@ Sprout is the **control plane**: API, permissions, lifecycle, routing. Applicati
 1. Align docs (this document).
 2. **Local runtime:** run a built app in a locked-down container, health-check it, serve it publicly at `{app}.{workspace}.localhost`, and make pause, resume, archive and idle sleep real. *Done: driver, release, health check, live status, public routing, wake on request, idle sleep, and real pause and archive. See `docs/local-runtime-learning.md`.*
 3. Static sites. *Done: a plain folder with `index.html`, served from the stored artifact (see `docs/static-sites-learning.md`). Sites that need a build wait for step 5.*
-4. CLI `sprout deploy` (CLI authentication is done: personal access tokens, see `docs/access-tokens-learning.md`; the CLI itself is next), then the MCP `deploy` tool (folder and public GitHub modes).
+4. CLI `sprout deploy`, then the MCP `deploy` tool (folder and public GitHub modes). *CLI done: login with a personal access token, then pack, check against the server's own rules, upload, poll and print the URL (see `docs/cli-learning.md`). The MCP tool is next.*
 5. `npm` installs through a controlled registry proxy.
 6. Python through buildpacks.
 7. Hosting trial, then the cloud driver.
