@@ -607,8 +607,8 @@ paths:
       Real builds. These paths exist only when the API runs with
       SPROUT_ENABLE_LOCAL_BUILDS=1 on a loopback address; otherwise they return 404.
       Uploaded code runs in a sealed Docker container on the API's own machine, so
-      this is local developer tooling, not a hosted service. A succeeded build
-      means the output was built and stored; nothing is started and no URL is live.
+      this is local developer tooling, not a hosted service. A deployment that
+      reaches live is serving at the application's url.
     parameters:
       - $ref: "#/components/parameters/WorkspaceSlug"
       - $ref: "#/components/parameters/ApplicationID"
@@ -617,11 +617,12 @@ paths:
       description: |
         Requires application edit permission, an active application, and a free
         queue slot; these are checked before the body is read. The body is a plain,
-        uncompressed tar of at most 16 MiB that follows the Node.js application
-        contract (docs/node-build-contract.md). Stages: source (extract and validate),
-        build (sealed Docker build), package (store the output). The uploaded
-        archive is deleted when the job ends, whatever its outcome. Failures use
-        stable codes such as node_contract_invalid or source_sensitive_path.
+        uncompressed tar of at most 16 MiB holding either a static site (index.html
+        at the root, no package.json) or a Node.js app that follows the application
+        contract (docs/node-build-contract.md). See the Deployment schema for stages
+        and statuses. The uploaded archive is deleted when the job ends, whatever its
+        outcome. Failures use stable codes such as node_contract_engine or
+        source_sensitive_path.
       security: [{ clerkSession: [] }, { accessToken: [] }]
       requestBody:
         required: true
@@ -635,7 +636,7 @@ paths:
             Location: { schema: { type: string } }
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+              schema: { $ref: "#/components/schemas/Deployment" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -672,7 +673,7 @@ paths:
                   deployments:
                     type: array
                     maxItems: 50
-                    items: { $ref: "#/components/schemas/DeploymentSimulation" }
+                    items: { $ref: "#/components/schemas/Deployment" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -690,7 +691,7 @@ paths:
           description: Build state and ordered source/build/package stages
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+              schema: { $ref: "#/components/schemas/Deployment" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
@@ -710,7 +711,7 @@ paths:
           description: Cancelled build
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/DeploymentSimulation" }
+              schema: { $ref: "#/components/schemas/Deployment" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -731,8 +732,8 @@ paths:
         schema: { type: string, pattern: '^[a-f0-9]{64}$' }
     get:
       summary: Stream authorized build snapshots with server-sent events
-      description: Same contract as the simulation events stream, for real builds.
-      security: [{ clerkSession: [] }, { accessToken: [] }]
+      description: Same contract as the simulation events stream, for real builds; each progress event carries a Deployment snapshot. Needs a browser session; access-token clients poll the deployment instead.
+      security: [{ clerkSession: [] }]
       responses:
         "200":
           description: SSE progress, complete, unavailable events and heartbeat comments
@@ -900,6 +901,43 @@ components:
             required: [name, status, failureCode]
             properties:
               name: { type: string, enum: [source, build, package] }
+              status: { type: string, enum: [pending, running, succeeded, failed, skipped] }
+              failureCode: { type: [string, "null"] }
+    Deployment:
+      description: |
+        A real build. It walks six stages in order: source (extract and validate),
+        build (a sealed Docker build for Node apps; a static site is only packed),
+        package (store the output), provision, release, and health_check (the
+        release must answer; static sites run no container).
+        succeeded means the output was built and stored; live means it is also
+        serving at the application's url.
+      type: object
+      additionalProperties: false
+      required: [id, applicationId, simulated, status, failureCode, createdAt, startedAt, finishedAt, stages]
+      properties:
+        id: { type: string, format: uuid }
+        applicationId: { type: string, format: uuid }
+        simulated: { type: boolean, const: false }
+        status: { type: string, enum: [queued, building, succeeded, live, failed, cancelled] }
+        failureCode:
+          type: [string, "null"]
+          description: |
+            A stable identifier, never source text. The set grows as rules are added,
+            so clients must handle unknown codes. Families include job_* and
+            server_shutdown, source_*, node_contract_* (node_contract_invalid is the
+            generic ancestor), node_build_*, static_contract_invalid, runtime_*,
+            provision_failed, release_failed and health_check_failed.
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: [string, "null"], format: date-time }
+        finishedAt: { type: [string, "null"], format: date-time }
+        stages:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, status, failureCode]
+            properties:
+              name: { type: string, enum: [source, build, package, provision, release, health_check] }
               status: { type: string, enum: [pending, running, succeeded, failed, skipped] }
               failureCode: { type: [string, "null"] }
     Invitation:

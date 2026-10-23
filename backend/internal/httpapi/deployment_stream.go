@@ -121,7 +121,7 @@ func (h *simulationStream) serve(w http.ResponseWriter, r *http.Request) {
 			}
 			cursor = next
 		}
-		terminal := job.Status == "succeeded" || job.Status == "failed" || job.Status == "cancelled"
+		terminal := job.Status == "succeeded" || job.Status == "live" || job.Status == "failed" || job.Status == "cancelled"
 		if terminal {
 			return true, write("event: complete\ndata: {}\n\n")
 		}

@@ -140,6 +140,21 @@ func TestProgressStreamOrderedSnapshotsAndReconnect(t *testing.T) {
 	}
 	assertReleased(t, s)
 }
+
+// A real build ends live, not succeeded; that is as final as any other end.
+func TestProgressStreamCompletesWhenLive(t *testing.T) {
+	s := newProgressStub()
+	server := streamServer(t, s, context.Background(), time.Now().Unix()+60, 5*time.Second)
+	res := streamGet(t, server, "")
+	reader := bufio.NewReader(res.Body)
+	progressFrame(t, reader, "progress")
+	s.change("live", nil)
+	if frame := progressFrame(t, reader, "progress"); !strings.Contains(frame, `"status":"live"`) {
+		t.Fatal(frame)
+	}
+	progressFrame(t, reader, "complete")
+	assertReleased(t, s)
+}
 func TestProgressStreamReauthorizationAndCleanup(t *testing.T) {
 	for _, reason := range []string{"revoked", "disconnect", "shutdown", "lifetime"} {
 		t.Run(reason, func(t *testing.T) {

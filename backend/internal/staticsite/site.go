@@ -32,7 +32,9 @@ const (
 // same plus dots: no dotfiles, spaces, control characters or encodings to confuse URLs.
 var segment = regexp.MustCompile(`^[A-Za-z0-9_@+-][A-Za-z0-9._@+-]*$`)
 
-func validName(name string) bool {
+// ValidName reports whether a path can be served as part of a static site.
+// Clients use it to name a file the server would refuse.
+func ValidName(name string) bool {
 	if name == "" || path.Clean(name) != name || strings.HasPrefix(name, "/") {
 		return false
 	}
@@ -71,7 +73,7 @@ func Validate(ctx context.Context, files fs.FS) error {
 		if name == "." {
 			return nil
 		}
-		if !validName(name) || !(entry.IsDir() || entry.Type().IsRegular()) {
+		if !ValidName(name) || !(entry.IsDir() || entry.Type().IsRegular()) {
 			return ErrContract
 		}
 		return nil
@@ -151,7 +153,7 @@ func Load(archive []byte) (*Site, error) {
 			return nil, source.ErrLimit
 		}
 		name := strings.TrimSuffix(header.Name, "/")
-		if !validName(name) {
+		if !ValidName(name) {
 			return nil, ErrContract
 		}
 		switch header.Typeflag {

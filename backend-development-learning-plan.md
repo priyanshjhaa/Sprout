@@ -376,7 +376,7 @@ Authentication is delegated to an external identity provider. Provider selection
 
 **Commit:** Use one commit per independently working system capability; never combine build, runtime, proxy, and cleanup into one unreviewable change.
 
-**Progress and order:** source preparation, the Node build contract, the sealed build runner, artifact storage, and real build jobs on the worker are done (see `docs/real-build-jobs-learning.md`). The runtime driver, local Docker driver, release and health-check stages and `live` status are done (see `docs/local-runtime-learning.md`). The public routing proxy on `*.localhost`, wake on request, idle sleep and real pause/resume/archive are done too. Static sites are done too (see `docs/static-sites-learning.md`). Next, in order: the CLI and MCP front doors, then controlled `npm` installs and Python buildpacks. The cloud runtime driver follows a hands-on hosting trial. See `deployment-strategy.md`.
+**Progress and order:** source preparation, the Node build contract, the sealed build runner, artifact storage, and real build jobs on the worker are done (see `docs/real-build-jobs-learning.md`). The runtime driver, local Docker driver, release and health-check stages and `live` status are done (see `docs/local-runtime-learning.md`). The public routing proxy on `*.localhost`, wake on request, idle sleep and real pause/resume/archive are done too. Static sites are done too (see `docs/static-sites-learning.md`), and so is the `sprout` CLI (see `docs/cli-learning.md`). Next, in order: the MCP front door, then controlled `npm` installs and Python buildpacks. The cloud runtime driver follows a hands-on hosting trial. See `deployment-strategy.md`.
 
 ### Milestone 9: Production hardening
 

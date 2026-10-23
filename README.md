@@ -131,6 +131,8 @@ The API supports `/api/v1/me`, a membership-scoped workspace lookup, and listing
 
 Press `Ctrl+C` in the server terminal to perform a graceful shutdown.
 
+To deploy from a terminal, install the CLI from `backend/` with `go install ./cmd/sprout`, create a token on the dashboard's Access tokens page, then run `sprout login` and `sprout deploy <folder>`. The API must run with `SPROUT_ENABLE_LOCAL_BUILDS=1`. See [the CLI notes](docs/cli-learning.md).
+
 For database work, follow the [local PostgreSQL setup](docs/local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.
 
 Useful demo routes:
@@ -223,7 +225,7 @@ The next implementation phases are intentionally incremental:
 
 1. ~~Local runtime~~ (done): built apps run in locked-down containers, are health-checked, and are served at `{app}.{workspace}.localhost` with real pause, resume, archive and idle sleep.
 2. ~~Static sites~~ (done): a plain folder with `index.html`, served straight from the stored artifact.
-3. CLI `sprout deploy` (authentication with personal access tokens is done; the CLI is next), then an MCP `deploy` tool that takes a folder or a GitHub repository.
+3. ~~CLI `sprout deploy`~~ (done): log in with an access token, then deploy a folder from the terminal. Next: an MCP `deploy` tool that takes a folder or a GitHub repository.
 4. `npm` installs through a controlled registry proxy.
 5. Python apps through buildpacks.
 6. A hands-on hosting trial (Fly Machines vs Cloud Run), then the cloud runtime driver.
@@ -244,6 +246,7 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 - [Bounded deployment simulations: learning and verification](docs/deployment-worker-learning.md)
 - [Live simulation progress: streaming and learning](docs/deployment-streaming-learning.md)
 - [Source preparation: filesystem safety and learning](docs/source-preparation-learning.md)
+- [The `sprout` CLI: deploying from the terminal](docs/cli-learning.md)
 - [Node.js application build contract](docs/node-build-contract.md)
 - [Database design](docs/database-design.md)
 - [Local PostgreSQL setup](docs/local-postgres.md)
