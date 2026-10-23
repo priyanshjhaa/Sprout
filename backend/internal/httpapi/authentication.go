@@ -72,7 +72,6 @@ var tokenRoutes = []struct {
 	{[]string{http.MethodGet, http.MethodPost}, regexp.MustCompile(`^/api/v1/workspaces/[^/]+/applications/[^/]+/deployments/?$`)},
 	{[]string{http.MethodGet}, regexp.MustCompile(`^/api/v1/workspaces/[^/]+/applications/[^/]+/deployments/[^/]+/?$`)},
 	{[]string{http.MethodPost}, regexp.MustCompile(`^/api/v1/workspaces/[^/]+/applications/[^/]+/deployments/[^/]+/cancel/?$`)},
-	{[]string{http.MethodGet}, regexp.MustCompile(`^/api/v1/workspaces/[^/]+/applications/[^/]+/deployments/[^/]+/events/?$`)},
 }
 
 func tokenMayCall(method, escapedPath string) bool {

@@ -119,7 +119,6 @@ func TestTokenAuthenticationAllowsTheDeployRoutes(t *testing.T) {
 		{http.MethodGet, "/api/v1/workspaces/acme/applications/app-1/deployments"},
 		{http.MethodGet, "/api/v1/workspaces/acme/applications/app-1/deployments/d-1"},
 		{http.MethodPost, "/api/v1/workspaces/acme/applications/app-1/deployments/d-1/cancel"},
-		{http.MethodGet, "/api/v1/workspaces/acme/applications/app-1/deployments/d-1/events"},
 	} {
 		resolver := &stubPrincipalResolver{}
 		tokens := &stubTokens{user: handlerTestUserID}
@@ -157,6 +156,8 @@ func TestTokenAuthenticationRefusesEverythingElse(t *testing.T) {
 		{http.MethodPut, "/api/v1/workspaces/acme/applications/app-1/access/u-1"},
 		{http.MethodDelete, "/api/v1/workspaces/acme/applications/app-1/access/u-1"},
 		{http.MethodPost, "/api/v1/workspaces/acme/applications/app-1/deployment-simulations"},
+		// The progress stream needs a browser session; token clients poll the deployment.
+		{http.MethodGet, "/api/v1/workspaces/acme/applications/app-1/deployments/d-1/events"},
 		{http.MethodPut, "/api/v1/workspaces/acme/applications/app-1/deployments"},
 		{http.MethodDelete, "/api/v1/workspaces/acme/applications/app-1/deployments/d-1"},
 		{http.MethodPost, "/api/v1/workspaces"},

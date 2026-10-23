@@ -732,8 +732,8 @@ paths:
         schema: { type: string, pattern: '^[a-f0-9]{64}$' }
     get:
       summary: Stream authorized build snapshots with server-sent events
-      description: Same contract as the simulation events stream, for real builds; each progress event carries a Deployment snapshot.
-      security: [{ clerkSession: [] }, { accessToken: [] }]
+      description: Same contract as the simulation events stream, for real builds; each progress event carries a Deployment snapshot. Needs a browser session; access-token clients poll the deployment instead.
+      security: [{ clerkSession: [] }]
       responses:
         "200":
           description: SSE progress, complete, unavailable events and heartbeat comments
