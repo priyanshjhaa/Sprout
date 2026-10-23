@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,6 +25,8 @@ const requestTimeout = 15 * time.Second
 const usage = `Sprout deploys small apps from a folder.
 
 Usage:
+  sprout deploy [folder] [--app slug] [--workspace slug]
+                             deploy a folder (default: this one) and print its address
   sprout login [--api URL]   store an access token for this machine
   sprout logout              forget the stored token
   sprout whoami              show who the token belongs to
@@ -57,7 +60,8 @@ func main() {
 	os.Exit(run(ctx, os.Args[1:], env))
 }
 
-// Exit codes: 0 success, 1 the operation failed, 2 usage or authentication.
+// Exit codes: 0 success, 1 the operation failed, 2 usage or authentication,
+// 130 interrupted (Ctrl-C).
 func run(ctx context.Context, args []string, env environment) int {
 	if len(args) == 0 {
 		fmt.Fprint(env.stderr, usage)
@@ -65,6 +69,8 @@ func run(ctx context.Context, args []string, env environment) int {
 	}
 	var err error
 	switch args[0] {
+	case "deploy":
+		err = deploy(ctx, args[1:], env)
 	case "login":
 		err = login(ctx, args[1:], env)
 	case "logout":
@@ -90,8 +96,17 @@ type usageError struct{ message string }
 
 func (e usageError) Error() string { return e.message }
 
+// interrupted ends a command after Ctrl-C, saying what the person should know.
+type interrupted struct{ message string }
+
+func (e interrupted) Error() string { return e.message }
+
 func exitCode(err error) int {
 	var usage usageError
+	var stopped interrupted
+	if errors.As(err, &stopped) || errors.Is(err, context.Canceled) {
+		return 130
+	}
 	if errors.As(err, &usage) || errors.Is(err, errNotLoggedIn) || errors.Is(err, errTokenShape) || errors.Is(err, apiclient.ErrInvalidBaseURL) ||
 		apiclient.HasCode(err, "authentication_required") || apiclient.HasCode(err, "token_not_permitted") {
 		return 2
@@ -102,21 +117,24 @@ func exitCode(err error) int {
 // describe turns an error into one line for a person. API errors keep their
 // stable code so they can be searched for and reported.
 func describe(err error) string {
+	var apiErr *apiclient.Error
+	var stopped interrupted
+	var network *url.Error
 	switch {
 	case apiclient.HasCode(err, "authentication_required"):
 		return "the access token was refused (invalid, expired or revoked); create a new one in the dashboard and run `sprout login`"
-	case errors.Is(err, context.DeadlineExceeded):
-		return "the API did not answer in time"
+	case apiclient.HasCode(err, "token_not_permitted"):
+		return "access tokens cannot do that; use the dashboard"
+	case errors.As(err, &apiErr):
+		return apiErr.Error()
+	case errors.As(err, &stopped):
+		return stopped.message
 	case errors.Is(err, context.Canceled):
 		return "interrupted"
-	}
-	var apiErr *apiclient.Error
-	if errors.As(err, &apiErr) {
-		return apiErr.Error()
-	}
-	var network interface{ Timeout() bool }
-	if errors.As(err, &network) {
-		return "cannot reach the Sprout API: " + err.Error()
+	case errors.As(err, &network) && network.Timeout():
+		return "the Sprout API did not answer in time"
+	case errors.As(err, &network):
+		return "cannot reach the Sprout API: " + network.Err.Error()
 	}
 	return err.Error()
 }

@@ -6,6 +6,7 @@
 package apiclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -116,6 +117,93 @@ func (c *Client) Me(ctx context.Context) (Me, error) {
 	var me Me
 	err := c.do(ctx, http.MethodGet, "/api/v1/me", nil, "", http.StatusOK, &me)
 	return me, err
+}
+
+// Capabilities reports the optional features this API process offers.
+func (c *Client) Capabilities(ctx context.Context) (Capabilities, error) {
+	var capabilities Capabilities
+	err := c.do(ctx, http.MethodGet, "/api/v1/capabilities", nil, "", http.StatusOK, &capabilities)
+	return capabilities, err
+}
+
+type Capabilities struct {
+	LocalBuilds bool `json:"localBuilds"`
+}
+
+type Application struct {
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Slug      string  `json:"slug"`
+	Lifecycle string  `json:"lifecycle"`
+	URL       *string `json:"url"`
+}
+
+func applicationsPath(workspace string) string {
+	return "/api/v1/workspaces/" + url.PathEscape(workspace) + "/applications"
+}
+
+func applicationPath(workspace, applicationID string) string {
+	return applicationsPath(workspace) + "/" + url.PathEscape(applicationID)
+}
+
+func (c *Client) ListApplications(ctx context.Context, workspace string) ([]Application, error) {
+	var list struct {
+		Applications []Application `json:"applications"`
+	}
+	err := c.do(ctx, http.MethodGet, applicationsPath(workspace), nil, "", http.StatusOK, &list)
+	return list.Applications, err
+}
+
+func (c *Client) GetApplication(ctx context.Context, workspace, applicationID string) (Application, error) {
+	var application Application
+	err := c.do(ctx, http.MethodGet, applicationPath(workspace, applicationID), nil, "", http.StatusOK, &application)
+	return application, err
+}
+
+func (c *Client) CreateApplication(ctx context.Context, workspace, name, slug string) (Application, error) {
+	body, err := json.Marshal(map[string]string{"name": name, "slug": slug})
+	if err != nil {
+		return Application{}, err
+	}
+	var application Application
+	err = c.do(ctx, http.MethodPost, applicationsPath(workspace), bytes.NewReader(body), "application/json", http.StatusCreated, &application)
+	return application, err
+}
+
+// Deployment is a real build; see the Deployment schema in the OpenAPI spec.
+type Deployment struct {
+	ID          string  `json:"id"`
+	Status      string  `json:"status"`
+	FailureCode *string `json:"failureCode"`
+	Stages      []Stage `json:"stages"`
+}
+
+type Stage struct {
+	Name        string  `json:"name"`
+	Status      string  `json:"status"`
+	FailureCode *string `json:"failureCode"`
+}
+
+// Done reports whether the deployment has reached a final status.
+func (d Deployment) Done() bool {
+	switch d.Status {
+	case "succeeded", "live", "failed", "cancelled":
+		return true
+	}
+	return false
+}
+
+// CreateDeployment uploads a source archive (a plain tar) and queues a build.
+func (c *Client) CreateDeployment(ctx context.Context, workspace, applicationID string, archive []byte) (Deployment, error) {
+	var deployment Deployment
+	err := c.do(ctx, http.MethodPost, applicationPath(workspace, applicationID)+"/deployments", bytes.NewReader(archive), "application/x-tar", http.StatusCreated, &deployment)
+	return deployment, err
+}
+
+func (c *Client) GetDeployment(ctx context.Context, workspace, applicationID, deploymentID string) (Deployment, error) {
+	var deployment Deployment
+	err := c.do(ctx, http.MethodGet, applicationPath(workspace, applicationID)+"/deployments/"+url.PathEscape(deploymentID), nil, "", http.StatusOK, &deployment)
+	return deployment, err
 }
 
 // do sends one request and decodes a JSON response with the expected status.
