@@ -13,7 +13,11 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/apitoken"
 )
 
-const goodToken = "sprout_pat_good"
+// Fake tokens in the server's shape: the prefix and 52 base32 characters.
+var (
+	goodToken    = "sprout_pat_" + strings.Repeat("a", 52)
+	revokedToken = "sprout_pat_" + strings.Repeat("b", 52)
+)
 
 func TestTokenPrefixMatchesServer(t *testing.T) {
 	if tokenPrefix != apitoken.Prefix {
@@ -92,7 +96,7 @@ func TestLoginVerifiesThenStoresPrivately(t *testing.T) {
 func TestLoginRefusesBadTokensWithoutStoring(t *testing.T) {
 	api := fakeAPI(t)
 	for name, secret := range map[string]string{
-		"revoked":    "sprout_pat_revoked\n",
+		"revoked":    revokedToken + "\n",
 		"wrong kind": "ghp_notours\n",
 		"empty":      "",
 	} {
@@ -105,6 +109,27 @@ func TestLoginRefusesBadTokensWithoutStoring(t *testing.T) {
 				t.Fatal("a refused token was stored")
 			}
 		})
+	}
+}
+
+func TestLoginExplainsAMangledPaste(t *testing.T) {
+	api := fakeAPI(t)
+	for name, tc := range map[string]struct{ input, says string }{
+		"pasted twice":    {goodToken + goodToken + "\n", "pasted twice"},
+		"cut short":       {goodToken[:40] + "\n", "not a complete"},
+		"stray character": {goodToken + "x\n", "not a complete"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			h := newHarness(t, tc.input)
+			if code := h.run("login", "--api", api.URL); code != 2 || !strings.Contains(h.stderr.String(), tc.says) {
+				t.Fatalf("exit %d, stderr %q", code, h.stderr)
+			}
+		})
+	}
+	// Terminals that use bracketed paste wrap the text in markers; they are not part of the token.
+	h := newHarness(t, "\x1b[200~"+goodToken+"\x1b[201~\n")
+	if code := h.run("login", "--api", api.URL); code != 0 {
+		t.Fatalf("a token wrapped in paste markers was refused: %s", h.stderr)
 	}
 }
 
@@ -172,7 +197,7 @@ func TestWhoamiWithoutLogin(t *testing.T) {
 func TestRevokedStoredTokenExplainsWhatToDo(t *testing.T) {
 	api := fakeAPI(t)
 	h := newHarness(t, "")
-	if err := writeCredentials(h.env.configDir, credentials{APIURL: api.URL, Token: "sprout_pat_revoked"}); err != nil {
+	if err := writeCredentials(h.env.configDir, credentials{APIURL: api.URL, Token: revokedToken}); err != nil {
 		t.Fatal(err)
 	}
 	if code := h.run("whoami"); code != 2 || !strings.Contains(h.stderr.String(), "was refused") {

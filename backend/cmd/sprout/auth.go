@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/priyanshjhaa/Sprout/backend/internal/apiclient"
 	"golang.org/x/term"
@@ -42,9 +41,9 @@ func login(ctx context.Context, args []string, env environment) error {
 	if err != nil {
 		return err
 	}
-	token = strings.TrimSpace(token)
-	if !strings.HasPrefix(token, tokenPrefix) {
-		return errTokenShape
+	token, err = cleanToken(token)
+	if err != nil {
+		return err
 	}
 	me, err := identify(ctx, address, token)
 	if err != nil {

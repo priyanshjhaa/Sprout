@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/priyanshjhaa/Sprout/backend/internal/apiclient"
@@ -22,8 +23,30 @@ const (
 
 var (
 	errNotLoggedIn = errors.New("not logged in: run `sprout login`, or set SPROUT_TOKEN")
-	errTokenShape  = errors.New("that is not a Sprout access token (they start with " + tokenPrefix + "); create one on the dashboard's Access tokens page")
+	errTokenShape  = errors.New("that is not a complete Sprout access token (" + tokenPrefix + " followed by 52 letters and digits); copy it again from the dashboard's Access tokens page")
+	errTokenTwice  = errors.New("the token appears more than once, so it was probably pasted twice (nothing shows while you paste); run `sprout login` and paste it once")
 )
+
+// tokenShape mirrors wellFormed in apitoken: 32 random bytes written as 52
+// lowercase base32 characters. The server answers any other value with the
+// same 401 as a revoked token, so the CLI checks first and says what is wrong.
+var tokenShape = regexp.MustCompile(`^` + tokenPrefix + `[a-z2-7]{52}$`)
+
+// pasteMarkers are what some terminals wrap pasted text in ("bracketed paste").
+var pasteMarkers = strings.NewReplacer("\x1b[200~", "", "\x1b[201~", "")
+
+// cleanToken removes whitespace and paste markers around a token and checks
+// its shape.
+func cleanToken(raw string) (string, error) {
+	token := strings.TrimSpace(pasteMarkers.Replace(raw))
+	if strings.Count(token, tokenPrefix) > 1 {
+		return "", errTokenTwice
+	}
+	if !tokenShape.MatchString(token) {
+		return "", errTokenShape
+	}
+	return token, nil
+}
 
 // credentials is what `sprout login` stores. The token is kept with the API
 // address it was verified against, and is only ever sent back to that address.
@@ -74,9 +97,10 @@ func resolveSession(getenv func(string) string, dir string) (session, error) {
 	if err != nil {
 		return session{}, err
 	}
-	if token := strings.TrimSpace(getenv("SPROUT_TOKEN")); token != "" {
-		if !strings.HasPrefix(token, tokenPrefix) {
-			return session{}, fmt.Errorf("SPROUT_TOKEN: %w", errTokenShape)
+	if raw := getenv("SPROUT_TOKEN"); strings.TrimSpace(raw) != "" {
+		token, err := cleanToken(raw)
+		if err != nil {
+			return session{}, fmt.Errorf("SPROUT_TOKEN: %w", err)
 		}
 		return session{apiURL: address, token: token, tokenSource: "SPROUT_TOKEN"}, nil
 	}
@@ -112,7 +136,7 @@ func readCredentials(dir string) (*credentials, error) {
 		return nil, fmt.Errorf("%s can be read by other users; run `chmod 600 %s` or `sprout login` again", path, path)
 	}
 	var stored credentials
-	if err := json.NewDecoder(io.LimitReader(file, 64<<10)).Decode(&stored); err != nil || stored.APIURL == "" || !strings.HasPrefix(stored.Token, tokenPrefix) {
+	if err := json.NewDecoder(io.LimitReader(file, 64<<10)).Decode(&stored); err != nil || stored.APIURL == "" || !tokenShape.MatchString(stored.Token) {
 		return nil, fmt.Errorf("%s is damaged; run `sprout login` again", path)
 	}
 	return &stored, nil
