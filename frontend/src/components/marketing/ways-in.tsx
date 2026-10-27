@@ -16,7 +16,7 @@ const ways = [
     line: "sprout deploy from any folder",
     icon: Terminal,
     tone: "clay",
-    available: false,
+    available: true,
   },
   {
     numeral: "III",
