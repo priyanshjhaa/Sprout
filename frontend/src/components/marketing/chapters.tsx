@@ -75,7 +75,7 @@ function DeployChapter() {
       body="Upload a folder, push from your terminal, or let a coding agent ship it. Each one sends a source archive to one typed API, so every app is built and run the same way."
       items={[
         { title: "Upload from the dashboard" },
-        { title: "sprout deploy from the CLI", soon: true },
+        { title: "sprout deploy from the CLI" },
         { title: "MCP tool for coding agents", soon: true },
         { title: "Public GitHub repositories", soon: true },
       ]}
