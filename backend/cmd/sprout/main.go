@@ -103,11 +103,12 @@ func (e interrupted) Error() string { return e.message }
 
 func exitCode(err error) int {
 	var usage usageError
+	var invalid invalidRequest
 	var stopped interrupted
 	if errors.As(err, &stopped) || errors.Is(err, context.Canceled) {
 		return 130
 	}
-	if errors.As(err, &usage) || errors.Is(err, errNotLoggedIn) || errors.Is(err, errTokenShape) || errors.Is(err, errTokenTwice) || errors.Is(err, apiclient.ErrInvalidBaseURL) ||
+	if errors.As(err, &usage) || errors.As(err, &invalid) || errors.Is(err, errNotLoggedIn) || errors.Is(err, errTokenShape) || errors.Is(err, errTokenTwice) || errors.Is(err, apiclient.ErrInvalidBaseURL) ||
 		apiclient.HasCode(err, "authentication_required") || apiclient.HasCode(err, "token_not_permitted") {
 		return 2
 	}
