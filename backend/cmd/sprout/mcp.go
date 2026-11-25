@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/priyanshjhaa/Sprout/backend/internal/apiclient"
+	"github.com/priyanshjhaa/Sprout/backend/internal/githubsource"
 	"github.com/priyanshjhaa/Sprout/backend/internal/sourcepack"
 )
 
@@ -24,12 +26,18 @@ import (
 // directory of this process.
 
 const mcpInstructions = `Sprout deploys small apps (a static website, or a Node.js app with no npm packages) to a public URL.
-Use the deploy tool when the user asks to deploy, publish or ship a folder. Every deployed app is public: anyone with its URL can open it, so deploy only what the user asked to publish.`
+Use the deploy tool when the user asks to deploy, publish or ship a folder of this project, or a public GitHub repository at a commit. Every deployed app is public: anyone with its URL can open it, so deploy only what the user asked to publish.`
+
+// githubBaseURL is where tarballs are downloaded from; tests point it at a fake.
+var githubBaseURL = githubsource.DefaultBaseURL
 
 type deployInput struct {
-	Folder    string `json:"folder" jsonschema:"the folder to deploy; it must be inside the current project, and a relative path starts at the project folder"`
-	App       string `json:"app,omitempty" jsonschema:"the app's name: lowercase letters, numbers and single dashes, like my-site. Defaults to the folder's name. Deploying to an existing app replaces its live version"`
-	Workspace string `json:"workspace,omitempty" jsonschema:"the workspace slug; defaults to the user's home workspace"`
+	Folder     string `json:"folder,omitempty" jsonschema:"a folder of this project to deploy; a relative path starts at the project folder. Give this or repository, not both"`
+	Repository string `json:"repository,omitempty" jsonschema:"a public GitHub repository to deploy, as owner/name. Give this or folder, not both"`
+	Commit     string `json:"commit,omitempty" jsonschema:"with repository: the full 40-character SHA of the commit to deploy; it must already be pushed to GitHub"`
+	Path       string `json:"path,omitempty" jsonschema:"with repository: the folder inside the repository that holds the app, like site or apps/web; defaults to the top of the repository"`
+	App        string `json:"app,omitempty" jsonschema:"the app's name: lowercase letters, numbers and single dashes, like my-site. Defaults to the folder's or repository's name. Deploying to an existing app replaces its live version"`
+	Workspace  string `json:"workspace,omitempty" jsonschema:"the workspace slug; defaults to the user's home workspace"`
 }
 
 type deployOutput struct {
@@ -56,12 +64,12 @@ func mcpServe(ctx context.Context, args []string, env environment) error {
 // newMCPServer builds the server for a project folder.
 func newMCPServer(project string, env environment) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "sprout", Version: "dev"}, &mcp.ServerOptions{Instructions: mcpInstructions})
-	tool := deployTool{project: project, env: env}
+	tool := deployTool{project: project, env: env, github: githubsource.Fetcher{BaseURL: githubBaseURL, UserAgent: userAgent}}
 	mcp.AddTool(server, &mcp.Tool{
 		Name:  "deploy",
 		Title: "Deploy to Sprout",
-		Description: "Deploy a folder in this project to Sprout and return its public URL. " +
-			"The folder must hold an index.html (a website) or a package.json (a Node.js app that uses no npm packages). " +
+		Description: "Deploy a folder in this project, or a public GitHub repository at a commit, to Sprout and return its public URL. " +
+			"The folder (or the repository's path) must hold an index.html (a website) or a package.json (a Node.js app that uses no npm packages). " +
 			"Hidden files, secrets and node_modules are never uploaded. If Sprout would refuse the folder, nothing is uploaded and the reason is returned so you can fix it.",
 	}, tool.deploy)
 	return server
@@ -70,17 +78,15 @@ func newMCPServer(project string, env environment) *mcp.Server {
 type deployTool struct {
 	project string
 	env     environment
+	github  githubsource.Fetcher
 }
 
 func (t deployTool) deploy(ctx context.Context, request *mcp.CallToolRequest, input deployInput) (*mcp.CallToolResult, deployOutput, error) {
-	folder, err := insideProject(t.project, input.Folder)
+	source, err := t.source(input)
 	if err != nil {
 		return nil, deployOutput{}, err
 	}
-	checked, err := newDeployRequest(folder, input.App, input.Workspace)
-	if err != nil {
-		return nil, deployOutput{}, err
-	}
+	// Log-in problems come first, before anything is downloaded.
 	current, err := resolveSession(t.env.getenv, t.env.configDir)
 	if err != nil {
 		return nil, deployOutput{}, forTheUser(err)
@@ -90,9 +96,22 @@ func (t deployTool) deploy(ctx context.Context, request *mcp.CallToolRequest, in
 		return nil, deployOutput{}, forTheUser(err)
 	}
 	reporter := &progressReporter{ctx: ctx, session: request.Session, token: request.Params.GetProgressToken()}
+	folder := source.folder
+	if source.repository != nil {
+		downloaded, cleanup, err := t.download(ctx, source, reporter)
+		if err != nil {
+			return nil, deployOutput{}, err
+		}
+		defer cleanup()
+		folder = downloaded
+	}
+	checked, err := newDeployRequest(folder, input.App, input.Workspace)
+	if err != nil {
+		return nil, deployOutput{}, err
+	}
 	result, err := deployFolder(ctx, client, checked, reporter)
 	if err != nil {
-		return nil, deployOutput{}, forTheAgent(err, input.Folder)
+		return nil, deployOutput{}, forTheAgent(err, source.retry)
 	}
 	output := deployOutput{
 		URL: result.url, App: result.app.Slug, Workspace: result.workspace,
@@ -106,6 +125,86 @@ func (t deployTool) deploy(ctx context.Context, request *mcp.CallToolRequest, in
 		summary = "Live. Open the app in the Sprout dashboard for its address."
 	}
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: summary}}}, output, nil
+}
+
+// deploySource is a checked choice of what to deploy: a folder of the project,
+// or a repository at a commit.
+type deploySource struct {
+	folder     string
+	repository *githubsource.Repository
+	commit     string
+	path       string
+	// retry words "deploy this built folder instead" for this kind of source.
+	retry func(built string) string
+}
+
+func (t deployTool) source(input deployInput) (deploySource, error) {
+	switch {
+	case input.Folder != "" && input.Repository != "":
+		return deploySource{}, invalidRequest{"give a folder or a repository to deploy, not both"}
+	case input.Repository != "":
+		repository, err := githubsource.ParseRepository(input.Repository)
+		if err != nil {
+			return deploySource{}, invalidRequest{err.Error()}
+		}
+		if input.Commit == "" {
+			return deploySource{}, invalidRequest{"give the full 40-character SHA of the commit to deploy; it must already be pushed to GitHub"}
+		}
+		commit, err := githubsource.ParseCommit(input.Commit)
+		if err != nil {
+			return deploySource{}, invalidRequest{err.Error()}
+		}
+		inside, err := githubsource.ParsePath(input.Path)
+		if err != nil {
+			return deploySource{}, invalidRequest{err.Error()}
+		}
+		retry := func(built string) string {
+			return fmt.Sprintf("If the finished website is in %q, deploy the same commit with path %q instead.", built, path.Join(inside, built))
+		}
+		return deploySource{repository: &repository, commit: commit, path: inside, retry: retry}, nil
+	case input.Commit != "" || input.Path != "":
+		return deploySource{}, invalidRequest{"commit and path only go with repository; to deploy a folder of this project, give just the folder"}
+	case strings.TrimSpace(input.Folder) == "":
+		return deploySource{}, invalidRequest{"say what to deploy: a folder of this project, or a public GitHub repository and commit"}
+	}
+	folder, err := insideProject(t.project, input.Folder)
+	if err != nil {
+		return deploySource{}, err
+	}
+	retry := func(built string) string {
+		return fmt.Sprintf("If the finished website is in %q, deploy %s instead.", built, filepath.Join(input.Folder, built))
+	}
+	return deploySource{folder: folder, retry: retry}, nil
+}
+
+// download writes the commit into a private temporary folder named after the
+// repository (so the app is named after it too) and returns a cleanup.
+func (t deployTool) download(ctx context.Context, source deploySource, reporter *progressReporter) (string, func(), error) {
+	where := source.repository.String()
+	if source.path != "" {
+		where += "/" + source.path
+	}
+	reporter.send(fmt.Sprintf("Downloading %s at %s from GitHub", where, source.commit[:7]))
+	temporary, err := os.MkdirTemp("", "sprout-github-")
+	if err != nil {
+		return "", nil, err
+	}
+	cleanup := func() { _ = os.RemoveAll(temporary) }
+	folder := filepath.Join(temporary, source.repository.Name)
+	if err := os.Mkdir(folder, 0o700); err != nil {
+		cleanup()
+		return "", nil, err
+	}
+	fetched, err := t.github.Fetch(ctx, *source.repository, source.commit, source.path, folder)
+	if err != nil {
+		cleanup()
+		if ctx.Err() != nil {
+			return "", nil, interrupted{"stopped while downloading from GitHub; nothing was deployed"}
+		}
+		return "", nil, err
+	}
+	reporter.leftOut = append(reporter.leftOut, fetched.Skipped...)
+	return folder, cleanup, nil
 }
 
 // insideProject resolves the folder an agent asked for and refuses anything
@@ -152,10 +251,10 @@ func forTheUser(err error) error {
 }
 
 // forTheAgent words a failed deploy so the agent can act on it.
-func forTheAgent(err error, folder string) error {
+func forTheAgent(err error, retry func(built string) string) error {
 	var refused refusedError
 	if errors.As(err, &refused) && refused.builtFolder != "" {
-		return fmt.Errorf("%s If the finished website is in %q, deploy %s instead.", refused.Error(), refused.builtFolder, filepath.Join(folder, refused.builtFolder))
+		return fmt.Errorf("%s %s", refused.Error(), retry(refused.builtFolder))
 	}
 	var stopped interrupted
 	if errors.As(err, &stopped) {

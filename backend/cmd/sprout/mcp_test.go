@@ -1,8 +1,13 @@
 package main
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
@@ -97,8 +102,13 @@ func TestMCPListsTheDeployTool(t *testing.T) {
 		t.Fatalf("tools %+v", tools.Tools)
 	}
 	schema, _ := json.Marshal(tools.Tools[0].InputSchema)
-	if !strings.Contains(string(schema), `"required":["folder"]`) {
-		t.Fatalf("folder should be the one required input: %s", schema)
+	for _, field := range []string{`"folder"`, `"repository"`, `"commit"`, `"path"`} {
+		if !strings.Contains(string(schema), field) {
+			t.Fatalf("no %s input: %s", field, schema)
+		}
+	}
+	if strings.Contains(string(schema), `"required"`) {
+		t.Fatalf("folder or repository, so neither is required on its own: %s", schema)
 	}
 	if !strings.Contains(a.session.InitializeResult().Instructions, "public") {
 		t.Fatal("the instructions must tell the agent that apps are public")
@@ -197,5 +207,104 @@ func TestMCPAsksTheUserToLogIn(t *testing.T) {
 	a := connectAgent(t, project(t, map[string]string{"site/index.html": "x"}), h)
 	if text, _, isError := a.deploy(map[string]any{"folder": "site"}); !isError || !strings.Contains(text, "run `sprout login` in a terminal") {
 		t.Fatalf("isError %v, text %q", isError, text)
+	}
+}
+
+const testCommit = "0123456789abcdef0123456789abcdef01234567"
+
+// fakeGitHub serves octocat/hello at testCommit as a tarball shaped like
+// GitHub's, and 404s for anything else.
+func fakeGitHub(t *testing.T, files map[string]string) {
+	t.Helper()
+	var buffer bytes.Buffer
+	zipped := gzip.NewWriter(&buffer)
+	writer := tar.NewWriter(zipped)
+	for name, body := range files {
+		if err := writer.WriteHeader(&tar.Header{Name: "hello-0123456/" + name, Mode: 0o644, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+		writer.Write([]byte(body))
+	}
+	writer.Close()
+	zipped.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/octocat/hello/tar.gz/"+testCommit {
+			http.NotFound(w, r)
+			return
+		}
+		w.Write(buffer.Bytes())
+	}))
+	t.Cleanup(server.Close)
+	githubBaseURL = server.URL
+	t.Cleanup(func() { githubBaseURL = "https://codeload.github.com" })
+}
+
+func TestMCPDeploysAGitHubRepositoryAtACommit(t *testing.T) {
+	fake, api := newFakeSprout(t)
+	fakeGitHub(t, map[string]string{"README.md": "x", "site/index.html": "<h1>hi</h1>", "site/.env": "SECRET=1"})
+	a := connectAgent(t, project(t, map[string]string{"notes.txt": "x"}), deployHarness(t, api))
+
+	text, output, isError := a.deploy(map[string]any{"repository": "https://github.com/octocat/hello", "commit": testCommit, "path": "site"})
+	if isError {
+		t.Fatalf("deploy failed: %s", text)
+	}
+	if output["app"] != "hello" || output["status"] != "live" {
+		t.Fatalf("text %q, output %v", text, output)
+	}
+	if leftOut, _ := output["leftOut"].([]any); len(leftOut) != 1 || leftOut[0] != ".env" {
+		t.Fatalf("leftOut %v", output["leftOut"])
+	}
+	if names := uploadedNames(t, fake.uploads[0]); strings.Join(names, ",") != "index.html" {
+		t.Fatalf("uploaded %v", names)
+	}
+	if !a.heard("Downloading octocat/hello/site at 0123456 from GitHub") {
+		t.Errorf("no download progress (heard %v)", a.progress)
+	}
+}
+
+func TestMCPExplainsAMissingRepository(t *testing.T) {
+	fake, api := newFakeSprout(t)
+	fakeGitHub(t, map[string]string{"index.html": "x"})
+	a := connectAgent(t, project(t, map[string]string{"notes.txt": "x"}), deployHarness(t, api))
+	text, _, isError := a.deploy(map[string]any{"repository": "octocat/private", "commit": testCommit})
+	if !isError || !strings.Contains(text, "only deploy public repositories") {
+		t.Fatalf("isError %v, text %q", isError, text)
+	}
+	if len(fake.uploads) != 0 {
+		t.Fatal("something was uploaded")
+	}
+}
+
+func TestMCPHintsAtTheBuiltFolderInARepository(t *testing.T) {
+	_, api := newFakeSprout(t)
+	fakeGitHub(t, map[string]string{
+		"web/package.json":    `{"name":"web","private":true,"dependencies":{"express":"^5.0.0"}}`,
+		"web/dist/index.html": "x",
+	})
+	a := connectAgent(t, project(t, map[string]string{"notes.txt": "x"}), deployHarness(t, api))
+	text, _, isError := a.deploy(map[string]any{"repository": "octocat/hello", "commit": testCommit, "path": "web"})
+	if !isError || !strings.Contains(text, `with path "web/dist" instead`) {
+		t.Fatalf("isError %v, text %q", isError, text)
+	}
+}
+
+func TestMCPChecksWhatToDeploy(t *testing.T) {
+	_, api := newFakeSprout(t)
+	a := connectAgent(t, project(t, map[string]string{"site/index.html": "x"}), deployHarness(t, api))
+	for _, c := range []struct {
+		arguments map[string]any
+		want      string
+	}{
+		{map[string]any{}, "say what to deploy"},
+		{map[string]any{"folder": "site", "repository": "octocat/hello"}, "not both"},
+		{map[string]any{"folder": "site", "commit": testCommit}, "only go with repository"},
+		{map[string]any{"repository": "octocat/hello"}, "40-character SHA"},
+		{map[string]any{"repository": "octocat/hello", "commit": "main"}, "not a full commit SHA"},
+		{map[string]any{"repository": "octocat", "commit": testCommit}, "owner/name"},
+		{map[string]any{"repository": "octocat/hello", "commit": testCommit, "path": "../x"}, "not a folder path"},
+	} {
+		if text, _, isError := a.deploy(c.arguments); !isError || !strings.Contains(text, c.want) {
+			t.Errorf("%v: isError %v, text %q", c.arguments, isError, text)
+		}
 	}
 }
