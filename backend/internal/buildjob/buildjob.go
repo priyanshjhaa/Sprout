@@ -25,7 +25,11 @@ import (
 // Builder turns a prepared source tree into a bounded output archive.
 // *nodeapp.Runner implements it; tests substitute a fake.
 type Builder interface {
+	// BuildFiles builds a server: dist/, package.json and node_modules.
 	BuildFiles(ctx context.Context, files fs.FS) ([]byte, error)
+	// BuildWebsite builds a project without a start script into a static
+	// site archive of its dist/ folder.
+	BuildWebsite(ctx context.Context, files fs.FS) ([]byte, error)
 }
 
 // HealthCheck waits until the instance at endpoint is serving, or fails.
@@ -80,7 +84,13 @@ func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment
 		if err := nodeapp.Validate(ctx, files); err != nil {
 			return err
 		}
-		if err := steps.SetRuntime(rt.RuntimeNode); err != nil {
+		// Without a start script the project builds a website: its dist/ is
+		// served like a static site and no process runs.
+		build := r.builder.BuildFiles
+		if nodeapp.IsWebsite(files) {
+			kind, build = rt.RuntimeStatic, r.builder.BuildWebsite
+		}
+		if err := steps.SetRuntime(kind); err != nil {
 			return err
 		}
 		if err := steps.Complete("source"); err != nil {
@@ -89,7 +99,7 @@ func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment
 		if err := steps.Begin("build"); err != nil {
 			return err
 		}
-		built, err := r.builder.BuildFiles(ctx, files)
+		built, err := build(ctx, files)
 		if err != nil {
 			return err
 		}

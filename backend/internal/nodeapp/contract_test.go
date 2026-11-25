@@ -49,7 +49,8 @@ func TestNodeContract(t *testing.T) {
 		{"valid", func(*Manifest, *lockfile) {}, true},
 		{"wrong node", func(m *Manifest, _ *lockfile) { m.Engines["node"] = "22.x" }, false},
 		{"not private", func(m *Manifest, _ *lockfile) { m.Private = false }, false},
-		{"missing start", func(m *Manifest, _ *lockfile) { delete(m.Scripts, "start") }, false},
+		{"no start (a website)", func(m *Manifest, _ *lockfile) { delete(m.Scripts, "start") }, true},
+		{"blank start", func(m *Manifest, _ *lockfile) { m.Scripts["start"] = " " }, false},
 		{"missing build", func(m *Manifest, _ *lockfile) { m.Scripts["build"] = " " }, false},
 		{"workspaces", func(m *Manifest, _ *lockfile) { m.Workspaces = json.RawMessage(`["packages/*"]`) }, false},
 		{"other manager", func(m *Manifest, _ *lockfile) { m.PackageManager = "pnpm@10.0.0" }, false},
@@ -143,7 +144,7 @@ func TestContractFailuresNameTheRule(t *testing.T) {
 		{"engines missing, like most real projects", func(m *Manifest, _ *lockfile) { m.Engines = nil }, "node_contract_engine"},
 		{"wrong node", func(m *Manifest, _ *lockfile) { m.Engines["node"] = "22.x" }, "node_contract_engine"},
 		{"not private", func(m *Manifest, _ *lockfile) { m.Private = false }, "node_contract_private"},
-		{"missing start", func(m *Manifest, _ *lockfile) { delete(m.Scripts, "start") }, "node_contract_scripts"},
+		{"blank start", func(m *Manifest, _ *lockfile) { m.Scripts["start"] = " " }, "node_contract_scripts"},
 		{"blank build", func(m *Manifest, _ *lockfile) { m.Scripts["build"] = " " }, "node_contract_scripts"},
 		{"workspaces", func(m *Manifest, _ *lockfile) { m.Workspaces = json.RawMessage(`["packages/*"]`) }, "node_contract_workspaces"},
 		{"no name", func(m *Manifest, _ *lockfile) { m.Name = "" }, "node_contract_manifest"},
@@ -177,5 +178,16 @@ func TestContractFailuresNameTheRule(t *testing.T) {
 	files["Dockerfile"] = &fstest.MapFile{Data: []byte("FROM scratch")}
 	if err := Validate(context.Background(), files); err == nil || err.Error() != "node_contract_files" {
 		t.Errorf("forbidden file: %v", err)
+	}
+}
+
+func TestIsWebsiteMeansNoStartScript(t *testing.T) {
+	manifest, lock := sample()
+	if IsWebsite(filesFor(t, manifest, lock)) {
+		t.Fatal("an app with a start script is a server")
+	}
+	delete(manifest.Scripts, "start")
+	if !IsWebsite(filesFor(t, manifest, lock)) {
+		t.Fatal("a project without a start script builds a website")
 	}
 }

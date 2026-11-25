@@ -18,6 +18,7 @@ import (
 
 	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
 	"github.com/priyanshjhaa/Sprout/backend/internal/source"
+	"github.com/priyanshjhaa/Sprout/backend/internal/staticsite"
 )
 
 var (
@@ -37,15 +38,13 @@ var pinnedImage = regexp.MustCompile(`^node@sha256:[a-f0-9]{64}$`)
 // multi-platform registry digest pulled for this milestone.
 const DefaultImage = "node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
 
-// buildCommand runs inside the sealed container. The input tar holds the app
+// The build runs inside the sealed container. The input tar holds the app
 // under app/ and, when it uses packages, the verified tarballs under
 // packages/. npm only ever reads those tarballs: the container has no
-// network, and install scripts never run. After the build, devDependencies
-// are pruned so the release carries only what `npm start` needs.
-// node_modules/.bin is left out because it holds symlinks; the runtime
-// recreates it when it unpacks the release. Stdout is the output tar, so every
-// other command is silenced. Exit 3 means the install failed, 4 the build.
-const buildCommand = `set -e
+// network, and install scripts never run. Stdout is the output tar, so every
+// other command is silenced. Exit 3 means the install failed, 4 the build, 5
+// that the build made no dist/ folder.
+const installAndBuild = `set -e
 tar -x --no-same-owner --no-same-permissions -C /workspace
 cd /workspace/app
 if [ -d /workspace/packages ]; then
@@ -54,11 +53,22 @@ if [ -d /workspace/packages ]; then
 fi
 npm ci --offline --ignore-scripts --no-audit --no-fund >/dev/null 2>&1 || exit 3
 npm --ignore-scripts run build >/dev/null 2>&1 || exit 4
-if [ -d node_modules ]; then
+[ -d dist ] || exit 5
+`
+
+// serverCommand then prunes devDependencies, so the release carries only what
+// `npm start` needs. node_modules/.bin is left out because it holds symlinks;
+// the runtime recreates it when it unpacks the release.
+const serverCommand = installAndBuild + `if [ -d node_modules ]; then
   npm prune --omit=dev --offline --ignore-scripts --no-audit --no-fund >/dev/null 2>&1 || exit 3
 fi
 if [ -d node_modules ]; then set -- dist package.json node_modules; else set -- dist package.json; fi
 tar --format=ustar --exclude=node_modules/.bin -cf - "$@"`
+
+// websiteCommand returns only what is inside dist/: the website itself.
+// Hidden files are not served, so the glob leaving them out is fine.
+const websiteCommand = installAndBuild + `cd dist
+tar --format=ustar -cf - -- *`
 
 // Packages downloads the tarballs a lockfile names. *npmfetch.Fetcher
 // implements it; tests substitute a fake.
@@ -104,6 +114,57 @@ func (r *Runner) RunFiles(ctx context.Context, files fs.FS) error {
 // production node_modules from a prepared source filesystem. The caller owns
 // files and must keep them available until return.
 func (r *Runner) BuildFiles(ctx context.Context, files fs.FS) ([]byte, error) {
+	raw, err := r.run(ctx, files, serverCommand)
+	if err != nil {
+		return nil, err
+	}
+	var artifact []byte
+	_, err = source.WithArchiveLimits(ctx, bytes.NewReader(raw), source.ArtifactLimits, func(ctx context.Context, built fs.FS) error {
+		info, statErr := fs.Stat(built, "dist")
+		if statErr != nil || !info.IsDir() {
+			return ErrArtifact
+		}
+		// The release must be self-contained: the runtime starts it with
+		// npm, which reads package.json.
+		manifest, statErr := fs.Stat(built, "package.json")
+		if statErr != nil || !manifest.Mode().IsRegular() {
+			return ErrArtifact
+		}
+		var buffer bytes.Buffer
+		if err := pack(ctx, built, "", tar.NewWriter(&buffer), &buffer, source.ArtifactLimits.ArchiveBytes); err != nil {
+			return err
+		}
+		artifact = buffer.Bytes()
+		return nil
+	})
+	return artifact, outputError(ctx, err)
+}
+
+// BuildWebsite builds a project without a start script and returns its dist/
+// folder as a static site archive, checked by the same rules as a plain
+// static site: an index.html at the top, web-safe names, the source limits.
+func (r *Runner) BuildWebsite(ctx context.Context, files fs.FS) ([]byte, error) {
+	raw, err := r.run(ctx, files, websiteCommand)
+	if err != nil {
+		return nil, err
+	}
+	var site []byte
+	_, err = source.WithArchive(ctx, bytes.NewReader(raw), func(ctx context.Context, built fs.FS) error {
+		if err := staticsite.Validate(ctx, built); err != nil {
+			return err
+		}
+		site, err = staticsite.Pack(ctx, built)
+		return err
+	})
+	if errors.Is(err, staticsite.ErrContract) {
+		return nil, err
+	}
+	return site, outputError(ctx, err)
+}
+
+// run validates the app, fetches its packages and runs command in the sealed
+// container, returning the raw output tar.
+func (r *Runner) run(ctx context.Context, files fs.FS, command string) ([]byte, error) {
 	if r == nil {
 		return nil, ErrImage
 	}
@@ -124,39 +185,20 @@ func (r *Runner) BuildFiles(ctx context.Context, files fs.FS) ([]byte, error) {
 	}()
 	runCtx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
-	raw, err := r.execute(runCtx, input)
-	if err != nil {
-		return nil, err
-	}
-	var artifact []byte
-	_, err = source.WithArchiveLimits(runCtx, bytes.NewReader(raw), source.ArtifactLimits, func(ctx context.Context, built fs.FS) error {
-		info, statErr := fs.Stat(built, "dist")
-		if statErr != nil || !info.IsDir() {
-			return ErrArtifact
-		}
-		// The release must be self-contained: the runtime starts it with
-		// npm, which reads package.json.
-		manifest, statErr := fs.Stat(built, "package.json")
-		if statErr != nil || !manifest.Mode().IsRegular() {
-			return ErrArtifact
-		}
-		var buffer bytes.Buffer
-		if err := pack(ctx, built, "", tar.NewWriter(&buffer), &buffer, source.ArtifactLimits.ArchiveBytes); err != nil {
-			return err
-		}
-		artifact = buffer.Bytes()
+	return r.execute(runCtx, input, command)
+}
+
+// outputError words a problem with the build's output.
+func outputError(ctx context.Context, err error) error {
+	switch {
+	case err == nil:
 		return nil
-	})
-	if err != nil {
-		if runCtx.Err() != nil {
-			return nil, runCtx.Err()
-		}
-		if errors.Is(err, source.ErrLimit) {
-			return nil, ErrArtifactSize
-		}
-		return nil, ErrArtifact
+	case ctx.Err() != nil:
+		return ctx.Err()
+	case errors.Is(err, source.ErrLimit):
+		return ErrArtifactSize
 	}
-	return artifact, nil
+	return ErrArtifact
 }
 
 // fetch downloads the app's packages. An app with none needs no network.
@@ -266,7 +308,7 @@ func pack(ctx context.Context, files fs.FS, prefix string, writer *tar.Writer, s
 	return nil
 }
 
-func (r *Runner) execute(ctx context.Context, input io.Reader) (artifact []byte, err error) {
+func (r *Runner) execute(ctx context.Context, input io.Reader, script string) (artifact []byte, err error) {
 	var random [16]byte
 	if _, err = rand.Read(random[:]); err != nil {
 		return nil, ErrDocker
@@ -275,7 +317,7 @@ func (r *Runner) execute(ctx context.Context, input io.Reader) (artifact []byte,
 	commandCtx, stop := context.WithCancel(ctx)
 	defer stop()
 	output := &boundedOutput{limit: int(source.MaxArchiveBytes), cancel: stop}
-	command := exec.CommandContext(commandCtx, "docker", dockerArgs(name, r.image)...)
+	command := exec.CommandContext(commandCtx, "docker", dockerArgs(name, r.image, script)...)
 	command.Stdin = input
 	command.Stdout = output
 	command.Stderr = io.Discard
@@ -306,6 +348,8 @@ func (r *Runner) execute(ctx context.Context, input io.Reader) (artifact []byte,
 		switch exit.ExitCode() {
 		case 3:
 			return nil, ErrInstall
+		case 5:
+			return nil, ErrArtifact
 		case 125, 126, 127: // Docker itself could not run the container
 		default:
 			return nil, ErrBuild
@@ -366,17 +410,21 @@ func cleanupContainer(ctx context.Context, name string, waitForLateCreate bool) 
 	}
 }
 
-func dockerArgs(name, image string) []string {
+// dockerArgs is the build container's whole security posture. /workspace is
+// mounted exec (Docker's default for tmpfs is noexec) because builds run
+// package commands such as vite and native helpers such as esbuild; that
+// grants nothing new, since the build can already run any code through node.
+func dockerArgs(name, image, script string) []string {
 	return []string{
 		"run", "--name", name, "--pull=never", "--interactive", "--log-driver=none",
 		"--label", "io.sprout.purpose=local-node-build", "--label", "io.sprout.owned=" + name,
 		"--network", "none", "--user", "65532:65532", "--read-only", "--cap-drop", "ALL",
 		"--security-opt", "no-new-privileges", "--cpus", "1", "--memory", "2g", "--memory-swap", "2g", "--pids-limit", "256",
-		"--tmpfs", "/workspace:rw,nosuid,nodev,size=1073741824,uid=65532,gid=65532,mode=0700",
+		"--tmpfs", "/workspace:rw,exec,nosuid,nodev,size=1073741824,uid=65532,gid=65532,mode=0700",
 		"--tmpfs", "/tmp:rw,nosuid,nodev,size=536870912,uid=65532,gid=65532,mode=0700",
 		"--workdir", "/workspace", "--env", "HOME=/tmp", "--env", "npm_config_cache=/tmp/npm-cache",
 		"--env", "HTTP_PROXY=", "--env", "HTTPS_PROXY=", "--env", "ALL_PROXY=", "--env", "NO_PROXY=",
 		"--env", "http_proxy=", "--env", "https_proxy=", "--env", "all_proxy=", "--env", "no_proxy=",
-		image, "sh", "-c", buildCommand,
+		image, "sh", "-c", script,
 	}
 }

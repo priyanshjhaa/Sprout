@@ -33,7 +33,7 @@ const (
 	reasonPrivate    = "node_contract_private"    // "private": true is required
 	reasonEngine     = "node_contract_engine"     // engines.node must be "24.x"
 	reasonWorkspaces = "node_contract_workspaces" // workspaces are not supported
-	reasonScripts    = "node_contract_scripts"    // build and start scripts are required
+	reasonScripts    = "node_contract_scripts"    // a build script is required; start, if present, must be usable
 	reasonLockfile   = "node_contract_lockfile"   // package-lock.json missing or inconsistent
 	reasonFiles      = "node_contract_files"      // files Sprout does not accept in the source
 )
@@ -95,10 +95,11 @@ func Validate(ctx context.Context, files fs.FS) error {
 	case len(manifest.Workspaces) != 0:
 		return broke(reasonWorkspaces)
 	}
-	for _, name := range []string{"build", "start"} {
-		if command := strings.TrimSpace(manifest.Scripts[name]); command == "" || len(command) > 2048 {
-			return broke(reasonScripts)
-		}
+	if command := strings.TrimSpace(manifest.Scripts["build"]); command == "" || len(command) > 2048 {
+		return broke(reasonScripts)
+	}
+	if command, present := manifest.Scripts["start"]; present && (strings.TrimSpace(command) == "" || len(command) > 2048) {
+		return broke(reasonScripts)
 	}
 	if lock.LockfileVersion != 3 || lock.Name != manifest.Name || lock.Version != manifest.Version || len(lock.Packages) > 4096 {
 		return broke(reasonLockfile)
@@ -226,4 +227,16 @@ func packagePath(name string) bool {
 		}
 	}
 	return true
+}
+
+// IsWebsite reports whether a Node project builds a website rather than a
+// server: it has no start script, so its dist/ folder is served as a static
+// site and no process runs. Call it after Validate.
+func IsWebsite(files fs.FS) bool {
+	var manifest Manifest
+	if err := readJSON(files, "package.json", 256<<10, &manifest); err != nil {
+		return false
+	}
+	_, hasStart := manifest.Scripts["start"]
+	return !hasStart
 }

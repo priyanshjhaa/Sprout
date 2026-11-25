@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
@@ -103,10 +104,12 @@ func archive(t *testing.T, extra map[string]string) []byte {
 
 type fakeBuilder struct {
 	output []byte
+	site   []byte
 	err    error
 }
 
-func (b fakeBuilder) BuildFiles(context.Context, fs.FS) ([]byte, error) { return b.output, b.err }
+func (b fakeBuilder) BuildFiles(context.Context, fs.FS) ([]byte, error)   { return b.output, b.err }
+func (b fakeBuilder) BuildWebsite(context.Context, fs.FS) ([]byte, error) { return b.site, b.err }
 
 type recordedSteps struct {
 	runtimes []string
@@ -588,4 +591,28 @@ func TestDockerBuildJobWithPackages(t *testing.T) {
 		t.Fatalf("express app did not go live: %+v %v", outcome, err)
 	}
 	runner.Release(ctx, work, outcome, false)
+}
+
+// A Node project without a start script builds a website: it goes live as a
+// static site, through the builder's website path, and never touches the
+// runtime driver.
+func TestNodeProjectWithoutStartGoesLiveAsAWebsite(t *testing.T) {
+	ctx := context.Background()
+	site, err := staticsite.Pack(ctx, fstest.MapFS{"index.html": {Data: []byte("<h1>built</h1>")}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner, sources, _ := newRunner(t, fakeBuilder{output: []byte("not a website"), site: site})
+	stored, _ := sources.Save(ctx, plainArchive(t, map[string]string{
+		"package.json":      `{"name":"x","version":"1.0.0","private":true,"engines":{"node":"24.x"},"scripts":{"build":"vite build"}}`,
+		"package-lock.json": `{"name":"x","version":"1.0.0","lockfileVersion":3,"packages":{"":{"name":"x","version":"1.0.0"}}}`,
+	}))
+	steps := &recordedSteps{}
+	outcome, err := runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, steps)
+	if err != nil || !outcome.Live || outcome.Provisioned {
+		t.Fatalf("outcome %+v err %v", outcome, err)
+	}
+	if len(steps.runtimes) != 1 || steps.runtimes[0] != rt.RuntimeStatic {
+		t.Fatalf("runtime %v, want static", steps.runtimes)
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -181,5 +182,45 @@ func TestDockerBuildsAnAppWithPackages(t *testing.T) {
 	runner, _ = NewRunner(DefaultImage, time.Minute, noPackages{})
 	if _, err := runner.BuildFiles(ctx, example); !errors.Is(err, ErrInstall) {
 		t.Fatalf("missing packages: got %v, want %v", err, ErrInstall)
+	}
+}
+
+// TestDockerBuildsAWebsite builds dev/vite-example, a project with no start
+// script, into a static site. Vite's esbuild and rollup arrive as
+// platform-specific packages and must work without their install scripts.
+func TestDockerBuildsAWebsite(t *testing.T) {
+	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
+		t.Skip("set SPROUT_DOCKER_TEST=1 to run the local Docker build test")
+	}
+	fetcher, err := npmfetch.New(filepath.Join(t.TempDir(), "npm"), npmfetch.BuildPlatform())
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner, err := NewRunner(DefaultImage, 2*time.Minute, fetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	site, err := runner.BuildWebsite(ctx, os.DirFS("../../dev/vite-example"))
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var names []string
+	sawScript := false
+	reader := tar.NewReader(bytes.NewReader(site))
+	for {
+		header, err := reader.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		names = append(names, header.Name)
+		sawScript = sawScript || (strings.HasPrefix(header.Name, "assets/") && strings.HasSuffix(header.Name, ".js"))
+	}
+	if !slices.Contains(names, "index.html") || !sawScript {
+		t.Fatalf("site files %v, want index.html and a bundled script under assets/", names)
 	}
 }
