@@ -133,6 +133,8 @@ Press `Ctrl+C` in the server terminal to perform a graceful shutdown.
 
 To deploy from a terminal, install the CLI from `backend/` with `go install ./cmd/sprout`, create a token on the dashboard's Access tokens page, then run `sprout login` and `sprout deploy <folder>`. The API must run with `SPROUT_ENABLE_LOCAL_BUILDS=1`. See [the CLI notes](docs/cli-learning.md).
 
+To let a coding agent deploy, register `sprout mcp` as an MCP server in the agent (for Claude Code: `claude mcp add sprout -- ~/go/bin/sprout mcp`, run inside the project). Its `deploy` tool takes a folder of that project or a public GitHub repository at a commit. See [the MCP notes](docs/mcp-learning.md).
+
 For database work, follow the [local PostgreSQL setup](docs/local-postgres.md) to start the localhost-only Docker service and apply the Drizzle migration.
 
 Useful demo routes:
@@ -209,7 +211,7 @@ The Go backend lives in `backend/`. Its `cmd/api` package is the executable entr
 
 The following capabilities are mocked and are not connected to production infrastructure:
 
-- GitHub repository access
+- Private GitHub repositories (public repositories deploy through the MCP tool)
 - Dashboard-triggered application builds and runtime containers (local Node build and artifact tooling exists)
 - DNS and TLS provisioning
 - Live log streaming
@@ -225,7 +227,7 @@ The next implementation phases are intentionally incremental:
 
 1. ~~Local runtime~~ (done): built apps run in locked-down containers, are health-checked, and are served at `{app}.{workspace}.localhost` with real pause, resume, archive and idle sleep.
 2. ~~Static sites~~ (done): a plain folder with `index.html`, served straight from the stored artifact.
-3. ~~CLI `sprout deploy`~~ (done): log in with an access token, then deploy a folder from the terminal. Next: an MCP `deploy` tool that takes a folder or a GitHub repository.
+3. ~~CLI `sprout deploy` and the MCP `deploy` tool~~ (done): log in with an access token, then deploy a folder from the terminal, or let a coding agent deploy a folder of its project or a public GitHub repository at a commit.
 4. `npm` installs through a controlled registry proxy.
 5. Python apps through buildpacks.
 6. A hands-on hosting trial (Fly Machines vs Cloud Run), then the cloud runtime driver.
@@ -247,6 +249,7 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 - [Live simulation progress: streaming and learning](docs/deployment-streaming-learning.md)
 - [Source preparation: filesystem safety and learning](docs/source-preparation-learning.md)
 - [The `sprout` CLI: deploying from the terminal](docs/cli-learning.md)
+- [The MCP deploy tool: deploying from a coding agent](docs/mcp-learning.md)
 - [Node.js application build contract](docs/node-build-contract.md)
 - [Database design](docs/database-design.md)
 - [Local PostgreSQL setup](docs/local-postgres.md)
