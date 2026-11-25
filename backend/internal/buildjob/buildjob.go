@@ -1,6 +1,6 @@
 // Package buildjob runs real deployments (Node apps and static sites) on the deployment worker: it loads an
-// uploaded source archive, prepares and validates it, builds it in the sealed
-// Node container, stores the output as an artifact, then provisions, starts and
+// uploaded source archive, prepares and validates it, downloads its locked npm
+// packages, builds it in the sealed offline Node container, stores the output as an artifact, then provisions, starts and
 // health-checks the release through the runtime driver. Only a release that
 // answers /health is reported live.
 package buildjob
@@ -16,6 +16,7 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 	"github.com/priyanshjhaa/Sprout/backend/internal/deployment"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
+	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
 	rt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 	"github.com/priyanshjhaa/Sprout/backend/internal/source"
 	"github.com/priyanshjhaa/Sprout/backend/internal/staticsite"
@@ -74,10 +75,6 @@ func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment
 			kind = rt.RuntimeStatic
 			built, err := prepareStatic(ctx, files, steps)
 			output = built
-			return err
-		}
-		// Packages are the blocker that matters most today, so say so first.
-		if err := nodeapp.CheckPackages(files); err != nil {
 			return err
 		}
 		if err := nodeapp.Validate(ctx, files); err != nil {
@@ -272,7 +269,8 @@ func (r *Runner) remove(ctx context.Context, store *artifact.Store, blob artifac
 // knownFailures are errors whose text is already a stable, user-safe code.
 var knownFailures = []error{
 	source.ErrInvalid, source.ErrLimit, source.ErrSensitive, source.ErrStorage, source.ErrCleanup,
-	nodeapp.ErrContract, nodeapp.ErrImage, nodeapp.ErrDependencies, nodeapp.ErrBuild,
+	nodeapp.ErrContract, nodeapp.ErrImage, nodeapp.ErrDependencies, nodeapp.ErrInstall, nodeapp.ErrBuild,
+	npmfetch.ErrUnavailable, npmfetch.ErrIntegrity, npmfetch.ErrTooLarge, npmfetch.ErrNotFound, npmfetch.ErrLockfile, npmfetch.ErrCache,
 	nodeapp.ErrArtifact, nodeapp.ErrArtifactSize, nodeapp.ErrDocker, nodeapp.ErrCleanup,
 	staticsite.ErrContract, artifact.ErrStorage,
 }

@@ -179,25 +179,3 @@ func TestContractFailuresNameTheRule(t *testing.T) {
 		t.Errorf("forbidden file: %v", err)
 	}
 }
-
-func TestCheckPackagesSpotsDependenciesButNotBrokenManifests(t *testing.T) {
-	manifest, lock := sample()
-	if err := CheckPackages(filesFor(t, manifest, lock)); err != nil {
-		t.Fatalf("an app with no packages: %v", err)
-	}
-	for name, change := range map[string]func(*Manifest){
-		"dependencies":          func(m *Manifest) { m.Dependencies = map[string]string{"next": "16.2.7"} },
-		"dev dependencies":      func(m *Manifest) { m.DevDependencies = map[string]string{"typescript": "^5"} },
-		"optional dependencies": func(m *Manifest) { m.OptionalDependencies = map[string]string{"fsevents": "^2"} },
-	} {
-		m, l := sample()
-		change(&m)
-		if err := CheckPackages(filesFor(t, m, l)); !errors.Is(err, ErrDependencies) {
-			t.Errorf("%s: %v", name, err)
-		}
-	}
-	// A manifest it cannot read is Validate's to describe, not this check's.
-	if err := CheckPackages(fstest.MapFS{"package.json": {Data: []byte("{nope")}}); err != nil {
-		t.Errorf("unreadable manifest: %v", err)
-	}
-}

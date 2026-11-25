@@ -235,8 +235,8 @@ func TestCheckReportsTheServersNodeRules(t *testing.T) {
 	if archive.Kind != KindNode {
 		t.Fatalf("kind %q, want node", archive.Kind)
 	}
-	if err := Check(context.Background(), archive); !errors.Is(err, nodeapp.ErrDependencies) {
-		t.Fatalf("expected the server's packages rule, got %v", err)
+	if err := Check(context.Background(), archive); err == nil || err.Error() != "node_contract_lockfile" {
+		t.Fatalf("expected the server's lockfile rule (packages need a package-lock.json), got %v", err)
 	}
 
 	dir = t.TempDir()

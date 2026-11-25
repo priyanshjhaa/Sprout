@@ -73,7 +73,7 @@ func run(ctx context.Context, args []string, out, diagnostics io.Writer) int {
 			return nodeapp.Validate(ctx, files)
 		}
 		if *buildNode {
-			runner, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute)
+			runner, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute, nil)
 			if err != nil {
 				return err
 			}

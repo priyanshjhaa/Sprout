@@ -227,18 +227,3 @@ func packagePath(name string) bool {
 	}
 	return true
 }
-
-// CheckPackages reports ErrDependencies when the app declares any npm packages.
-// Sprout cannot install packages yet, so this is the most important thing to
-// tell someone: it is checked before the finer contract rules. An unreadable
-// manifest is left for Validate to describe.
-func CheckPackages(files fs.FS) error {
-	var manifest Manifest
-	if err := readJSON(files, "package.json", 256<<10, &manifest); err != nil {
-		return nil
-	}
-	if len(manifest.Dependencies) != 0 || len(manifest.DevDependencies) != 0 || len(manifest.OptionalDependencies) != 0 {
-		return ErrDependencies
-	}
-	return nil
-}

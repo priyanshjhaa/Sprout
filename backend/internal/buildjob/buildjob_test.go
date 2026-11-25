@@ -19,6 +19,7 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/artifact"
 	"github.com/priyanshjhaa/Sprout/backend/internal/deployment"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
+	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
 	rt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 	"github.com/priyanshjhaa/Sprout/backend/internal/staticsite"
 )
@@ -373,7 +374,7 @@ func TestDockerBuildJob(t *testing.T) {
 	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
 		t.Skip("set SPROUT_DOCKER_TEST=1 to run the Docker build job test")
 	}
-	builder, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute)
+	builder, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -521,16 +522,16 @@ func TestStaticContractFailures(t *testing.T) {
 	}
 }
 
-// A real-world project (many packages, no engines field) is told about the
-// packages first: that is the blocker no edit to package.json can fix.
-func TestAppWithPackagesIsToldAboutPackagesFirst(t *testing.T) {
+// A real-world project with packages is no longer refused for using them: it
+// is told which rule of the contract it breaks (here, no engines field).
+func TestAppWithPackagesIsToldWhichRuleItBreaks(t *testing.T) {
 	ctx := context.Background()
 	manifest := `{"name":"compiq","version":"0.1.0","private":true,"scripts":{"build":"next build","start":"next start"},"dependencies":{"next":"16.2.7","react":"19.2.4"}}`
 	runner, sources, _ := newRunner(t, fakeBuilder{})
 	stored, _ := sources.Save(ctx, plainArchive(t, map[string]string{"package.json": manifest, "package-lock.json": "{}"}))
 	_, err := runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, &recordedSteps{})
-	if failureCode(err) != "node_build_dependencies_unsupported" {
-		t.Fatalf("code = %q, want the packages explanation (not the engines rule)", failureCode(err))
+	if failureCode(err) != "node_contract_engine" {
+		t.Fatalf("code = %q, want the engines rule", failureCode(err))
 	}
 	// Without packages, the specific contract rule is what comes back.
 	stored, _ = sources.Save(ctx, plainArchive(t, map[string]string{
@@ -541,4 +542,50 @@ func TestAppWithPackagesIsToldAboutPackagesFirst(t *testing.T) {
 	if failureCode(err) != "node_contract_engine" {
 		t.Fatalf("code = %q, want node_contract_engine", failureCode(err))
 	}
+}
+
+// TestDockerBuildJobWithPackages takes dev/node-express-example all the way to
+// live: its packages are downloaded and verified, installed in the offline
+// build, carried in the release, and Express answers the health check. It
+// needs Docker, the pinned image and internet access.
+func TestDockerBuildJobWithPackages(t *testing.T) {
+	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
+		t.Skip("set SPROUT_DOCKER_TEST=1 to run the Docker build job test")
+	}
+	fetcher, err := npmfetch.New(filepath.Join(t.TempDir(), "npm"), npmfetch.BuildPlatform())
+	if err != nil {
+		t.Fatal(err)
+	}
+	builder, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute, fetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docker, err := rt.NewDocker(nodeapp.DefaultImage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{}
+	for _, name := range []string{"package.json", "package-lock.json", "build.mjs", "server.mjs"} {
+		data, err := os.ReadFile(filepath.Join("../../dev/node-express-example", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[name] = string(data)
+	}
+	sources, artifacts := openStore(t), openStore(t)
+	runner := NewRunner(sources, artifacts, builder, docker, DefaultHealthCheck, deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ctx := context.Background()
+	stored, err := sources.Save(ctx, plainArchive(t, files))
+	if err != nil {
+		t.Fatal(err)
+	}
+	work := deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}
+	t.Cleanup(func() {
+		_ = docker.Destroy(context.Background(), rt.Release{ApplicationID: testApp, DeploymentID: testDep})
+	})
+	outcome, err := runner.Run(ctx, work, &recordedSteps{})
+	if err != nil || !outcome.Live {
+		t.Fatalf("express app did not go live: %+v %v", outcome, err)
+	}
+	runner.Release(ctx, work, outcome, false)
 }

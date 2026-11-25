@@ -23,6 +23,7 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/httpapi"
 	"github.com/priyanshjhaa/Sprout/backend/internal/identity"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
+	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
 	apprt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 	"github.com/priyanshjhaa/Sprout/backend/internal/sharing"
 	"github.com/priyanshjhaa/Sprout/backend/internal/team"
@@ -82,7 +83,12 @@ func realMain() int {
 			return 1
 		}
 		defer artifacts.Close()
-		builder, err := nodeapp.NewRunner(nodeapp.DefaultImage, 2*time.Minute)
+		packages, err := npmfetch.New(builds.PackageCacheDirectory, npmfetch.BuildPlatform())
+		if err != nil {
+			logger.Error("SPROUT_PACKAGE_CACHE_DIR must be an absolute directory private to this user (0700)")
+			return 1
+		}
+		builder, err := nodeapp.NewRunner(nodeapp.DefaultImage, 3*time.Minute, packages)
 		if err != nil {
 			logger.Error("node build runner configuration invalid")
 			return 1
@@ -143,7 +149,9 @@ func realMain() int {
 		appsServer = proxy.NewServer(appConfig.Apps.Address)
 		appURL = appConfig.Apps.URL
 		runner = buildjob.NewRunner(sources, artifacts, builder, driver, buildjob.DefaultHealthCheck, runner, logger)
-		jobTimeout = 4 * time.Minute
+		// Downloading packages, installing, building and starting can all take
+		// a while on a first build; later builds reuse the package cache.
+		jobTimeout = 6 * time.Minute
 		logger.Warn("local builds enabled: uploaded code runs in Docker on this machine")
 	}
 	worker, err := deployment.NewManager(deploymentRepository, runner, logger, 2, 8, jobTimeout)

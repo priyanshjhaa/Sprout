@@ -20,6 +20,27 @@ const (
 	MaxEntries            = 256
 )
 
+// Limits bound one extraction. Uploaded sources use SourceLimits; build
+// output, which may carry the app's production node_modules, uses
+// ArtifactLimits.
+type Limits struct {
+	ArchiveBytes int64 // the tar stream itself
+	ContentBytes int64 // all file contents together
+	FileBytes    int64 // one file
+	Entries      int   // files and directories
+	Depth        int   // path segments
+	// Packages exempts paths under node_modules/ from the sensitive-name rules:
+	// those files come from public npm packages, verified against the
+	// lockfile, not from the person's own folder, and some packages ship
+	// files such as test.key or .env.example.
+	Packages bool
+}
+
+var (
+	SourceLimits   = Limits{ArchiveBytes: MaxArchiveBytes, ContentBytes: MaxSourceBytes, FileBytes: MaxFileBytes, Entries: MaxEntries, Depth: 16}
+	ArtifactLimits = Limits{ArchiveBytes: 16 << 20, ContentBytes: 15 << 20, FileBytes: 8 << 20, Entries: 12000, Depth: 32, Packages: true}
+)
+
 var (
 	ErrInvalid   = errors.New("source_archive_invalid")
 	ErrLimit     = errors.New("source_limit_exceeded")
@@ -39,7 +60,12 @@ type Summary struct {
 // plain uncompressed tar archives are accepted. The caller owns input and must give
 // blocking network readers their own read deadline; context cannot interrupt an
 // arbitrary Reader. This function starts no goroutines and runs no source code.
-func WithArchive(ctx context.Context, input io.Reader, consume func(context.Context, fs.FS) error) (summary Summary, err error) {
+func WithArchive(ctx context.Context, input io.Reader, consume func(context.Context, fs.FS) error) (Summary, error) {
+	return WithArchiveLimits(ctx, input, SourceLimits, consume)
+}
+
+// WithArchiveLimits is WithArchive with explicit limits.
+func WithArchiveLimits(ctx context.Context, input io.Reader, limits Limits, consume func(context.Context, fs.FS) error) (summary Summary, err error) {
 	if err = ctx.Err(); err != nil {
 		return
 	}
@@ -65,8 +91,8 @@ func WithArchive(ctx context.Context, input io.Reader, consume func(context.Cont
 			err = errors.Join(err, ErrCleanup)
 		}
 	}()
-	limited := &io.LimitedReader{R: contextReader{ctx: ctx, reader: input}, N: MaxArchiveBytes + 1}
-	summary, err = extract(ctx, root, limited)
+	limited := &io.LimitedReader{R: contextReader{ctx: ctx, reader: input}, N: limits.ArchiveBytes + 1}
+	summary, err = extract(ctx, root, limited, limits)
 	if ctx.Err() != nil {
 		return summary, ctx.Err()
 	}
@@ -98,7 +124,7 @@ func (r contextReader) Read(p []byte) (int, error) {
 	return r.reader.Read(p)
 }
 
-func extract(ctx context.Context, root *os.Root, input io.Reader) (Summary, error) {
+func extract(ctx context.Context, root *os.Root, input io.Reader, limits Limits) (Summary, error) {
 	var result Summary
 	reader := tar.NewReader(input)
 	seen := map[string]bool{}
@@ -113,7 +139,7 @@ func extract(ctx context.Context, root *os.Root, input io.Reader) (Summary, erro
 		if err != nil {
 			return result, ErrInvalid
 		}
-		if entries >= MaxEntries {
+		if entries >= limits.Entries {
 			return result, ErrLimit
 		}
 		// BSD tar's numeric padding can be classified as FormatUnknown by Go.
@@ -121,7 +147,7 @@ func extract(ctx context.Context, root *os.Root, input io.Reader) (Summary, erro
 		if (header.Format != tar.FormatUSTAR && header.Format != tar.FormatUnknown) || len(header.PAXRecords) != 0 || len(header.Xattrs) != 0 || (header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeDir) || header.Linkname != "" {
 			return result, ErrInvalid
 		}
-		name, err := safeName(header.Name, header.Typeflag == tar.TypeDir)
+		name, err := safeName(header.Name, header.Typeflag == tar.TypeDir, limits)
 		if err != nil {
 			return result, err
 		}
@@ -130,7 +156,7 @@ func extract(ctx context.Context, root *os.Root, input io.Reader) (Summary, erro
 			return result, ErrInvalid
 		}
 		seen[key] = true
-		if header.Size < 0 || header.Size > MaxFileBytes || result.Bytes+header.Size > MaxSourceBytes {
+		if header.Size < 0 || header.Size > limits.FileBytes || result.Bytes+header.Size > limits.ContentBytes {
 			return result, ErrLimit
 		}
 		if header.Typeflag == tar.TypeDir {
@@ -186,11 +212,11 @@ func extract(ctx context.Context, root *os.Root, input io.Reader) (Summary, erro
 // client can name the offending file before uploading. It returns ErrInvalid,
 // ErrLimit or ErrSensitive, exactly as extraction would.
 func CheckName(name string) error {
-	_, err := safeName(name, false)
+	_, err := safeName(name, false, SourceLimits)
 	return err
 }
 
-func safeName(name string, directory bool) (string, error) {
+func safeName(name string, directory bool, limits Limits) (string, error) {
 	if directory {
 		name = strings.TrimSuffix(name, "/")
 	}
@@ -198,12 +224,16 @@ func safeName(name string, directory bool) (string, error) {
 		return "", ErrInvalid
 	}
 	parts := strings.Split(name, "/")
-	if len(parts) > 16 {
+	if len(parts) > limits.Depth {
 		return "", ErrLimit
 	}
+	packageFile := limits.Packages && len(parts) > 1 && parts[0] == "node_modules"
 	for _, part := range parts {
 		if part == "." || part == ".." || strings.TrimSpace(part) != part || strings.HasSuffix(part, ".") {
 			return "", ErrInvalid
+		}
+		if packageFile {
+			continue
 		}
 		part = strings.ToLower(part)
 		switch part {
