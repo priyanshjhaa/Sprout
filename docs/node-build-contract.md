@@ -1,4 +1,6 @@
-# Node.js application contract — version 1
+# Node.js application contract — version 2
+
+Version 2 (the npm installs milestone, see [npm installs](./npm-installs-learning.md)) allows packages from the public npm registry and makes `start` optional: a project without one builds a website from its `dist/`. The sections below describe the sealed build as it stands.
 
 This is the first supported application type for Sprout. A local smoke runner executes the reference app's build command inside an offline, disposable Node container. Its Go API returns a validated `dist/` tar to trusted callers. The local `sourcecheck` command can save that tar in a private artifact directory when explicitly requested. The application runtime is described in [local runtime](./local-runtime-learning.md), and simulation jobs remain simulations.
 
@@ -6,7 +8,7 @@ This is the first supported application type for Sprout. A local smoke runner ex
 
 - A single npm application at the archive root, with `package.json` and `package-lock.json`.
 - `private: true`, a nonempty name/version, and `engines.node: "24.x"`.
-- Nonempty `scripts.build` and `scripts.start` (at most 2,048 bytes each).
+- A nonempty `scripts.build`, and optionally `scripts.start` (at most 2,048 bytes each). With `start` the app is a server; without it, the built `dist/` is served as a website.
 - npm lockfile version 3, with matching application name/version and root dependency maps.
 - Every direct dependency must have a corresponding lock entry. Locked packages must have a public `https://registry.npmjs.org` tarball URL and one SHA-512 integrity digest.
 - No Git/file/URL dependency specifiers, linked packages, workspaces, alternative package-manager lockfiles, uploaded `node_modules`, `.next`, or `dist` directories.
@@ -14,13 +16,13 @@ This is the first supported application type for Sprout. A local smoke runner ex
 - The build must produce a nonempty `dist/` directory containing regular files. Symlinks, special files, sensitive paths, and output outside that directory are rejected or excluded.
 - Existing archive path, size, credential-file, and cleanup restrictions still apply. Manifest limit: 256 KiB; lockfile limit: 1 MiB; maximum 4,096 lock entries.
 
-This initial policy is intentionally narrower than npm. Native dependencies requiring install hooks, private registries, monorepos, and framework-specific runtimes are not supported yet. Extra npm lifecycle scripts may exist, but the controlled commands below disable automatic pre/post and install hooks.
+This policy is intentionally narrower than npm. Packages come only from the public registry; Sprout downloads each locked tarball, checks it against the lockfile's SHA-512, and hands it to the offline build. Native dependencies requiring install hooks, private registries, monorepos, and framework-specific runtimes are not supported yet. Extra npm lifecycle scripts may exist, but the controlled commands below disable automatic pre/post and install hooks.
 
 The Go validator is a preflight check, not a reimplementation of npm's dependency resolver. `npm ci` must still validate the complete dependency graph. Integrity strings are checked for shape here; npm must verify downloaded content against them during installation. A registry URL allowlist is not an egress firewall or a guarantee that package code is safe.
 
 ## Why a Node.js app was refused
 
-A refusal names the rule that failed, using a stable code (never source text): `node_build_dependencies_unsupported` (the app declares npm packages, which Sprout cannot install yet; this is reported first), `node_contract_engine` (`engines.node` must be `24.x`), `node_contract_private`, `node_contract_scripts` (a `build` and a `start` script), `node_contract_manifest`, `node_contract_lockfile`, `node_contract_workspaces`, and `node_contract_files`. `node_contract_invalid` is the generic form. The dashboard explains each in plain language, and when a folder is dropped it checks `package.json` in the browser first.
+A refusal names the rule that failed, using a stable code (never source text): `node_contract_engine` (`engines.node` must be `24.x`), `node_contract_private`, `node_contract_scripts` (a `build` script; a `start` script, if present, must not be blank), `node_contract_manifest`, `node_contract_lockfile`, `node_contract_workspaces`, and `node_contract_files`. `node_contract_invalid` is the generic form. The dashboard explains each in plain language, and when a folder is dropped it checks `package.json` in the browser first.
 
 ## Platform-owned commands
 
@@ -28,8 +30,8 @@ The sealed build runner executes the dependency and build rows. The runtime row 
 
 | Phase | Command | Boundary |
 | --- | --- | --- |
-| Dependencies | `npm ci --offline --ignore-scripts --no-audit --no-fund` | Local smoke runner: dependency-free lockfile, offline container |
-| Build | `npm --ignore-scripts run build` | No network; bounded disposable container |
+| Dependencies | `npm cache add <verified tarballs>` then `npm ci --offline --ignore-scripts --no-audit --no-fund` | Tarballs fetched and checked by Sprout; offline container |
+| Build | `npm --ignore-scripts run build`, then `npm prune --omit=dev` for a server | No network; bounded disposable container |
 | Runtime | `npm --ignore-scripts start` | Separate non-root, read-only runtime container with a loopback port and no host access |
 
 The smoke runner uses `node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6`, the official `node:24.21.0-bookworm-slim` image digest downloaded for this milestone. Docker identified it as Linux/arm64 on this host. The runner does not use a moving `node:24` tag. The application cannot select the image, override container flags, mount host paths, or request a Docker socket.
@@ -40,9 +42,9 @@ The application must listen on `0.0.0.0` using `PORT` (initially `3000`), return
 
 The local smoke runner uses a disposable non-root container with a read-only root filesystem, all Linux capabilities dropped, no-new-privileges, Docker's default seccomp profile, no networking, and no host mounts. It does not use privileged mode, host namespaces, the Docker socket, or inherited host environment variables. Docker control access belongs only to trusted Sprout platform code. The command is local developer tooling and assumes the configured Docker context is a trusted local daemon.
 
-The local runner applies a two-minute timeout, one CPU, 1 GiB memory with no extra swap, 128 processes, a 512 MiB workspace tmpfs, and 64 MiB `/tmp`. It discards script logs. Docker stdout is limited to a 16 MiB artifact tar, then validated and normalized with the source filesystem rules (at most 8 MiB file content). These are local smoke-build limits, not shared service capacity controls.
+The runner applies a three-minute timeout on the worker (two in `sourcecheck`), one CPU, 2 GiB memory with no extra swap, 256 processes, a 1 GiB workspace tmpfs (mounted exec, so package commands can run), and 512 MiB `/tmp`. It discards script logs. Docker stdout is limited to a 16 MiB artifact tar, then validated and normalized with the source filesystem rules (at most 8 MiB file content). These are local smoke-build limits, not shared service capacity controls.
 
-The local runner uses `npm ci --offline` and accepts only lockfiles with no third-party dependencies. The build runs `npm --ignore-scripts run build` with networking disabled. Arbitrary dependency downloads remain unsupported until constrained egress, redirects, cache ownership, and registry policy are enforced. Do not weaken network isolation just to make an install pass.
+The runner installs with `npm ci --offline` from tarballs Sprout downloaded from `registry.npmjs.org` and verified against the lockfile (see [npm installs](./npm-installs-learning.md)). The build container never has a network. Do not weaken network isolation just to make an install pass.
 
 The container emits only a `dist/` tar after a successful build. Go checks the archive's paths, file types, and byte limits, then repacks it with platform-owned metadata. This does not inspect the application code for malicious behavior. The local artifact store can write these bytes atomically to an explicitly chosen private directory. It never puts build output in PostgreSQL.
 
