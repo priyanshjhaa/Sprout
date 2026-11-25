@@ -24,7 +24,7 @@ const ways = [
     line: "A folder or a GitHub commit",
     icon: Plug,
     tone: "slate",
-    available: false,
+    available: true,
   },
   {
     numeral: "IV",
@@ -32,7 +32,7 @@ const ways = [
     line: "Ship what your agent just wrote",
     icon: Bot,
     tone: "ochre",
-    available: false,
+    available: true,
   },
 ];
 

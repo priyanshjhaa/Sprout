@@ -76,8 +76,8 @@ function DeployChapter() {
       items={[
         { title: "Upload from the dashboard" },
         { title: "sprout deploy from the CLI" },
-        { title: "MCP tool for coding agents", soon: true },
-        { title: "Public GitHub repositories", soon: true },
+        { title: "MCP tool for coding agents" },
+        { title: "Public GitHub repositories" },
       ]}
       active={step}
     >

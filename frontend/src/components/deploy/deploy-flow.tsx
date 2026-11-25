@@ -15,8 +15,8 @@ import { PageHeader } from "@/components/dashboard/page-header";
 // The planned front doors, all calling the same deploy API (deployment-strategy.md at the repository root).
 const frontDoors = [
   "Drop or choose your site's folder in this dashboard (when local builds are on). A ready-made .tar works too",
-  "sprout deploy from your terminal (coming soon)",
-  "A deploy tool for coding agents (MCP) that takes a folder or a GitHub repository (coming soon)",
+  "sprout deploy from your terminal",
+  "sprout mcp: a deploy tool for coding agents that takes a folder of the project or a public GitHub repository at a commit",
 ];
 
 // Mirrors docs/node-build-contract.md and docs/static-sites-learning.md.

@@ -16,12 +16,12 @@ test.describe("landing page", () => {
     await expect(page.locator("footer").getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/sign-in");
   });
 
-  test("marks only the dashboard and the CLI as available", async ({ page }) => {
+  test("marks every way in as available", async ({ page }) => {
     await page.goto("/#ways-in");
     const statuses = page.locator(".lp-book-status");
     await expect(statuses).toHaveCount(4);
     const available = page.locator("li", { has: page.locator(".lp-book-status[data-available]") });
-    await expect(available.getByRole("heading", { level: 3 })).toHaveText(["The Dashboard", "The CLI"]);
+    await expect(available.getByRole("heading", { level: 3 })).toHaveText(["The Dashboard", "The CLI", "The MCP Tool", "Coding Agents"]);
   });
 
   test("does not scroll sideways", async ({ page }) => {
