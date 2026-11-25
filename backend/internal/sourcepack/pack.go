@@ -71,6 +71,7 @@ const (
 	ReasonJunk         Reason = "junk"         // system clutter
 	ReasonLink         Reason = "link"         // symlinks, which could point anywhere
 	ReasonSpecial      Reason = "special"      // sockets, devices and pipes
+	ReasonOutput       Reason = "output"       // a Node project's own dist/, which Sprout rebuilds
 )
 
 var (
@@ -156,6 +157,22 @@ func Pack(ctx context.Context, dir string) (Archive, error) {
 	if err != nil {
 		return Archive{}, err
 	}
+	result.BuiltFolder = builtFolder(files)
+	// A Node project is built by Sprout, which refuses an uploaded dist/: a
+	// local build's output is left out rather than blocking the deploy.
+	if slices.ContainsFunc(files, func(file entry) bool { return file.path == "package.json" }) {
+		kept := files[:0]
+		for _, file := range files {
+			if file.path == "dist" || strings.HasPrefix(file.path, "dist/") {
+				continue
+			}
+			kept = append(kept, file)
+		}
+		if len(kept) != len(files) {
+			result.Skipped = append(result.Skipped, Skip{Path: "dist", Reason: ReasonOutput})
+		}
+		files = kept
+	}
 	if err := checkFiles(files, result.Skipped); err != nil {
 		return Archive{}, err
 	}
@@ -167,7 +184,6 @@ func Pack(ctx context.Context, dir string) (Archive, error) {
 			return Archive{}, err
 		}
 	}
-	result.BuiltFolder = builtFolder(files)
 
 	var buffer bytes.Buffer
 	writer := tar.NewWriter(&buffer)

@@ -136,6 +136,13 @@ export function prepareFolder(picked: SourceFile[]): PreparedFolder {
     );
   }
 
+  // Sprout builds a Node project itself and refuses an uploaded dist/, so a
+  // local build's output is left out instead of blocking the deploy.
+  if (kind === "node" && entries.some((entry) => entry.segments[0] === "dist")) {
+    entries = entries.filter((entry) => entry.segments[0] !== "dist");
+    skipped.add("dist");
+  }
+
   if (entries.length > limits.maxFiles) {
     throw new FolderProblem(`That folder has ${entries.length} files; Sprout takes up to ${limits.maxFiles}. Remove what the site doesn't need.`);
   }
