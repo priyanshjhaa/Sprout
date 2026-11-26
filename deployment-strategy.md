@@ -30,9 +30,9 @@ A coding agent is a *client* of the deploy API. Sprout does not generate code an
 
 ## 3. Which apps can build (v1), in order
 
-1. **Static sites:** a plain folder with `index.html` at the root and no `package.json`. Served directly from the stored artifact, with no running process. A Node project without a `start` script (Vite, React and so on) is built, and its `dist/` is served the same way.
+1. **Static sites:** a plain folder with `index.html` at the root and no `package.json` or `requirements.txt`. Served directly from the stored artifact, with no running process. A Node project without a `start` script (Vite, React and so on) is built, and its `dist/` is served the same way.
 2. **Node.js web apps:** the contract in `docs/node-build-contract.md`, with packages from the public npm registry. Sprout downloads the locked tarballs, checks each against the lockfile's SHA-512 and hands them to the build, which stays offline and never runs install scripts (see `docs/npm-installs-learning.md`).
-3. **Python web apps:** through buildpacks (Cloud Native Buildpacks or Railpack, chosen by a short spike).
+3. **Python web apps:** a `requirements.txt` that pins every package with its hashes, and a `Procfile` with one `web:` command. Sprout finds a matching Linux wheel for each package on PyPI, checks its SHA-256 and hands it to the build, which installs with `pip --no-index --only-binary :all: --require-hashes` and stays offline (see `docs/python-apps-learning.md`). Buildpacks were considered and rejected: they download packages and Python itself during the build, and run their own build scripts, so the build could no longer be sealed.
 
 Sprout, not the application, always chooses the build image and the runtime settings. User-supplied Dockerfiles are not accepted.
 
@@ -59,7 +59,7 @@ Sprout is the **control plane**: API, permissions, lifecycle, routing. Applicati
 3. Static sites. *Done: a plain folder with `index.html`, served from the stored artifact (see `docs/static-sites-learning.md`). Sites that need a build wait for step 5.*
 4. CLI `sprout deploy`, then the MCP `deploy` tool (folder and public GitHub modes). *Done. CLI: login with a personal access token, then pack, check against the server's own rules, upload, poll and print the URL (see `docs/cli-learning.md`). MCP: `sprout mcp` offers one `deploy` tool for a folder inside the agent's project or a public GitHub repository at a commit; the commit is downloaded on the client, so the server still receives only a source archive (see `docs/mcp-learning.md`).*
 5. `npm` installs. *Done, without a proxy: Sprout fetches and verifies the locked packages, and the build installs them with no network. A project without a `start` script builds a website. See `docs/npm-installs-learning.md`.*
-6. Python through buildpacks.
+6. Python apps. *Done, without buildpacks: the same sealed build as npm, with hashed wheels from PyPI. See `docs/python-apps-learning.md`.*
 7. Hosting trial, then the cloud driver.
 8. Later: private apps, private GitHub repositories, Postgres, encrypted secrets, artifact retention, permanent delete.
 
