@@ -205,12 +205,21 @@ func TestLocalBuilds(t *testing.T) {
 	if err != nil || !on.LocalBuilds.Enabled || on.LocalBuilds.SourceDirectory != "/private/tmp/sprout-sources" {
 		t.Fatalf("enabled builds: %+v %v", on.LocalBuilds, err)
 	}
+	if on.LocalBuilds.PackageCacheDirectory != "/private/tmp/npm-packages" {
+		t.Fatalf("default package cache %q, want npm-packages beside the artifacts", on.LocalBuilds.PackageCacheDirectory)
+	}
+	custom, err := Load(lookup(with(map[string]string{"SPROUT_ENABLE_LOCAL_BUILDS": "1", "SPROUT_SOURCE_DIR": "/private/tmp/sprout-sources", "SPROUT_ARTIFACT_DIR": "/private/tmp/sprout-artifacts", "SPROUT_PACKAGE_CACHE_DIR": "/private/tmp/npm"})))
+	if err != nil || custom.LocalBuilds.PackageCacheDirectory != "/private/tmp/npm" {
+		t.Fatalf("custom package cache: %+v %v", custom.LocalBuilds, err)
+	}
 	for name, extra := range map[string]map[string]string{
-		"ambiguous flag":    {"SPROUT_ENABLE_LOCAL_BUILDS": "true"},
-		"public address":    with(map[string]string{"SPROUT_API_ADDRESS": "0.0.0.0:8080"}),
-		"relative source":   {"SPROUT_SOURCE_DIR": "sources"},
-		"missing artifacts": {"SPROUT_ARTIFACT_DIR": ""},
-		"same directory":    {"SPROUT_ARTIFACT_DIR": "/private/tmp/sprout-sources"},
+		"ambiguous flag":         {"SPROUT_ENABLE_LOCAL_BUILDS": "true"},
+		"public address":         with(map[string]string{"SPROUT_API_ADDRESS": "0.0.0.0:8080"}),
+		"relative source":        {"SPROUT_SOURCE_DIR": "sources"},
+		"missing artifacts":      {"SPROUT_ARTIFACT_DIR": ""},
+		"same directory":         {"SPROUT_ARTIFACT_DIR": "/private/tmp/sprout-sources"},
+		"relative package cache": {"SPROUT_PACKAGE_CACHE_DIR": "npm"},
+		"package cache shared":   {"SPROUT_PACKAGE_CACHE_DIR": "/private/tmp/sprout-artifacts"},
 	} {
 		values := with(enabled)
 		for key, value := range extra {

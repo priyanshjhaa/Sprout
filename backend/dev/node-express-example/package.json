@@ -1,0 +1,17 @@
+{
+  "name": "sprout-express-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node dist/server.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "is-number": "^7.0.0"
+  }
+}

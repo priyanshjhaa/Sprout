@@ -25,7 +25,7 @@ import (
 // deploys folders inside the project the agent was started in: the working
 // directory of this process.
 
-const mcpInstructions = `Sprout deploys small apps (a static website, or a Node.js app with no npm packages) to a public URL.
+const mcpInstructions = `Sprout deploys small apps (a static website, a website built with npm, or a Node.js server) to a public URL. Node.js projects need a package-lock.json; packages come from the public npm registry and install without running their install scripts.
 Use the deploy tool when the user asks to deploy, publish or ship a folder of this project, or a public GitHub repository at a commit. Every deployed app is public: anyone with its URL can open it, so deploy only what the user asked to publish.`
 
 // githubBaseURL is where tarballs are downloaded from; tests point it at a fake.
@@ -69,7 +69,7 @@ func newMCPServer(project string, env environment) *mcp.Server {
 		Name:  "deploy",
 		Title: "Deploy to Sprout",
 		Description: "Deploy a folder in this project, or a public GitHub repository at a commit, to Sprout and return its public URL. " +
-			"The folder (or the repository's path) must hold an index.html (a website) or a package.json (a Node.js app that uses no npm packages). " +
+			"The folder (or the repository's path) must hold an index.html (a website) or a package.json and package-lock.json (a Node.js project: with a start script it runs as a server, without one its built dist/ is served as a website). " +
 			"Hidden files, secrets and node_modules are never uploaded. If Sprout would refuse the folder, nothing is uploaded and the reason is returned so you can fix it.",
 	}, tool.deploy)
 	return server

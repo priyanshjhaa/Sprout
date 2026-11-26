@@ -63,7 +63,7 @@ func TestDeployFlowRefusalSaysWhyAndUploadsNothing(t *testing.T) {
 	}
 	_, err = deployFolder(context.Background(), client, request, &recorder{})
 	var refused refusedError
-	if !errors.As(err, &refused) || refused.code != "node_build_dependencies_unsupported" || refused.builtFolder != "dist" {
+	if !errors.As(err, &refused) || refused.code != "node_contract_lockfile" || refused.builtFolder != "dist" {
 		t.Fatalf("expected a refusal naming the rule and dist, got %v", err)
 	}
 	if len(fake.uploads) != 0 {

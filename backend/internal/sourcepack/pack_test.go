@@ -235,8 +235,8 @@ func TestCheckReportsTheServersNodeRules(t *testing.T) {
 	if archive.Kind != KindNode {
 		t.Fatalf("kind %q, want node", archive.Kind)
 	}
-	if err := Check(context.Background(), archive); !errors.Is(err, nodeapp.ErrDependencies) {
-		t.Fatalf("expected the server's packages rule, got %v", err)
+	if err := Check(context.Background(), archive); err == nil || err.Error() != "node_contract_lockfile" {
+		t.Fatalf("expected the server's lockfile rule (packages need a package-lock.json), got %v", err)
 	}
 
 	dir = t.TempDir()
@@ -298,5 +298,29 @@ func TestBuiltFolderIsReported(t *testing.T) {
 	}
 	if archive.BuiltFolder != "dist" {
 		t.Fatalf("BuiltFolder %q, want dist", archive.BuiltFolder)
+	}
+}
+
+// A Node project's own dist/ is rebuilt by Sprout, which refuses an uploaded
+// one, so packing leaves it out and says so instead of blocking the deploy.
+func TestPackLeavesOutANodeProjectsOwnDist(t *testing.T) {
+	dir := t.TempDir()
+	write(t, dir, map[string]string{"package.json": "{}", "package-lock.json": "{}", "index.html": "x", "dist/index.html": "x", "dist/assets/a.js": "x"})
+	archive, err := Pack(context.Background(), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if archive.Files != 3 || archive.BuiltFolder != "dist" {
+		t.Fatalf("files %d, built folder %q", archive.Files, archive.BuiltFolder)
+	}
+	if !slices.Contains(archive.Skipped, Skip{Path: "dist", Reason: ReasonOutput}) {
+		t.Fatalf("skipped %v", archive.Skipped)
+	}
+
+	// A plain website may have a folder called dist; it is part of the site.
+	dir = t.TempDir()
+	write(t, dir, map[string]string{"index.html": "x", "dist/app.js": "x"})
+	if archive, err := Pack(context.Background(), dir); err != nil || archive.Files != 2 {
+		t.Fatalf("website: files %d, err %v", archive.Files, err)
 	}
 }

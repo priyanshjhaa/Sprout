@@ -51,6 +51,11 @@ test("hidden files, secrets and dependency folders are never uploaded, and the p
 test("it says what it found when there is nothing to deploy, and hints at near misses", () => {
   assert.equal(prepareFolder([file("app/package.json"), file("app/server.js")]).kind, "node");
   assert.equal(prepareFolder([file("package.json"), file("index.html")]).kind, "node", "package.json wins, as on the server");
+  // A Node project's own dist/ is rebuilt by Sprout, so it is left out, not refused.
+  const built = prepareFolder([file("app/package.json"), file("app/package-lock.json"), file("app/dist/index.html"), file("app/dist/assets/a.js"), file("app/index.html")]);
+  assert.deepEqual(built.files.map((f) => f.path), ["index.html", "package-lock.json", "package.json"]);
+  assert.ok(built.skipped.includes("dist"));
+  assert.ok(prepareFolder([file("site/index.html"), file("site/dist/x.js")]).files.some((f) => f.path === "dist/x.js"), "a plain website keeps a folder called dist");
   assert.throws(() => prepareFolder([file("notes/readme.txt"), file("notes/todo.txt")]), /index\.html.*package\.json.*readme\.txt/);
   assert.throws(() => prepareFolder([file("site/Index.html")]), /Rename "Index.html" to exactly "index.html"/);
   assert.throws(() => prepareFolder([file("site/home/index.html"), file("site/other.html")]), /at the top of the folder/);

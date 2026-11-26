@@ -208,7 +208,7 @@ func TestDeployStopsBeforeUploadingWhatTheServerWouldRefuse(t *testing.T) {
 	if len(fake.uploads) != 0 {
 		t.Fatal("an archive the server would refuse was uploaded")
 	}
-	for _, want := range []string{"not uploaded", "npm packages", "node_build_dependencies_unsupported", "sprout deploy " + filepath.Join(dir, "dist")} {
+	for _, want := range []string{"not uploaded", "package-lock.json", "node_contract_lockfile", "sprout deploy " + filepath.Join(dir, "dist")} {
 		if !strings.Contains(h.stderr.String(), want) {
 			t.Errorf("stderr lacks %q: %s", want, h.stderr)
 		}

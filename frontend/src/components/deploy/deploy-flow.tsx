@@ -22,8 +22,9 @@ const frontDoors = [
 // Mirrors docs/node-build-contract.md and docs/static-sites-learning.md.
 const nodeContract = [
   "One npm application with package.json and package-lock.json at the root",
-  "Node.js 24 (engines.node: \"24.x\") with build and start scripts",
-  "Builds into a dist/ folder; serves /health on PORT",
+  "Node.js 24 (engines.node: \"24.x\") with a build script; npm packages from the public registry are installed for you",
+  "With a start script it runs as a server; without one, the built dist/ folder is served as a website",
+  "Builds into a dist/ folder; a server answers /health on PORT",
   "No Dockerfile, node_modules, .env files, or credentials",
 ];
 const staticContract = [

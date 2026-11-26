@@ -8,9 +8,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
 )
 
 // Run with SPROUT_DOCKER_TEST=1 when the pinned image is available locally.
@@ -25,7 +29,7 @@ func TestDockerSmokeRunner(t *testing.T) {
 		t.Fatalf("pinned image unavailable: %v", err)
 	}
 	before := localBuildContainers(t)
-	runner, err := NewRunner(DefaultImage, 30*time.Second)
+	runner, err := NewRunner(DefaultImage, 30*time.Second, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,4 +117,110 @@ func localBuildContainers(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return strings.TrimSpace(string(output))
+}
+
+// noPackages pretends every package is already provided, but hands over none,
+// so npm has to fail offline instead of reaching for the network.
+type noPackages struct{}
+
+func (noPackages) Fetch(context.Context, []byte) ([]npmfetch.Package, error) { return nil, nil }
+
+// TestDockerBuildsAnAppWithPackages builds dev/node-express-example for real:
+// packages are downloaded from the npm registry into a temporary cache, then
+// installed inside the sealed container with no network. It needs Docker, the
+// pinned image and internet access, so it runs only with SPROUT_DOCKER_TEST=1.
+func TestDockerBuildsAnAppWithPackages(t *testing.T) {
+	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
+		t.Skip("set SPROUT_DOCKER_TEST=1 to run the local Docker build test")
+	}
+	before := localBuildContainers(t)
+	example := os.DirFS("../../dev/node-express-example")
+	fetcher, err := npmfetch.New(filepath.Join(t.TempDir(), "npm"), npmfetch.BuildPlatform())
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner, err := NewRunner(DefaultImage, 2*time.Minute, fetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	artifact, err := runner.BuildFiles(ctx, example)
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	names := map[string]bool{}
+	reader := tar.NewReader(bytes.NewReader(artifact))
+	for {
+		header, err := reader.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		names[header.Name] = true
+	}
+	for _, want := range []string{"package.json", "dist/server.mjs", "node_modules/express/package.json"} {
+		if !names[want] {
+			t.Errorf("the release lacks %s", want)
+		}
+	}
+	for name := range names {
+		if strings.HasPrefix(name, "node_modules/is-number/") {
+			t.Errorf("a devDependency reached the release: %s", name)
+		}
+		if strings.HasPrefix(name, "node_modules/.bin/") {
+			t.Errorf("node_modules/.bin reached the release: %s", name)
+		}
+	}
+	if after := localBuildContainers(t); after != before {
+		t.Fatalf("build left a container behind: before %q, after %q", before, after)
+	}
+
+	// Without its packages, the offline install fails, and says so.
+	runner, _ = NewRunner(DefaultImage, time.Minute, noPackages{})
+	if _, err := runner.BuildFiles(ctx, example); !errors.Is(err, ErrInstall) {
+		t.Fatalf("missing packages: got %v, want %v", err, ErrInstall)
+	}
+}
+
+// TestDockerBuildsAWebsite builds dev/vite-example, a project with no start
+// script, into a static site. Vite's esbuild and rollup arrive as
+// platform-specific packages and must work without their install scripts.
+func TestDockerBuildsAWebsite(t *testing.T) {
+	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
+		t.Skip("set SPROUT_DOCKER_TEST=1 to run the local Docker build test")
+	}
+	fetcher, err := npmfetch.New(filepath.Join(t.TempDir(), "npm"), npmfetch.BuildPlatform())
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner, err := NewRunner(DefaultImage, 2*time.Minute, fetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	site, err := runner.BuildWebsite(ctx, os.DirFS("../../dev/vite-example"))
+	if err != nil {
+		t.Fatalf("build: %v", err)
+	}
+	var names []string
+	sawScript := false
+	reader := tar.NewReader(bytes.NewReader(site))
+	for {
+		header, err := reader.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		names = append(names, header.Name)
+		sawScript = sawScript || (strings.HasPrefix(header.Name, "assets/") && strings.HasSuffix(header.Name, ".js"))
+	}
+	if !slices.Contains(names, "index.html") || !sawScript {
+		t.Fatalf("site files %v, want index.html and a bundled script under assets/", names)
+	}
 }

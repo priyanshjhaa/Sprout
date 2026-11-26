@@ -49,7 +49,8 @@ func TestNodeContract(t *testing.T) {
 		{"valid", func(*Manifest, *lockfile) {}, true},
 		{"wrong node", func(m *Manifest, _ *lockfile) { m.Engines["node"] = "22.x" }, false},
 		{"not private", func(m *Manifest, _ *lockfile) { m.Private = false }, false},
-		{"missing start", func(m *Manifest, _ *lockfile) { delete(m.Scripts, "start") }, false},
+		{"no start (a website)", func(m *Manifest, _ *lockfile) { delete(m.Scripts, "start") }, true},
+		{"blank start", func(m *Manifest, _ *lockfile) { m.Scripts["start"] = " " }, false},
 		{"missing build", func(m *Manifest, _ *lockfile) { m.Scripts["build"] = " " }, false},
 		{"workspaces", func(m *Manifest, _ *lockfile) { m.Workspaces = json.RawMessage(`["packages/*"]`) }, false},
 		{"other manager", func(m *Manifest, _ *lockfile) { m.PackageManager = "pnpm@10.0.0" }, false},
@@ -143,7 +144,7 @@ func TestContractFailuresNameTheRule(t *testing.T) {
 		{"engines missing, like most real projects", func(m *Manifest, _ *lockfile) { m.Engines = nil }, "node_contract_engine"},
 		{"wrong node", func(m *Manifest, _ *lockfile) { m.Engines["node"] = "22.x" }, "node_contract_engine"},
 		{"not private", func(m *Manifest, _ *lockfile) { m.Private = false }, "node_contract_private"},
-		{"missing start", func(m *Manifest, _ *lockfile) { delete(m.Scripts, "start") }, "node_contract_scripts"},
+		{"blank start", func(m *Manifest, _ *lockfile) { m.Scripts["start"] = " " }, "node_contract_scripts"},
 		{"blank build", func(m *Manifest, _ *lockfile) { m.Scripts["build"] = " " }, "node_contract_scripts"},
 		{"workspaces", func(m *Manifest, _ *lockfile) { m.Workspaces = json.RawMessage(`["packages/*"]`) }, "node_contract_workspaces"},
 		{"no name", func(m *Manifest, _ *lockfile) { m.Name = "" }, "node_contract_manifest"},
@@ -180,24 +181,13 @@ func TestContractFailuresNameTheRule(t *testing.T) {
 	}
 }
 
-func TestCheckPackagesSpotsDependenciesButNotBrokenManifests(t *testing.T) {
+func TestIsWebsiteMeansNoStartScript(t *testing.T) {
 	manifest, lock := sample()
-	if err := CheckPackages(filesFor(t, manifest, lock)); err != nil {
-		t.Fatalf("an app with no packages: %v", err)
+	if IsWebsite(filesFor(t, manifest, lock)) {
+		t.Fatal("an app with a start script is a server")
 	}
-	for name, change := range map[string]func(*Manifest){
-		"dependencies":          func(m *Manifest) { m.Dependencies = map[string]string{"next": "16.2.7"} },
-		"dev dependencies":      func(m *Manifest) { m.DevDependencies = map[string]string{"typescript": "^5"} },
-		"optional dependencies": func(m *Manifest) { m.OptionalDependencies = map[string]string{"fsevents": "^2"} },
-	} {
-		m, l := sample()
-		change(&m)
-		if err := CheckPackages(filesFor(t, m, l)); !errors.Is(err, ErrDependencies) {
-			t.Errorf("%s: %v", name, err)
-		}
-	}
-	// A manifest it cannot read is Validate's to describe, not this check's.
-	if err := CheckPackages(fstest.MapFS{"package.json": {Data: []byte("{nope")}}); err != nil {
-		t.Errorf("unreadable manifest: %v", err)
+	delete(manifest.Scripts, "start")
+	if !IsWebsite(filesFor(t, manifest, lock)) {
+		t.Fatal("a project without a start script builds a website")
 	}
 }

@@ -128,15 +128,26 @@ func volumeCreateArgs(r Release) []string {
 // prepareArgs unpacks the archive into the release volume. The helper has no
 // network, no capabilities and a read-only root; it is root only so it may
 // write the new volume, then makes the files world-readable and read-only for
-// the unprivileged runtime user.
+// the unprivileged runtime user. A release with packages arrives without
+// node_modules/.bin (symlinks never leave a build), so npm relinks it here,
+// offline and without running any package's scripts.
 func (d *Docker) prepareArgs(r Release) []string {
 	return []string{"run", "--rm", "--interactive", "--pull=never", "--log-driver=none",
 		"--name", "sprout-prepare-" + r.DeploymentID, "--label", labelPurpose + "=release-prepare",
 		"--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
 		"--cpus", "1", "--memory", "256m", "--memory-swap", "256m", "--pids-limit", "32",
+		"--tmpfs", "/tmp:rw,nosuid,nodev,size=67108864,mode=0700",
+		"--env", "HOME=/tmp", "--env", "npm_config_cache=/tmp/npm-cache", "--env", "npm_config_update_notifier=false",
 		"--mount", "type=volume,src=" + volumeName(r) + ",dst=/app",
-		d.image, "sh", "-c", "tar -x --no-same-owner --no-same-permissions -C /app && chmod -R a+rX,a-w /app"}
+		d.image, "sh", "-c", prepareCommand}
 }
+
+const prepareCommand = `set -e
+tar -x --no-same-owner --no-same-permissions -C /app
+if [ -d /app/node_modules ]; then
+  cd /app && npm rebuild --offline --ignore-scripts --no-audit --no-fund >/dev/null 2>&1
+fi
+chmod -R a+rX,a-w /app`
 
 // runArgs is the whole security posture of a running application. Application
 // code is untrusted: no capabilities, no new privileges, a read-only root,

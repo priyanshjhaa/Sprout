@@ -77,7 +77,7 @@ because a killed process never runs its cleanup code.
   offered beyond this machine.
 - Docker restrictions are defence in depth on a shared kernel, not proof of safe
   hostile multi-tenant execution (see `node-build-contract.md`).
-- Dependency installs are still offline-only, so only dependency-free apps build.
+- Dependency installs were offline-only here, so only dependency-free apps built. Packages arrived later: see `npm-installs-learning.md`.
 
 ## Slice 4: dashboard upload
 

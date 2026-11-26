@@ -30,8 +30,8 @@ A coding agent is a *client* of the deploy API. Sprout does not generate code an
 
 ## 3. Which apps can build (v1), in order
 
-1. **Static sites:** a plain folder with `index.html` at the root and no `package.json`. Served directly from the stored artifact, with no running process. (A site that needs a build step waits for controlled `npm` installs.)
-2. **Node.js web apps:** the current contract (`docs/node-build-contract.md`), extended with real `npm` installs through a controlled registry proxy.
+1. **Static sites:** a plain folder with `index.html` at the root and no `package.json`. Served directly from the stored artifact, with no running process. A Node project without a `start` script (Vite, React and so on) is built, and its `dist/` is served the same way.
+2. **Node.js web apps:** the contract in `docs/node-build-contract.md`, with packages from the public npm registry. Sprout downloads the locked tarballs, checks each against the lockfile's SHA-512 and hands them to the build, which stays offline and never runs install scripts (see `docs/npm-installs-learning.md`).
 3. **Python web apps:** through buildpacks (Cloud Native Buildpacks or Railpack, chosen by a short spike).
 
 Sprout, not the application, always chooses the build image and the runtime settings. User-supplied Dockerfiles are not accepted.
@@ -58,11 +58,11 @@ Sprout is the **control plane**: API, permissions, lifecycle, routing. Applicati
 2. **Local runtime:** run a built app in a locked-down container, health-check it, serve it publicly at `{app}.{workspace}.localhost`, and make pause, resume, archive and idle sleep real. *Done: driver, release, health check, live status, public routing, wake on request, idle sleep, and real pause and archive. See `docs/local-runtime-learning.md`.*
 3. Static sites. *Done: a plain folder with `index.html`, served from the stored artifact (see `docs/static-sites-learning.md`). Sites that need a build wait for step 5.*
 4. CLI `sprout deploy`, then the MCP `deploy` tool (folder and public GitHub modes). *Done. CLI: login with a personal access token, then pack, check against the server's own rules, upload, poll and print the URL (see `docs/cli-learning.md`). MCP: `sprout mcp` offers one `deploy` tool for a folder inside the agent's project or a public GitHub repository at a commit; the commit is downloaded on the client, so the server still receives only a source archive (see `docs/mcp-learning.md`).*
-5. `npm` installs through a controlled registry proxy.
+5. `npm` installs. *Done, without a proxy: Sprout fetches and verifies the locked packages, and the build installs them with no network. A project without a `start` script builds a website. See `docs/npm-installs-learning.md`.*
 6. Python through buildpacks.
 7. Hosting trial, then the cloud driver.
 8. Later: private apps, private GitHub repositories, Postgres, encrypted secrets, artifact retention, permanent delete.
 
 ## Before anything leaves localhost
 
-Artifact retention, a dependency egress policy, CLI token security (browser login flow, per-workspace token scopes, rate limiting), abuse limits for public URLs (rate limits, size caps, takedown), and a review of the build and runtime isolation boundary.
+Artifact retention (and a package cache sweep), a review of the package download policy (one registry host, lockfile-listed tarballs, checksums), CLI token security (browser login flow, per-workspace token scopes, rate limiting), abuse limits for public URLs (rate limits, size caps, takedown), and a review of the build and runtime isolation boundary.

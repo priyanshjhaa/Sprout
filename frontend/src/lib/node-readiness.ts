@@ -9,18 +9,6 @@ const MAX_MANIFEST_BYTES = 256 * 1024;
 // Where a build tool puts the finished website.
 const builtOutputFolders = ["dist", "build", "out"];
 
-const quote = (names: string[], max = 4) =>
-  names.slice(0, max).join(", ") + (names.length > max ? ` and ${names.length - max} more` : "");
-
-function packageNames(manifest: Record<string, unknown>): string[] {
-  const names = new Set<string>();
-  for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
-    const group = manifest[field];
-    if (group && typeof group === "object") Object.keys(group).forEach((name) => names.add(name));
-  }
-  return [...names];
-}
-
 /**
  * What would stop this Node.js app from running on Sprout today, as sentences.
  * Empty means nothing obvious. `builtOutput` is the name of a folder that already
@@ -32,27 +20,21 @@ export function describeNodeProblems(manifest: unknown, hasLockfile: boolean, bu
   }
   const m = manifest as Record<string, unknown>;
 
-  // Packages are the blocker no edit can fix today, so they are said first and alone.
-  const packages = packageNames(m);
-  if (packages.length > 0) {
-    const problems = [`Sprout can't install packages yet, and this app uses ${packages.length} (${quote(packages)}). Plain websites, and Node.js apps that use no packages, work today.`];
-    if (builtOutput) {
-      problems.push(`If this is a website you built, drop its "${builtOutput}" folder instead. That is a plain website Sprout can run now.`);
-    }
-    return problems;
-  }
-
   const problems: string[] = [];
   const engines = m.engines && typeof m.engines === "object" ? (m.engines as Record<string, unknown>) : {};
   const scripts = m.scripts && typeof m.scripts === "object" ? (m.scripts as Record<string, unknown>) : {};
   if (typeof m.name !== "string" || !m.name || typeof m.version !== "string" || !m.version) problems.push('package.json needs a "name" and a "version".');
   if (m.private !== true) problems.push('package.json needs "private": true.');
   if (engines.node !== "24.x") problems.push('package.json needs "engines": { "node": "24.x" }.');
-  const missing = ["build", "start"].filter((name) => typeof scripts[name] !== "string" || !(scripts[name] as string).trim());
-  if (missing.length > 0) problems.push(`package.json needs a ${missing.map((name) => `"${name}"`).join(" and a ")} script.`);
+  if (typeof scripts.build !== "string" || !scripts.build.trim()) {
+    problems.push('package.json needs a "build" script. Add a "start" script too to run a server; without one, the built dist/ folder is served as a website.');
+  } else if ("start" in scripts && (typeof scripts.start !== "string" || !scripts.start.trim())) {
+    problems.push('The "start" script in package.json is empty. Fill it in to run a server, or remove it to serve the built dist/ folder as a website.');
+  }
   if (m.workspaces) problems.push("Workspaces (monorepos) aren't supported.");
   if (!hasLockfile) problems.push('Add a package-lock.json (run "npm install" once to create it).');
-  if (builtOutput) problems.push(`If this is a website you built, drop its "${builtOutput}" folder instead.`);
+  // A website that is already built can also be deployed as it is.
+  if (problems.length > 0 && builtOutput) problems.push(`If this is a website you built, you can also drop its "${builtOutput}" folder on its own.`);
   return problems;
 }
 

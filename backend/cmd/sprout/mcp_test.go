@@ -152,7 +152,7 @@ func TestMCPExplainsARefusalSoTheAgentCanFixIt(t *testing.T) {
 	}), deployHarness(t, api))
 
 	text, _, isError := a.deploy(map[string]any{"folder": "shop"})
-	if !isError || !strings.Contains(text, "npm packages") || !strings.Contains(text, "deploy shop/dist instead") {
+	if !isError || !strings.Contains(text, "package-lock.json") || !strings.Contains(text, "deploy shop/dist instead") {
 		t.Fatalf("isError %v, text %q", isError, text)
 	}
 	if len(fake.uploads) != 0 {
