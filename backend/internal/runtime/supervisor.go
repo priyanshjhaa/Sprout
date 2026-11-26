@@ -177,9 +177,12 @@ func (s *Supervisor) Close() {
 	s.wg.Wait()
 }
 
+// contains matches releases by identity. A driver's inventory does not know
+// a release's runtime, so comparing whole values would never match one that
+// came from the database.
 func contains(releases []Release, want Release) bool {
 	for _, release := range releases {
-		if release == want {
+		if release.ApplicationID == want.ApplicationID && release.DeploymentID == want.DeploymentID {
 			return true
 		}
 	}
