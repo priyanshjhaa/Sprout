@@ -117,7 +117,7 @@ func TestFetchRefusesATamperedTarball(t *testing.T) {
 	if _, err := f.Fetch(context.Background(), data); !errors.Is(err, ErrIntegrity) {
 		t.Fatalf("err %v", err)
 	}
-	entries, _ := os.ReadDir(f.cache)
+	entries, _ := os.ReadDir(f.cache.Dir())
 	if len(entries) != 0 {
 		t.Fatalf("an unverified file stayed in the cache: %v", entries)
 	}
