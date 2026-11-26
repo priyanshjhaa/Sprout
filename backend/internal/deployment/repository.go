@@ -521,9 +521,9 @@ func (r *SQLRepository) LiveRoute(ctx context.Context, workspaceSlug, applicatio
 	route := runtime.Route{Release: runtime.Release{ApplicationID: row.ApplicationID.String()}, Lifecycle: string(row.Lifecycle)}
 	if row.DeploymentID.Valid && row.ArtifactID.Valid && row.ArtifactSha256.Valid && row.ArtifactBytes.Valid {
 		route.Live = true
-		route.Runtime = runtime.RuntimeNode
+		route.Release.Runtime = runtime.RuntimeNode
 		if row.Runtime.Valid {
-			route.Runtime = row.Runtime.String
+			route.Release.Runtime = row.Runtime.String
 		}
 		route.Release.DeploymentID = row.DeploymentID.String()
 		route.Artifact = artifact.Descriptor{ID: row.ArtifactID.String, SHA256: row.ArtifactSha256.String, Size: int64(row.ArtifactBytes.Int32)}
@@ -543,10 +543,9 @@ func (r *SQLRepository) RuntimeDesired(ctx context.Context) (runtime.Desired, er
 	var desired runtime.Desired
 	for _, row := range rows {
 		desired.Live = append(desired.Live, runtime.Route{
-			Release:   runtime.Release{ApplicationID: row.ApplicationID.String(), DeploymentID: row.DeploymentID.String()},
+			Release:   runtime.Release{ApplicationID: row.ApplicationID.String(), DeploymentID: row.DeploymentID.String(), Runtime: row.Runtime},
 			Lifecycle: string(row.Lifecycle),
 			Live:      true,
-			Runtime:   row.Runtime,
 		})
 	}
 	ids, err := q.ListInProgressDeployments(ctx)
@@ -562,7 +561,7 @@ func (r *SQLRepository) RuntimeDesired(ctx context.Context) (runtime.Desired, er
 // SetRuntime records how a building deployment will be served. The database
 // also restricts the value, but rejecting here keeps the error a domain error.
 func (r *SQLRepository) SetRuntime(ctx context.Context, id, kind string) error {
-	if kind != runtime.RuntimeNode && kind != runtime.RuntimeStatic {
+	if kind != runtime.RuntimeNode && kind != runtime.RuntimePython && kind != runtime.RuntimeStatic {
 		return ErrInvalid
 	}
 	if err := r.CheckOwnership(ctx); err != nil {

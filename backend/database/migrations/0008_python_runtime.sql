@@ -1,0 +1,2 @@
+ALTER TABLE "deployments" DROP CONSTRAINT "deployments_runtime_known";--> statement-breakpoint
+ALTER TABLE "deployments" ADD CONSTRAINT "deployments_runtime_known" CHECK ("deployments"."runtime" in ('node', 'python', 'static'));

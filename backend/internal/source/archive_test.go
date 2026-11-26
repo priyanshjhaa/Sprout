@@ -230,3 +230,22 @@ func (r *cancellingReader) Read(p []byte) (int, error) {
 	r.cancel()
 	return n, err
 }
+
+func TestArtifactLimitsExemptOnlyPackageFolders(t *testing.T) {
+	for name, want := range map[string]error{
+		"site-packages/certifi/cacert.pem": nil,
+		"node_modules/x/test.key":          nil,
+		"certifi/cacert.pem":               ErrSensitive,
+		"site-packages-not/cacert.pem":     ErrSensitive,
+	} {
+		data := archive(t, tar.Header{Name: name, Mode: 0o644, Size: 1, Typeflag: tar.TypeReg})
+		_, err := WithArchiveLimits(context.Background(), bytes.NewReader(data), ArtifactLimits, func(context.Context, fs.FS) error { return nil })
+		if !errors.Is(err, want) && !(want == nil && err == nil) {
+			t.Errorf("%s: %v, want %v", name, err, want)
+		}
+	}
+	data := archive(t, tar.Header{Name: "site-packages/cacert.pem", Mode: 0o644, Size: 1, Typeflag: tar.TypeReg})
+	if _, err := WithArchive(context.Background(), bytes.NewReader(data), func(context.Context, fs.FS) error { return nil }); !errors.Is(err, ErrSensitive) {
+		t.Errorf("an uploaded source gets no exemption: %v", err)
+	}
+}

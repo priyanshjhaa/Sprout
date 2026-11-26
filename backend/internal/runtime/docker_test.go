@@ -19,15 +19,34 @@ import (
 
 var testRelease = Release{ApplicationID: "11111111-1111-4111-8111-111111111111", DeploymentID: "22222222-2222-4222-8222-222222222222"}
 
-const testImage = "node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
+const (
+	testImage       = "node@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6"
+	testPythonImage = "python@sha256:f0fa218d5b06f9b9235024fa061cde2cb141f726de52134471053d2d9b5324a3"
+)
 
 // Command construction is a security boundary, so the flags are asserted.
 func TestRunArgsLockDownTheApplication(t *testing.T) {
-	d, err := NewDocker(testImage)
+	d, err := NewDocker(testImage, testPythonImage)
 	if err != nil {
 		t.Fatal(err)
 	}
+	python := testRelease
+	python.Runtime = RuntimePython
+	for _, release := range []Release{testRelease, python} {
+		assertLockedDown(t, d.runArgs(release))
+	}
 	args := d.runArgs(testRelease)
+	if !slices.Equal(args[len(args)-4:], []string{testImage, "npm", "--ignore-scripts", "start"}) {
+		t.Errorf("platform-owned start command not last: %v", args[len(args)-4:])
+	}
+	args = d.runArgs(python)
+	if !slices.Equal(args[len(args)-4:], []string{testPythonImage, "sh", "-c", startPython}) || !slices.Contains(args, "PYTHONPATH=/app/site-packages") {
+		t.Errorf("python start command: %v", args[len(args)-6:])
+	}
+}
+
+func assertLockedDown(t *testing.T, args []string) {
+	t.Helper()
 	joined := " " + strings.Join(args, " ") + " "
 	for _, want := range []string{
 		" --user 65532:65532 ", " --read-only ", " --cap-drop ALL ", " --security-opt no-new-privileges ",
@@ -49,13 +68,10 @@ func TestRunArgsLockDownTheApplication(t *testing.T) {
 			t.Errorf("run args share a host namespace: %s", arg)
 		}
 	}
-	if !slices.Equal(args[len(args)-4:], []string{testImage, "npm", "--ignore-scripts", "start"}) {
-		t.Errorf("platform-owned start command not last: %v", args[len(args)-4:])
-	}
 }
 
 func TestPrepareArgsHaveNoNetworkOrCapabilities(t *testing.T) {
-	d, _ := NewDocker(testImage)
+	d, _ := NewDocker(testImage, testPythonImage)
 	joined := " " + strings.Join(d.prepareArgs(testRelease), " ") + " "
 	for _, want := range []string{" --network none ", " --read-only ", " --cap-drop ALL ", " --security-opt no-new-privileges "} {
 		if !strings.Contains(joined, want) {
@@ -65,10 +81,13 @@ func TestPrepareArgsHaveNoNetworkOrCapabilities(t *testing.T) {
 }
 
 func TestInvalidReleaseAndImageAreRejected(t *testing.T) {
-	if _, err := NewDocker("node:24"); err == nil {
+	if _, err := NewDocker("node:24", testPythonImage); err == nil {
 		t.Fatal("unpinned image accepted")
 	}
-	d, _ := NewDocker(testImage)
+	if _, err := NewDocker(testImage, "python:3.13"); err == nil {
+		t.Fatal("unpinned python image accepted")
+	}
+	d, _ := NewDocker(testImage, testPythonImage)
 	bad := Release{ApplicationID: "x; rm -rf /", DeploymentID: testRelease.DeploymentID}
 	ctx := context.Background()
 	if d.Prepare(ctx, bad, []byte("x")) != ErrInvalid || d.Stop(ctx, bad) != ErrInvalid || d.Destroy(ctx, bad) != ErrInvalid {
@@ -76,6 +95,11 @@ func TestInvalidReleaseAndImageAreRejected(t *testing.T) {
 	}
 	if _, err := d.Start(ctx, bad); err != ErrInvalid {
 		t.Fatal("invalid release started")
+	}
+	unknown := testRelease
+	unknown.Runtime = "ruby"
+	if _, err := d.Start(ctx, unknown); err != ErrInvalid || d.Prepare(ctx, unknown, []byte("x")) != ErrInvalid {
+		t.Fatal("a release with an unknown runtime reached the Docker CLI")
 	}
 }
 
@@ -122,7 +146,7 @@ func TestDockerRuntimeLifecycle(t *testing.T) {
 	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
 		t.Skip("set SPROUT_DOCKER_TEST=1 to run the local Docker runtime test")
 	}
-	d, _ := NewDocker(testImage)
+	d, _ := NewDocker(testImage, testPythonImage)
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	defer d.Destroy(context.Background(), testRelease)
@@ -177,7 +201,7 @@ func TestProxyWakesARealContainer(t *testing.T) {
 	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
 		t.Skip("set SPROUT_DOCKER_TEST=1 to run the local Docker runtime test")
 	}
-	driver, _ := NewDocker(testImage)
+	driver, _ := NewDocker(testImage, testPythonImage)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	defer driver.Destroy(context.Background(), testRelease)
@@ -238,7 +262,7 @@ func TestReconcileSleepsAndArchivesARealApp(t *testing.T) {
 	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
 		t.Skip("set SPROUT_DOCKER_TEST=1 to run the local Docker runtime test")
 	}
-	driver, _ := NewDocker(testImage)
+	driver, _ := NewDocker(testImage, testPythonImage)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	defer driver.Destroy(context.Background(), testRelease)

@@ -45,7 +45,9 @@ func staticProxy(t *testing.T, loader ArtifactLoader, lifecycle string) (*Proxy,
 	t.Helper()
 	driver := newScripted("127.0.0.1:1")
 	s := newSupervisor(t, driver, staticArtifacts{}, 3)
-	route := Route{Release: testRelease, Lifecycle: lifecycle, Live: true, Runtime: RuntimeStatic}
+	release := testRelease
+	release.Runtime = RuntimeStatic
+	route := Route{Release: release, Lifecycle: lifecycle, Live: true}
 	p, err := NewProxy("localhost", func(context.Context, string, string) (Route, error) { return route, nil }, s, loader, testLogger())
 	if err != nil {
 		t.Fatal(err)

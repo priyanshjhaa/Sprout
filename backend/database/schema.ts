@@ -215,7 +215,7 @@ export const deployments = pgTable(
     uniqueIndex("deployments_one_live_per_app").on(table.applicationId)
       .where(sql`${table.status} = 'live'`),
     check("deployments_simulation_not_live", sql`not ${table.simulated} or ${table.status} <> 'live'`),
-    check("deployments_runtime_known", sql`${table.runtime} in ('node', 'static')`),
+    check("deployments_runtime_known", sql`${table.runtime} in ('node', 'python', 'static')`),
     check("deployments_duration_nonnegative", sql`${table.durationMs} is null or ${table.durationMs} >= 0`),
     // NULL satisfies a CHECK, so each artifact column is tested for presence explicitly.
     check(

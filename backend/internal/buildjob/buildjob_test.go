@@ -21,6 +21,8 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/deployment"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
 	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
+	"github.com/priyanshjhaa/Sprout/backend/internal/pypifetch"
+	"github.com/priyanshjhaa/Sprout/backend/internal/pythonapp"
 	rt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 	"github.com/priyanshjhaa/Sprout/backend/internal/staticsite"
 )
@@ -36,6 +38,7 @@ type fakeDriver struct {
 	prepareErr, startErr error
 	inventory            rt.Inventory
 	calls                []string
+	started              []rt.Release
 	destroyed            []rt.Release
 }
 
@@ -45,6 +48,7 @@ func (d *fakeDriver) Prepare(_ context.Context, r rt.Release, archive []byte) er
 }
 func (d *fakeDriver) Start(_ context.Context, r rt.Release) (rt.Instance, error) {
 	d.calls = append(d.calls, "start")
+	d.started = append(d.started, r)
 	return rt.Instance{Release: r, Endpoint: "127.0.0.1:1"}, d.startErr
 }
 func (d *fakeDriver) Endpoint(context.Context, rt.Release) (string, error) {
@@ -149,7 +153,7 @@ func newRuntimeRunner(t *testing.T, builder Builder, driver *fakeDriver, check H
 	t.Helper()
 	sources, artifacts := openStore(t), openStore(t)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return NewRunner(sources, artifacts, builder, driver, check, deployment.Staged(deployment.Simulate), logger), sources, artifacts, driver
+	return NewRunner(sources, artifacts, builder, nil, driver, check, deployment.Staged(deployment.Simulate), logger), sources, artifacts, driver
 }
 
 func TestBuildSuccessAndRelease(t *testing.T) {
@@ -381,12 +385,12 @@ func TestDockerBuildJob(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	docker, err := rt.NewDocker(nodeapp.DefaultImage)
+	docker, err := rt.NewDocker(nodeapp.DefaultImage, pythonapp.DefaultImage)
 	if err != nil {
 		t.Fatal(err)
 	}
 	sources, artifacts := openStore(t), openStore(t)
-	runner := NewRunner(sources, artifacts, builder, docker, DefaultHealthCheck, deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	runner := NewRunner(sources, artifacts, builder, nil, docker, DefaultHealthCheck, deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	ctx := context.Background()
 	stored, err := sources.Save(ctx, archive(t, nil))
 	if err != nil {
@@ -563,7 +567,7 @@ func TestDockerBuildJobWithPackages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	docker, err := rt.NewDocker(nodeapp.DefaultImage)
+	docker, err := rt.NewDocker(nodeapp.DefaultImage, pythonapp.DefaultImage)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -576,7 +580,7 @@ func TestDockerBuildJobWithPackages(t *testing.T) {
 		files[name] = string(data)
 	}
 	sources, artifacts := openStore(t), openStore(t)
-	runner := NewRunner(sources, artifacts, builder, docker, DefaultHealthCheck, deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	runner := NewRunner(sources, artifacts, builder, nil, docker, DefaultHealthCheck, deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
 	ctx := context.Background()
 	stored, err := sources.Save(ctx, plainArchive(t, files))
 	if err != nil {
@@ -615,4 +619,116 @@ func TestNodeProjectWithoutStartGoesLiveAsAWebsite(t *testing.T) {
 	if len(steps.runtimes) != 1 || steps.runtimes[0] != rt.RuntimeStatic {
 		t.Fatalf("runtime %v, want static", steps.runtimes)
 	}
+}
+
+type fakePython struct {
+	output []byte
+	err    error
+	calls  *int
+}
+
+func (b fakePython) BuildFiles(context.Context, fs.FS) ([]byte, error) {
+	*b.calls++
+	return b.output, b.err
+}
+
+func pythonProject(extra map[string]string) map[string]string {
+	files := map[string]string{
+		"requirements.txt": "flask==3.1.3 --hash=sha256:" + strings.Repeat("a", 64) + "\n",
+		"Procfile":         "web: gunicorn app:app --bind 0.0.0.0:$PORT\n",
+		"app.py":           "app = None\n",
+	}
+	for name, data := range extra {
+		files[name] = data
+	}
+	return files
+}
+
+// A requirements.txt makes a Python app: it is built by the Python builder and
+// started by the runtime as a Python release.
+func TestPythonProjectGoesLiveWithThePythonRuntime(t *testing.T) {
+	ctx := context.Background()
+	calls := 0
+	driver := &fakeDriver{}
+	sources, artifacts := openStore(t), openStore(t)
+	runner := NewRunner(sources, artifacts, fakeBuilder{err: errors.New("not a Node app")}, fakePython{output: []byte("python release"), calls: &calls},
+		driver, healthy, deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	stored, _ := sources.Save(ctx, plainArchive(t, pythonProject(nil)))
+	steps := &recordedSteps{}
+	outcome, err := runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, steps)
+	if err != nil || !outcome.Live || calls != 1 {
+		t.Fatalf("outcome %+v err %v calls %d", outcome, err, calls)
+	}
+	if len(steps.runtimes) != 1 || steps.runtimes[0] != rt.RuntimePython {
+		t.Fatalf("runtime %v, want python", steps.runtimes)
+	}
+	if len(driver.started) != 1 || driver.started[0].Runtime != rt.RuntimePython {
+		t.Fatalf("the driver was not told the release is Python: %+v", driver.started)
+	}
+}
+
+func TestPythonProjectIsToldWhichRuleItBreaks(t *testing.T) {
+	for want, extra := range map[string]map[string]string{
+		"python_contract_requirements": {"requirements.txt": "flask==3.1.3\n"},
+		"python_contract_procfile":     {"Procfile": "worker: python job.py\n"},
+		"python_contract_files":        {"venv/pyvenv.cfg": "home = /usr\n"},
+	} {
+		t.Run(want, func(t *testing.T) {
+			ctx := context.Background()
+			calls := 0
+			sources, artifacts := openStore(t), openStore(t)
+			runner := NewRunner(sources, artifacts, fakeBuilder{}, fakePython{calls: &calls}, &fakeDriver{}, healthy,
+				deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
+			stored, _ := sources.Save(ctx, plainArchive(t, pythonProject(extra)))
+			_, err := runner.Run(ctx, deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}, &recordedSteps{})
+			if got := failureCode(err); got != want || calls != 0 {
+				t.Fatalf("got %q (%v), want %q; builder calls %d", got, err, want, calls)
+			}
+		})
+	}
+}
+
+// TestDockerBuildJobForPython takes dev/python-flask-example from source to a
+// healthy release: wheels from PyPI, the sealed build, then the Python runtime.
+// It needs Docker, both pinned images and internet access.
+func TestDockerBuildJobForPython(t *testing.T) {
+	if os.Getenv("SPROUT_DOCKER_TEST") != "1" {
+		t.Skip("set SPROUT_DOCKER_TEST=1 to run the Docker build job test")
+	}
+	fetcher, err := pypifetch.New(filepath.Join(t.TempDir(), "wheels"), pypifetch.BuildPlatform())
+	if err != nil {
+		t.Fatal(err)
+	}
+	builder, err := pythonapp.NewRunner(pythonapp.DefaultImage, 2*time.Minute, fetcher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docker, err := rt.NewDocker(nodeapp.DefaultImage, pythonapp.DefaultImage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{}
+	for _, name := range []string{"Procfile", "requirements.txt", "app.py"} {
+		data, err := os.ReadFile(filepath.Join("../../dev/python-flask-example", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files[name] = string(data)
+	}
+	sources, artifacts := openStore(t), openStore(t)
+	runner := NewRunner(sources, artifacts, fakeBuilder{}, builder, docker, DefaultHealthCheck, deployment.Staged(deployment.Simulate), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	ctx := context.Background()
+	stored, err := sources.Save(ctx, plainArchive(t, files))
+	if err != nil {
+		t.Fatal(err)
+	}
+	work := deployment.Work{DeploymentID: testDep, ApplicationID: testApp, Source: &stored}
+	t.Cleanup(func() {
+		_ = docker.Destroy(context.Background(), rt.Release{ApplicationID: testApp, DeploymentID: testDep})
+	})
+	outcome, err := runner.Run(ctx, work, &recordedSteps{})
+	if err != nil || !outcome.Live {
+		t.Fatalf("flask app did not go live: %+v %v", outcome, err)
+	}
+	runner.Release(ctx, work, outcome, false)
 }

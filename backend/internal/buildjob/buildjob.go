@@ -1,8 +1,9 @@
-// Package buildjob runs real deployments (Node apps and static sites) on the deployment worker: it loads an
-// uploaded source archive, prepares and validates it, downloads its locked npm
-// packages, builds it in the sealed offline Node container, stores the output as an artifact, then provisions, starts and
-// health-checks the release through the runtime driver. Only a release that
-// answers /health is reported live.
+// Package buildjob runs real deployments (Node apps, Python apps and static
+// sites) on the deployment worker: it loads an uploaded source archive,
+// prepares and validates it, downloads its locked packages, builds it in a
+// sealed offline container, stores the output as an artifact, then
+// provisions, starts and health-checks the release through the runtime
+// driver. Only a release that answers /health is reported live.
 package buildjob
 
 import (
@@ -17,6 +18,8 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/deployment"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
 	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
+	"github.com/priyanshjhaa/Sprout/backend/internal/pypifetch"
+	"github.com/priyanshjhaa/Sprout/backend/internal/pythonapp"
 	rt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 	"github.com/priyanshjhaa/Sprout/backend/internal/source"
 	"github.com/priyanshjhaa/Sprout/backend/internal/staticsite"
@@ -32,6 +35,12 @@ type Builder interface {
 	BuildWebsite(ctx context.Context, files fs.FS) ([]byte, error)
 }
 
+// PythonBuilder builds a Python app: its files with site-packages/ installed.
+// *pythonapp.Runner implements it; tests substitute a fake.
+type PythonBuilder interface {
+	BuildFiles(ctx context.Context, files fs.FS) ([]byte, error)
+}
+
 // HealthCheck waits until the instance at endpoint is serving, or fails.
 type HealthCheck func(ctx context.Context, endpoint string) error
 
@@ -45,14 +54,15 @@ func DefaultHealthCheck(ctx context.Context, endpoint string) error {
 type Runner struct {
 	sources, artifacts *artifact.Store
 	builder            Builder
+	python             PythonBuilder
 	driver             rt.Driver
 	healthy            HealthCheck
 	simulation         deployment.Runner
 	logger             *slog.Logger
 }
 
-func NewRunner(sources, artifacts *artifact.Store, builder Builder, driver rt.Driver, healthy HealthCheck, simulation deployment.Runner, logger *slog.Logger) *Runner {
-	return &Runner{sources: sources, artifacts: artifacts, builder: builder, driver: driver, healthy: healthy, simulation: simulation, logger: logger}
+func NewRunner(sources, artifacts *artifact.Store, builder Builder, python PythonBuilder, driver rt.Driver, healthy HealthCheck, simulation deployment.Runner, logger *slog.Logger) *Runner {
+	return &Runner{sources: sources, artifacts: artifacts, builder: builder, python: python, driver: driver, healthy: healthy, simulation: simulation, logger: logger}
 }
 
 func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment.Steps) (deployment.Outcome, error) {
@@ -74,21 +84,33 @@ func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment
 	var output []byte
 	kind := rt.RuntimeNode
 	_, err = source.WithArchive(ctx, bytes.NewReader(data), func(ctx context.Context, files fs.FS) error {
-		// A package.json makes it a Node app; anything else must be a static site.
-		if _, statErr := fs.Stat(files, "package.json"); statErr != nil {
+		// A package.json makes it a Node app, a requirements.txt a Python app;
+		// anything else must be a static site.
+		var build func(context.Context, fs.FS) ([]byte, error)
+		switch _, statErr := fs.Stat(files, "package.json"); {
+		case statErr == nil:
+			if err := nodeapp.Validate(ctx, files); err != nil {
+				return err
+			}
+			// Without a start script the project builds a website: its dist/
+			// is served like a static site and no process runs.
+			build = r.builder.BuildFiles
+			if nodeapp.IsWebsite(files) {
+				kind, build = rt.RuntimeStatic, r.builder.BuildWebsite
+			}
+		case pythonapp.IsPython(files):
+			if err := pythonapp.Validate(ctx, files); err != nil {
+				return err
+			}
+			if r.python == nil {
+				return pythonapp.ErrImage
+			}
+			kind, build = rt.RuntimePython, r.python.BuildFiles
+		default:
 			kind = rt.RuntimeStatic
 			built, err := prepareStatic(ctx, files, steps)
 			output = built
 			return err
-		}
-		if err := nodeapp.Validate(ctx, files); err != nil {
-			return err
-		}
-		// Without a start script the project builds a website: its dist/ is
-		// served like a static site and no process runs.
-		build := r.builder.BuildFiles
-		if nodeapp.IsWebsite(files) {
-			kind, build = rt.RuntimeStatic, r.builder.BuildWebsite
 		}
 		if err := steps.SetRuntime(kind); err != nil {
 			return err
@@ -125,7 +147,7 @@ func (r *Runner) Run(ctx context.Context, work deployment.Work, steps deployment
 	if kind == rt.RuntimeStatic {
 		return goLiveStatic(output, outcome, steps)
 	}
-	return r.goLive(ctx, work, output, outcome, steps)
+	return r.goLive(ctx, work, kind, output, outcome, steps)
 }
 
 // prepareStatic validates a static site and packs it. There is nothing to
@@ -178,8 +200,8 @@ func goLiveStatic(archive []byte, outcome deployment.Outcome, steps deployment.S
 // goLive provisions the release, starts it, and waits for it to be healthy.
 // Provisioned is set before the first driver call so Release cleans up even
 // when a call fails halfway.
-func (r *Runner) goLive(ctx context.Context, work deployment.Work, archive []byte, outcome deployment.Outcome, steps deployment.Steps) (deployment.Outcome, error) {
-	release := rt.Release{ApplicationID: work.ApplicationID, DeploymentID: work.DeploymentID}
+func (r *Runner) goLive(ctx context.Context, work deployment.Work, kind string, archive []byte, outcome deployment.Outcome, steps deployment.Steps) (deployment.Outcome, error) {
+	release := rt.Release{ApplicationID: work.ApplicationID, DeploymentID: work.DeploymentID, Runtime: kind}
 	if err := steps.Begin("provision"); err != nil {
 		return outcome, err
 	}
@@ -282,6 +304,9 @@ var knownFailures = []error{
 	nodeapp.ErrContract, nodeapp.ErrImage, nodeapp.ErrDependencies, nodeapp.ErrInstall, nodeapp.ErrBuild,
 	npmfetch.ErrUnavailable, npmfetch.ErrIntegrity, npmfetch.ErrTooLarge, npmfetch.ErrNotFound, npmfetch.ErrLockfile, npmfetch.ErrCache,
 	nodeapp.ErrArtifact, nodeapp.ErrArtifactSize, nodeapp.ErrDocker, nodeapp.ErrCleanup,
+	pythonapp.ErrImage, pythonapp.ErrDependencies, pythonapp.ErrInstall, pythonapp.ErrBuild,
+	pythonapp.ErrArtifact, pythonapp.ErrArtifactSize, pythonapp.ErrDocker, pythonapp.ErrCleanup,
+	pypifetch.ErrUnavailable, pypifetch.ErrIntegrity, pypifetch.ErrTooLarge, pypifetch.ErrNotFound, pypifetch.ErrNoWheel, pypifetch.ErrRequirements, pypifetch.ErrCache,
 	staticsite.ErrContract, artifact.ErrStorage,
 }
 
@@ -298,6 +323,10 @@ func classify(err error) error {
 	var contract *nodeapp.ContractError
 	if errors.As(err, &contract) {
 		return &deployment.Failure{Code: contract.Code, Err: err}
+	}
+	var python *pythonapp.ContractError
+	if errors.As(err, &python) {
+		return &deployment.Failure{Code: python.Code, Err: err}
 	}
 	for _, known := range knownFailures {
 		if errors.Is(err, known) {
