@@ -193,7 +193,7 @@ func TestSimulationRepositoryPostgreSQL(t *testing.T) {
 		kind := ""
 		for _, route := range desired.Live {
 			if route.Release.DeploymentID == built.ID {
-				kind = route.Runtime
+				kind = route.Release.Runtime
 			}
 		}
 		if kind != "static" {

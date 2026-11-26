@@ -27,13 +27,26 @@ var uuid = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-
 // Docker runs releases as containers on the local Docker daemon through the
 // Docker CLI, the same trusted boundary the build runner uses. It is local
 // developer infrastructure: the daemon must be one the operator trusts.
-type Docker struct{ image string }
+// Each runtime runs in the pinned image its release was built with.
+type Docker struct{ node, python string }
 
-func NewDocker(image string) (*Docker, error) {
-	if !strings.HasPrefix(image, "node@sha256:") {
+func NewDocker(node, python string) (*Docker, error) {
+	if !strings.HasPrefix(node, "node@sha256:") || !strings.HasPrefix(python, "python@sha256:") {
 		return nil, ErrInvalid
 	}
-	return &Docker{image: image}, nil
+	return &Docker{node: node, python: python}, nil
+}
+
+// image is the release's runtime image. An empty runtime is Node, the
+// database's default for deployments made before runtimes were recorded.
+func (d *Docker) image(r Release) (string, bool) {
+	switch r.Runtime {
+	case RuntimeNode, "":
+		return d.node, true
+	case RuntimePython:
+		return d.python, true
+	}
+	return "", false
 }
 
 func valid(r Release) bool {
@@ -44,7 +57,7 @@ func volumeName(r Release) string    { return "sprout-release-" + r.DeploymentID
 func containerName(r Release) string { return "sprout-app-" + r.DeploymentID }
 
 func (d *Docker) Prepare(ctx context.Context, release Release, archive []byte) error {
-	if !valid(release) || len(archive) == 0 {
+	if _, known := d.image(release); !valid(release) || !known || len(archive) == 0 {
 		return ErrInvalid
 	}
 	if err := docker(ctx, nil, nil, volumeCreateArgs(release)...); err != nil {
@@ -58,7 +71,7 @@ func (d *Docker) Prepare(ctx context.Context, release Release, archive []byte) e
 }
 
 func (d *Docker) Start(ctx context.Context, release Release) (Instance, error) {
-	if !valid(release) {
+	if _, known := d.image(release); !valid(release) || !known {
 		return Instance{}, ErrInvalid
 	}
 	if err := ensureNetwork(ctx); err != nil {
@@ -128,10 +141,16 @@ func volumeCreateArgs(r Release) []string {
 // prepareArgs unpacks the archive into the release volume. The helper has no
 // network, no capabilities and a read-only root; it is root only so it may
 // write the new volume, then makes the files world-readable and read-only for
-// the unprivileged runtime user. A release with packages arrives without
+// the unprivileged runtime user. A Node release with packages arrives without
 // node_modules/.bin (symlinks never leave a build), so npm relinks it here,
-// offline and without running any package's scripts.
+// offline and without running any package's scripts. A Python release needs
+// nothing beyond unpacking: its packages are plain files in site-packages/.
 func (d *Docker) prepareArgs(r Release) []string {
+	image, _ := d.image(r)
+	command := prepareCommand
+	if r.Runtime == RuntimePython {
+		command = preparePython
+	}
 	return []string{"run", "--rm", "--interactive", "--pull=never", "--log-driver=none",
 		"--name", "sprout-prepare-" + r.DeploymentID, "--label", labelPurpose + "=release-prepare",
 		"--network", "none", "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
@@ -139,7 +158,7 @@ func (d *Docker) prepareArgs(r Release) []string {
 		"--tmpfs", "/tmp:rw,nosuid,nodev,size=67108864,mode=0700",
 		"--env", "HOME=/tmp", "--env", "npm_config_cache=/tmp/npm-cache", "--env", "npm_config_update_notifier=false",
 		"--mount", "type=volume,src=" + volumeName(r) + ",dst=/app",
-		d.image, "sh", "-c", prepareCommand}
+		image, "sh", "-c", command}
 }
 
 const prepareCommand = `set -e
@@ -149,13 +168,30 @@ if [ -d /app/node_modules ]; then
 fi
 chmod -R a+rX,a-w /app`
 
+// preparePython also marks the packages' commands (gunicorn, uvicorn)
+// executable: Sprout repacks every build output with fixed file modes, so
+// they arrive as plain files. That grants nothing new, since the application
+// can already run any Python code.
+const preparePython = `set -e
+tar -x --no-same-owner --no-same-permissions -C /app
+if [ -d /app/site-packages/bin ]; then
+  find /app/site-packages/bin -maxdepth 1 -type f -exec chmod a+x {} +
+fi
+chmod -R a+rX,a-w /app`
+
+// startPython runs the Procfile's web command, which the build already
+// checked is the file's only process. Like npm start, it is the
+// application's own shell command, run inside the application's sandbox.
+const startPython = `exec sh -c "$(sed -n 's/^[[:space:]]*web[[:space:]]*:[[:space:]]*//p' /app/Procfile | tr -d '\r' | head -n 1)"`
+
 // runArgs is the whole security posture of a running application. Application
 // code is untrusted: no capabilities, no new privileges, a read-only root,
 // the release mounted read-only, bounded CPU/memory/processes, a port
 // published on loopback only, and a network on which apps cannot reach each
 // other. Nothing here is chosen by the application.
 func (d *Docker) runArgs(r Release) []string {
-	return []string{"run", "--detach", "--init", "--pull=never", "--restart", "no", "--log-driver=none",
+	image, _ := d.image(r)
+	args := []string{"run", "--detach", "--init", "--pull=never", "--restart", "no", "--log-driver=none",
 		"--name", containerName(r),
 		"--label", labelPurpose + "=" + purposeApp, "--label", labelApp + "=" + r.ApplicationID, "--label", labelRelease + "=" + r.DeploymentID,
 		"--user", nonRoot, "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
@@ -163,9 +199,19 @@ func (d *Docker) runArgs(r Release) []string {
 		"--tmpfs", "/tmp:rw,nosuid,nodev,size=67108864,uid=65532,gid=65532,mode=0700",
 		"--mount", "type=volume,src=" + volumeName(r) + ",dst=/app,readonly",
 		"--workdir", "/app", "--network", networkName, "--publish", "127.0.0.1::" + appPort,
-		"--env", "PORT=" + appPort, "--env", "HOME=/tmp", "--env", "NODE_ENV=production",
+		"--env", "PORT=" + appPort, "--env", "HOME=/tmp",
+	}
+	if r.Runtime == RuntimePython {
+		// Packages live in the release's site-packages/, and their commands
+		// (gunicorn, uvicorn) in its bin/. The release is read-only, so Python
+		// is told not to try writing bytecode.
+		return append(args, "--env", "PYTHONPATH=/app/site-packages", "--env", "PYTHONDONTWRITEBYTECODE=1", "--env", "PYTHONUNBUFFERED=1",
+			"--env", "PATH=/app/site-packages/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin",
+			image, "sh", "-c", startPython)
+	}
+	return append(args, "--env", "NODE_ENV=production",
 		"--env", "npm_config_cache=/tmp/npm-cache", "--env", "npm_config_update_notifier=false",
-		d.image, "npm", "--ignore-scripts", "start"}
+		image, "npm", "--ignore-scripts", "start")
 }
 
 // ensureNetwork creates the shared app network once. Inter-container traffic

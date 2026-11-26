@@ -42,6 +42,9 @@ test("hidden files, secrets and dependency folders are never uploaded, and the p
   assert.equal(skipReason(".env.production"), "hidden");
   assert.equal(skipReason("keys.PEM"), "private");
   assert.equal(skipReason("node_modules"), "dependencies");
+  assert.equal(skipReason("venv"), "dependencies");
+  assert.equal(skipReason("site-packages"), "dependencies");
+  assert.equal(skipReason("__pycache__"), "junk");
   assert.equal(skipReason("index.html"), null);
   assert.equal(skipReason("environment.html"), null, "only a leading dot hides a file");
   problem(() => prepareFolder([file("site/.env"), file("site/.git/HEAD")]));
@@ -51,6 +54,8 @@ test("hidden files, secrets and dependency folders are never uploaded, and the p
 test("it says what it found when there is nothing to deploy, and hints at near misses", () => {
   assert.equal(prepareFolder([file("app/package.json"), file("app/server.js")]).kind, "node");
   assert.equal(prepareFolder([file("package.json"), file("index.html")]).kind, "node", "package.json wins, as on the server");
+  assert.equal(prepareFolder([file("api/requirements.txt"), file("api/app.py"), file("api/venv/pyvenv.cfg")]).kind, "python");
+  assert.equal(prepareFolder([file("requirements.txt"), file("index.html")]).kind, "python", "requirements.txt wins over index.html, as on the server");
   // A Node project's own dist/ is rebuilt by Sprout, so it is left out, not refused.
   const built = prepareFolder([file("app/package.json"), file("app/package-lock.json"), file("app/dist/index.html"), file("app/dist/assets/a.js"), file("app/index.html")]);
   assert.deepEqual(built.files.map((f) => f.path), ["index.html", "package-lock.json", "package.json"]);

@@ -6,7 +6,7 @@ const facts = [
   "Non-root, read-only containers",
   "Healthy on /health before it goes public",
   "Sleeps when idle, wakes on a visit",
-  "Static sites and Node.js apps",
+  "Static sites, Node.js and Python apps",
   "One deploy API behind every client",
   "Pause, resume, and archive any app",
 ];

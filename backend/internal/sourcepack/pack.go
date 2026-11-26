@@ -42,6 +42,7 @@ type Kind string
 const (
 	KindStatic Kind = "static"
 	KindNode   Kind = "node"
+	KindPython Kind = "python"
 )
 
 // Archive is a packed folder, ready to upload.
@@ -67,7 +68,7 @@ type Reason string
 const (
 	ReasonHidden       Reason = "hidden"       // .env, .git, .DS_Store and every other dot-file
 	ReasonPrivate      Reason = "private"      // keys and credential files
-	ReasonDependencies Reason = "dependencies" // node_modules
+	ReasonDependencies Reason = "dependencies" // node_modules, and Python's venv and site-packages
 	ReasonJunk         Reason = "junk"         // system clutter
 	ReasonLink         Reason = "link"         // symlinks, which could point anywhere
 	ReasonSpecial      Reason = "special"      // sockets, devices and pipes
@@ -75,9 +76,13 @@ const (
 )
 
 var (
-	secretNames    = []string{"credentials.json", "id_rsa", "id_ed25519", "id_ecdsa"}
-	junkNames      = []string{"__macosx", "thumbs.db", "desktop.ini"}
-	secretSuffixes = []string{".pem", ".key", ".p12", ".pfx"}
+	secretNames = []string{"credentials.json", "id_rsa", "id_ed25519", "id_ecdsa"}
+	junkNames   = []string{"__macosx", "thumbs.db", "desktop.ini", "__pycache__"}
+	// Installed packages are rebuilt by Sprout from the lockfile or
+	// requirements.txt. A virtual environment is usually .venv, which is
+	// hidden anyway; venv is the other name Python's own docs use.
+	dependencyNames = []string{"node_modules", "venv", "site-packages"}
+	secretSuffixes  = []string{".pem", ".key", ".p12", ".pfx"}
 )
 
 // SkipReason says why a single path segment is never uploaded, or "" if it is
@@ -89,7 +94,7 @@ func SkipReason(segment string) Reason {
 		return ReasonJunk
 	case strings.HasPrefix(lower, "."):
 		return ReasonHidden
-	case lower == "node_modules":
+	case slices.Contains(dependencyNames, lower):
 		return ReasonDependencies
 	case slices.Contains(junkNames, lower):
 		return ReasonJunk
@@ -249,6 +254,9 @@ func kindOf(files []entry) (Kind, error) {
 	if has("package.json") {
 		return KindNode, nil
 	}
+	if has("requirements.txt") {
+		return KindPython, nil
+	}
 	if has("index.html") {
 		return KindStatic, nil
 	}
@@ -268,7 +276,7 @@ func kindOf(files []entry) (Kind, error) {
 			found = append(found, top)
 		}
 	}
-	return "", problemf("%sSprout needs an index.html (a website) or a package.json (a Node.js app) at the top of the folder. Found: %s.", hint, quoteList(found))
+	return "", problemf("%sSprout needs an index.html (a website), a package.json (a Node.js app) or a requirements.txt (a Python app) at the top of the folder. Found: %s.", hint, quoteList(found))
 }
 
 func builtFolder(files []entry) string {

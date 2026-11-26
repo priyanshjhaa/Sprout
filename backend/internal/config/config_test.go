@@ -205,8 +205,8 @@ func TestLocalBuilds(t *testing.T) {
 	if err != nil || !on.LocalBuilds.Enabled || on.LocalBuilds.SourceDirectory != "/private/tmp/sprout-sources" {
 		t.Fatalf("enabled builds: %+v %v", on.LocalBuilds, err)
 	}
-	if on.LocalBuilds.PackageCacheDirectory != "/private/tmp/npm-packages" {
-		t.Fatalf("default package cache %q, want npm-packages beside the artifacts", on.LocalBuilds.PackageCacheDirectory)
+	if on.LocalBuilds.PackageCacheDirectory != "/private/tmp/packages" {
+		t.Fatalf("default package cache %q, want packages beside the artifacts", on.LocalBuilds.PackageCacheDirectory)
 	}
 	custom, err := Load(lookup(with(map[string]string{"SPROUT_ENABLE_LOCAL_BUILDS": "1", "SPROUT_SOURCE_DIR": "/private/tmp/sprout-sources", "SPROUT_ARTIFACT_DIR": "/private/tmp/sprout-artifacts", "SPROUT_PACKAGE_CACHE_DIR": "/private/tmp/npm"})))
 	if err != nil || custom.LocalBuilds.PackageCacheDirectory != "/private/tmp/npm" {

@@ -21,18 +21,18 @@ const (
 )
 
 // Limits bound one extraction. Uploaded sources use SourceLimits; build
-// output, which may carry the app's production node_modules, uses
-// ArtifactLimits.
+// output, which may carry the app's production node_modules or its Python
+// site-packages, uses ArtifactLimits.
 type Limits struct {
 	ArchiveBytes int64 // the tar stream itself
 	ContentBytes int64 // all file contents together
 	FileBytes    int64 // one file
 	Entries      int   // files and directories
 	Depth        int   // path segments
-	// Packages exempts paths under node_modules/ from the sensitive-name rules:
-	// those files come from public npm packages, verified against the
-	// lockfile, not from the person's own folder, and some packages ship
-	// files such as test.key or .env.example.
+	// Packages exempts paths under node_modules/ and site-packages/ from the
+	// sensitive-name rules: those files come from public packages, verified
+	// against the lockfile or requirements.txt, not from the person's own
+	// folder, and some packages ship files such as test.key or cacert.pem.
 	Packages bool
 }
 
@@ -227,7 +227,7 @@ func safeName(name string, directory bool, limits Limits) (string, error) {
 	if len(parts) > limits.Depth {
 		return "", ErrLimit
 	}
-	packageFile := limits.Packages && len(parts) > 1 && parts[0] == "node_modules"
+	packageFile := limits.Packages && len(parts) > 1 && (parts[0] == "node_modules" || parts[0] == "site-packages")
 	for _, part := range parts {
 		if part == "." || part == ".." || strings.TrimSpace(part) != part || strings.HasSuffix(part, ".") {
 			return "", ErrInvalid

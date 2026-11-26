@@ -107,8 +107,11 @@ func (p printer) stageFinished(stage string, succeeded bool) {
 }
 
 func describeKind(kind sourcepack.Kind) string {
-	if kind == sourcepack.KindNode {
+	switch kind {
+	case sourcepack.KindNode:
 		return "Node.js app"
+	case sourcepack.KindPython:
+		return "Python app"
 	}
 	return "website"
 }

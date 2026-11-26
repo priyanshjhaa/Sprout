@@ -18,10 +18,14 @@ var (
 )
 
 // Release names one immutable built deployment. Both IDs are UUIDs; drivers
-// derive resource names from them, so they are validated before use.
+// derive resource names from them, so they are validated before use. Runtime
+// says how it runs (RuntimeNode, RuntimePython or RuntimeStatic); drivers
+// need it to prepare and start a release, but not to stop or destroy one, so
+// releases a driver lists may leave it empty.
 type Release struct {
 	ApplicationID string
 	DeploymentID  string
+	Runtime       string
 }
 
 // Instance is a running release and where to reach it from the control plane.

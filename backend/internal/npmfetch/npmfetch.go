@@ -10,24 +10,21 @@ package npmfetch
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
-	"time"
 
 	"golang.org/x/sync/errgroup"
+
+	"github.com/priyanshjhaa/Sprout/backend/internal/pkgcache"
 )
 
 const (
@@ -79,31 +76,20 @@ type Package struct {
 
 // Fetcher downloads into a cache directory it owns.
 type Fetcher struct {
-	cache    string
+	cache    *pkgcache.Cache
 	platform Platform
 	client   *http.Client
 	// registry replaces https://registry.npmjs.org in tests.
 	registry string
 }
 
-// New opens a cache in an existing absolute directory, private to this user.
+// New opens a cache in an absolute directory, private to this user.
 func New(cache string, platform Platform) (*Fetcher, error) {
-	if !filepath.IsAbs(cache) {
+	opened, err := pkgcache.Open(cache)
+	if err != nil {
 		return nil, ErrCache
 	}
-	if err := os.MkdirAll(cache, 0o700); err != nil {
-		return nil, ErrCache
-	}
-	info, err := os.Stat(cache)
-	if err != nil || !info.IsDir() || info.Mode().Perm()&0o077 != 0 {
-		return nil, ErrCache
-	}
-	client := &http.Client{
-		Timeout: 2 * time.Minute,
-		// Tarballs are served directly; a redirect could lead anywhere.
-		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-	}
-	return &Fetcher{cache: cache, platform: platform, client: client, registry: "https://" + registryHost}, nil
+	return &Fetcher{cache: opened, platform: platform, client: pkgcache.NewClient(), registry: "https://" + registryHost}, nil
 }
 
 type lockEntry struct {
@@ -218,74 +204,28 @@ func (f *Fetcher) Fetch(ctx context.Context, lock []byte) ([]Package, error) {
 }
 
 func (f *Fetcher) one(ctx context.Context, item wanted) (Package, error) {
-	path := filepath.Join(f.cache, hex.EncodeToString(item.digest)+".tgz")
-	if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-		return Package{Path: path, Integrity: item.integrity, Bytes: info.Size()}, nil
+	name := hex.EncodeToString(item.digest) + ".tgz"
+	if size, ok := f.cache.Cached(name); ok {
+		return Package{Path: f.cache.Path(name), Integrity: item.integrity, Bytes: size}, nil
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, item.url, nil)
+	size, err := f.cache.Download(ctx, f.client, item.url, name, sha512.New, item.digest, MaxPackageBytes)
 	if err != nil {
-		return Package{}, ErrUnavailable
+		return Package{}, translate(err)
 	}
-	request.Header.Set("User-Agent", "sprout-build")
-	response, err := f.client.Do(request)
-	if err != nil {
-		if ctx.Err() != nil {
-			return Package{}, ctx.Err()
-		}
-		return Package{}, ErrUnavailable
-	}
-	defer response.Body.Close()
-	switch {
-	case response.StatusCode == http.StatusNotFound:
-		return Package{}, ErrNotFound
-	case response.StatusCode != http.StatusOK:
-		return Package{}, ErrUnavailable
-	}
-	if response.ContentLength > MaxPackageBytes {
-		return Package{}, ErrTooLarge
-	}
-	return f.store(ctx, response.Body, item, path)
+	return Package{Path: f.cache.Path(name), Integrity: item.integrity, Bytes: size}, nil
 }
 
-// store writes a download beside the cache entry and publishes it by rename
-// only once its digest matches, so the cache never holds an unverified file
-// and two builds fetching the same package cannot see half of one.
-func (f *Fetcher) store(ctx context.Context, body io.Reader, item wanted, path string) (Package, error) {
-	var random [8]byte
-	if _, err := rand.Read(random[:]); err != nil {
-		return Package{}, ErrCache
-	}
-	partial := filepath.Join(f.cache, "."+hex.EncodeToString(random[:])+".partial")
-	file, err := os.OpenFile(partial, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return Package{}, ErrCache
-	}
-	published := false
-	defer func() {
-		if !published {
-			_ = os.Remove(partial)
+// translate gives the cache's errors npm's own codes.
+func translate(err error) error {
+	for from, to := range map[error]error{
+		pkgcache.ErrUnavailable: ErrUnavailable, pkgcache.ErrIntegrity: ErrIntegrity, pkgcache.ErrTooLarge: ErrTooLarge,
+		pkgcache.ErrNotFound: ErrNotFound, pkgcache.ErrCache: ErrCache,
+	} {
+		if errors.Is(err, from) {
+			return to
 		}
-	}()
-	hash := sha512.New()
-	written, copyErr := io.Copy(io.MultiWriter(file, hash), io.LimitReader(body, MaxPackageBytes+1))
-	closeErr := file.Close()
-	switch {
-	case copyErr != nil && ctx.Err() != nil:
-		return Package{}, ctx.Err()
-	case copyErr != nil:
-		return Package{}, ErrUnavailable
-	case written > MaxPackageBytes:
-		return Package{}, ErrTooLarge
-	case closeErr != nil:
-		return Package{}, ErrCache
-	case !slices.Equal(hash.Sum(nil), item.digest):
-		return Package{}, ErrIntegrity
 	}
-	if err := os.Rename(partial, path); err != nil {
-		return Package{}, ErrCache
-	}
-	published = true
-	return Package{Path: path, Integrity: item.integrity, Bytes: written}, nil
+	return err
 }
 
 // Verify re-reads a cached tarball through its digest while copying it, so a
@@ -297,19 +237,5 @@ func Verify(p Package, into io.Writer) error {
 	if err != nil {
 		return ErrIntegrity
 	}
-	file, err := os.Open(p.Path)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrCache, err)
-	}
-	defer file.Close()
-	hash := sha512.New()
-	written, err := io.Copy(io.MultiWriter(into, hash), io.LimitReader(file, p.Bytes+1))
-	if err != nil {
-		return err
-	}
-	if written != p.Bytes || !slices.Equal(hash.Sum(nil), digest) {
-		_ = os.Remove(p.Path)
-		return ErrIntegrity
-	}
-	return nil
+	return translate(pkgcache.Verify(p.Path, sha512.New, digest, p.Bytes, into))
 }

@@ -44,8 +44,9 @@ type Apps struct {
 
 // LocalBuilds is enabled only with SPROUT_ENABLE_LOCAL_BUILDS=1, an API bound to
 // a loopback address, and two existing private directories for source uploads
-// and build artifacts. Verified npm packages are cached in
-// SPROUT_PACKAGE_CACHE_DIR, by default npm-packages beside the artifacts.
+// and build artifacts. Packages are cached in SPROUT_PACKAGE_CACHE_DIR, by
+// default packages beside the artifacts: verified npm tarballs and Python
+// wheels, each named by its digest.
 type LocalBuilds struct {
 	Enabled               bool
 	SourceDirectory       string
@@ -133,7 +134,7 @@ func loadLocalBuilds(lookupEnv LookupEnv, address string) (LocalBuilds, error) {
 	if builds.SourceDirectory == builds.ArtifactDirectory {
 		return LocalBuilds{}, fmt.Errorf("SPROUT_SOURCE_DIR and SPROUT_ARTIFACT_DIR must be different directories")
 	}
-	builds.PackageCacheDirectory = filepath.Join(filepath.Dir(builds.ArtifactDirectory), "npm-packages")
+	builds.PackageCacheDirectory = filepath.Join(filepath.Dir(builds.ArtifactDirectory), "packages")
 	if directory, exists := lookupEnv("SPROUT_PACKAGE_CACHE_DIR"); exists && strings.TrimSpace(directory) != "" {
 		if directory = strings.TrimSpace(directory); !filepath.IsAbs(directory) {
 			return LocalBuilds{}, fmt.Errorf("SPROUT_PACKAGE_CACHE_DIR must be an absolute path")

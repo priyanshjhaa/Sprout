@@ -61,8 +61,9 @@ func (d *scriptedDriver) List(context.Context) (Inventory, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	var inventory Inventory
+	// Like Docker's labels, the inventory knows a release's IDs, not its runtime.
 	for r := range d.prepared {
-		inventory.Releases = append(inventory.Releases, r)
+		inventory.Releases = append(inventory.Releases, Release{ApplicationID: r.ApplicationID, DeploymentID: r.DeploymentID})
 	}
 	return inventory, nil
 }
@@ -123,6 +124,22 @@ func TestEnsureSharesOneStartAndPreparesMissingFiles(t *testing.T) {
 	// Now running: no further work.
 	if _, err := s.Ensure(context.Background(), testRoute); err != nil || driver.starts.Load() != 1 {
 		t.Fatalf("second Ensure restarted: %v starts=%d", err, driver.starts.Load())
+	}
+}
+
+// A release woken from the database carries its runtime; the files the driver
+// already holds for it must be recognised, not unpacked over again.
+func TestEnsureReusesPreparedFilesWhateverTheRuntime(t *testing.T) {
+	driver := newScripted(healthyServer(t))
+	driver.prepared[testRelease] = true
+	route := testRoute
+	route.Release.Runtime = RuntimePython
+	s := newSupervisor(t, driver, staticArtifacts{}, 3)
+	if _, err := s.Ensure(context.Background(), route); err != nil {
+		t.Fatal(err)
+	}
+	if driver.prepares.Load() != 0 || driver.starts.Load() != 1 {
+		t.Fatalf("prepares=%d starts=%d, want the prepared files reused", driver.prepares.Load(), driver.starts.Load())
 	}
 }
 

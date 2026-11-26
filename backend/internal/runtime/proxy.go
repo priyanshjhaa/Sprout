@@ -74,7 +74,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		notice(w, http.StatusNotFound, "Not deployed", "This application has not been deployed yet.")
 		return
 	}
-	if route.Runtime == RuntimeStatic {
+	if route.Release.Runtime == RuntimeStatic {
 		p.serveStatic(w, r, route)
 		return
 	}

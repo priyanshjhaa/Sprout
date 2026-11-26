@@ -24,6 +24,8 @@ import (
 	"github.com/priyanshjhaa/Sprout/backend/internal/identity"
 	"github.com/priyanshjhaa/Sprout/backend/internal/nodeapp"
 	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
+	"github.com/priyanshjhaa/Sprout/backend/internal/pypifetch"
+	"github.com/priyanshjhaa/Sprout/backend/internal/pythonapp"
 	apprt "github.com/priyanshjhaa/Sprout/backend/internal/runtime"
 	"github.com/priyanshjhaa/Sprout/backend/internal/sharing"
 	"github.com/priyanshjhaa/Sprout/backend/internal/team"
@@ -93,6 +95,18 @@ func realMain() int {
 			logger.Error("node build runner configuration invalid")
 			return 1
 		}
+		// Both registries share the cache: npm tarballs and Python wheels are
+		// named by different digests and cannot collide.
+		wheels, err := pypifetch.New(builds.PackageCacheDirectory, pypifetch.BuildPlatform())
+		if err != nil {
+			logger.Error("SPROUT_PACKAGE_CACHE_DIR must be an absolute directory private to this user (0700)")
+			return 1
+		}
+		pythonBuilder, err := pythonapp.NewRunner(pythonapp.DefaultImage, 3*time.Minute, wheels)
+		if err != nil {
+			logger.Error("python build runner configuration invalid")
+			return 1
+		}
 		// The worker lock is held and interrupted jobs are recovered, so nothing
 		// in flight can own a stored file: reclaim what a crash left behind.
 		sweepCtx, sweepCancel := context.WithTimeout(ctx, 30*time.Second)
@@ -107,7 +121,7 @@ func realMain() int {
 			logger.Error("build storage sweep failed")
 			return 1
 		}
-		driver, err := apprt.NewDocker(nodeapp.DefaultImage)
+		driver, err := apprt.NewDocker(nodeapp.DefaultImage, pythonapp.DefaultImage)
 		if err != nil {
 			logger.Error("runtime driver configuration invalid")
 			return 1
@@ -148,7 +162,7 @@ func realMain() int {
 		kickRuntime = supervisor.Kick
 		appsServer = proxy.NewServer(appConfig.Apps.Address)
 		appURL = appConfig.Apps.URL
-		runner = buildjob.NewRunner(sources, artifacts, builder, driver, buildjob.DefaultHealthCheck, runner, logger)
+		runner = buildjob.NewRunner(sources, artifacts, builder, pythonBuilder, driver, buildjob.DefaultHealthCheck, runner, logger)
 		// Downloading packages, installing, building and starting can all take
 		// a while on a first build; later builds reuse the package cache.
 		jobTimeout = 6 * time.Minute

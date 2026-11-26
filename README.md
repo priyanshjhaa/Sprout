@@ -229,7 +229,7 @@ The next implementation phases are intentionally incremental:
 2. ~~Static sites~~ (done): a plain folder with `index.html`, served straight from the stored artifact.
 3. ~~CLI `sprout deploy` and the MCP `deploy` tool~~ (done): log in with an access token, then deploy a folder from the terminal, or let a coding agent deploy a folder of its project or a public GitHub repository at a commit.
 4. ~~`npm` installs~~ (done): apps may use packages from the public npm registry, fetched and checked by Sprout and installed in the offline build. A Node project without a `start` script, such as a Vite site, is built and served as a website.
-5. Python apps through buildpacks.
+5. ~~Python apps~~ (done): a hashed `requirements.txt` and a `Procfile`; Sprout fetches and checks the wheels from PyPI and installs them in the same offline build. Flask, FastAPI and similar apps work.
 6. A hands-on hosting trial (Fly Machines vs Cloud Run), then the cloud runtime driver.
 7. Later: private apps, private repositories, Postgres, encrypted secrets, artifact retention.
 
@@ -251,6 +251,7 @@ Sprout should remain deployable on a deliberately small initial architecture—o
 - [The `sprout` CLI: deploying from the terminal](docs/cli-learning.md)
 - [The MCP deploy tool: deploying from a coding agent](docs/mcp-learning.md)
 - [npm installs: real Node apps and built websites](docs/npm-installs-learning.md)
+- [Python apps: hashed wheels in the sealed build](docs/python-apps-learning.md)
 - [Node.js application build contract](docs/node-build-contract.md)
 - [Database design](docs/database-design.md)
 - [Local PostgreSQL setup](docs/local-postgres.md)

@@ -15,6 +15,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/priyanshjhaa/Sprout/backend/internal/sourcepack"
 )
 
 // fakeSprout is just enough of the API for a deploy: a workspace, its apps,
@@ -286,6 +288,14 @@ func TestSlugify(t *testing.T) {
 	} {
 		if got := slugify(name); got != want {
 			t.Errorf("slugify(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
+func TestDescribeKindNamesEveryKind(t *testing.T) {
+	for kind, want := range map[sourcepack.Kind]string{sourcepack.KindStatic: "website", sourcepack.KindNode: "Node.js app", sourcepack.KindPython: "Python app"} {
+		if got := describeKind(kind); got != want {
+			t.Errorf("describeKind(%q) = %q, want %q", kind, got, want)
 		}
 	}
 }

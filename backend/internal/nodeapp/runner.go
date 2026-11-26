@@ -4,18 +4,15 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
-	"os/exec"
-	"path"
 	"regexp"
 	"time"
 
+	"github.com/priyanshjhaa/Sprout/backend/internal/buildbox"
 	"github.com/priyanshjhaa/Sprout/backend/internal/npmfetch"
 	"github.com/priyanshjhaa/Sprout/backend/internal/source"
 	"github.com/priyanshjhaa/Sprout/backend/internal/staticsite"
@@ -131,7 +128,7 @@ func (r *Runner) BuildFiles(ctx context.Context, files fs.FS) ([]byte, error) {
 			return ErrArtifact
 		}
 		var buffer bytes.Buffer
-		if err := pack(ctx, built, "", tar.NewWriter(&buffer), &buffer, source.ArtifactLimits.ArchiveBytes); err != nil {
+		if err := buildbox.Pack(ctx, built, "", tar.NewWriter(&buffer), &buffer, source.ArtifactLimits.ArchiveBytes); err != nil {
 			return err
 		}
 		artifact = buffer.Bytes()
@@ -195,7 +192,7 @@ func outputError(ctx context.Context, err error) error {
 		return nil
 	case ctx.Err() != nil:
 		return ctx.Err()
-	case errors.Is(err, source.ErrLimit):
+	case errors.Is(err, source.ErrLimit), errors.Is(err, buildbox.ErrLimit):
 		return ErrArtifactSize
 	}
 	return ErrArtifact
@@ -235,7 +232,10 @@ func writeInput(ctx context.Context, files fs.FS, packages []npmfetch.Package) (
 		}
 	}()
 	writer := tar.NewWriter(input)
-	if err := pack(ctx, files, "app", writer, nil, 0); err != nil {
+	if err := buildbox.Pack(ctx, files, "app", writer, nil, 0); err != nil {
+		if errors.Is(err, buildbox.ErrFiles) {
+			return nil, ErrContract
+		}
 		return nil, err
 	}
 	for i, p := range packages {
@@ -259,172 +259,37 @@ func writeInput(ctx context.Context, files fs.FS, packages []npmfetch.Package) (
 	return input, nil
 }
 
-// pack writes files into writer under prefix with platform-owned metadata.
-// When limit is positive, size (the bytes written so far) must stay within it.
-func pack(ctx context.Context, files fs.FS, prefix string, writer *tar.Writer, size *bytes.Buffer, limit int64) error {
-	err := fs.WalkDir(files, ".", func(name string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return ErrContract
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if name == "." {
-			return nil
-		}
-		target := name
-		if prefix != "" {
-			target = path.Join(prefix, name)
-		}
-		if entry.IsDir() {
-			return writer.WriteHeader(&tar.Header{Name: target + "/", Mode: 0700, Typeflag: tar.TypeDir})
-		}
-		content, err := fs.ReadFile(files, name)
-		if err != nil {
-			return ErrContract
-		}
-		if err := writer.WriteHeader(&tar.Header{Name: target, Mode: 0600, Size: int64(len(content)), Typeflag: tar.TypeReg}); err != nil {
-			return ErrContract
-		}
-		if _, err := writer.Write(content); err != nil {
-			return ErrContract
-		}
-		if limit > 0 && int64(size.Len()) > limit {
-			return source.ErrLimit
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	if prefix == "" {
-		if writer.Close() != nil {
-			return ErrContract
-		}
-		if limit > 0 && int64(size.Len()) > limit {
-			return source.ErrLimit
-		}
-	}
-	return nil
+// box is the sealed build container for Node.
+func (r *Runner) box() buildbox.Box {
+	return buildbox.Box{Image: r.image, Purpose: "local-node-build", Env: []string{"npm_config_cache=/tmp/npm-cache"}}
 }
 
-func (r *Runner) execute(ctx context.Context, input io.Reader, script string) (artifact []byte, err error) {
-	var random [16]byte
-	if _, err = rand.Read(random[:]); err != nil {
-		return nil, ErrDocker
+// execute runs script in the sealed container and gives its exit codes and
+// failures Node's own codes.
+func (r *Runner) execute(ctx context.Context, input io.Reader, script string) ([]byte, error) {
+	output, err := r.box().Run(ctx, input, script, int(source.MaxArchiveBytes))
+	var cleanup error
+	if errors.Is(err, buildbox.ErrCleanup) {
+		cleanup = ErrCleanup
 	}
-	name := "sprout-local-build-" + hex.EncodeToString(random[:])
-	commandCtx, stop := context.WithCancel(ctx)
-	defer stop()
-	output := &boundedOutput{limit: int(source.MaxArchiveBytes), cancel: stop}
-	command := exec.CommandContext(commandCtx, "docker", dockerArgs(name, r.image, script)...)
-	command.Stdin = input
-	command.Stdout = output
-	command.Stderr = io.Discard
-	command.WaitDelay = 5 * time.Second
-
-	// Cleanup has its own bounded context so cancellation still stops the
-	// specific container after the local Docker CLI has been interrupted.
-	defer func() {
-		cleanupCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-		if cleanupContainer(cleanupCtx, name, commandCtx.Err() != nil) != nil {
-			err = errors.Join(err, ErrCleanup)
-		}
-	}()
-
-	runErr := command.Run()
-	if output.exceeded {
-		return nil, ErrArtifactSize
+	var exit *buildbox.ExitError
+	switch {
+	case err == nil:
+		return output, nil
+	case errors.As(err, &exit) && exit.Code == 3:
+		err = ErrInstall
+	case errors.As(err, &exit) && exit.Code == 5:
+		err = ErrArtifact
+	case errors.As(err, &exit):
+		err = ErrBuild
+	case errors.Is(err, buildbox.ErrTooLarge):
+		err = ErrArtifactSize
+	case ctx.Err() != nil:
+		err = ctx.Err()
+	case errors.Is(err, buildbox.ErrDocker):
+		err = ErrDocker
+	case cleanup != nil:
+		err = nil
 	}
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-	if runErr == nil {
-		return output.buffer.Bytes(), nil
-	}
-	var exit *exec.ExitError
-	if errors.As(runErr, &exit) {
-		switch exit.ExitCode() {
-		case 3:
-			return nil, ErrInstall
-		case 5:
-			return nil, ErrArtifact
-		case 125, 126, 127: // Docker itself could not run the container
-		default:
-			return nil, ErrBuild
-		}
-	}
-	return nil, ErrDocker
-}
-
-type boundedOutput struct {
-	buffer   bytes.Buffer
-	limit    int
-	cancel   context.CancelFunc
-	exceeded bool
-}
-
-func (b *boundedOutput) Write(p []byte) (int, error) {
-	if b.exceeded {
-		return len(p), nil
-	}
-	remaining := b.limit - b.buffer.Len()
-	if len(p) > remaining {
-		if remaining > 0 {
-			_, _ = b.buffer.Write(p[:remaining])
-		}
-		b.exceeded = true
-		b.cancel()
-		return len(p), nil
-	}
-	_, _ = b.buffer.Write(p)
-	return len(p), nil
-}
-
-func cleanupContainer(ctx context.Context, name string, waitForLateCreate bool) error {
-	for {
-		inspect := exec.CommandContext(ctx, "docker", "container", "inspect", name)
-		inspect.Stdout = io.Discard
-		inspect.Stderr = io.Discard
-		if inspect.Run() == nil {
-			remove := exec.CommandContext(ctx, "docker", "container", "rm", "--force", "--", name)
-			remove.Stdout = io.Discard
-			remove.Stderr = io.Discard
-			if remove.Run() == nil {
-				return nil
-			}
-		} else if !waitForLateCreate {
-			return nil
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		timer := time.NewTimer(250 * time.Millisecond)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return ctx.Err()
-		case <-timer.C:
-		}
-	}
-}
-
-// dockerArgs is the build container's whole security posture. /workspace is
-// mounted exec (Docker's default for tmpfs is noexec) because builds run
-// package commands such as vite and native helpers such as esbuild; that
-// grants nothing new, since the build can already run any code through node.
-func dockerArgs(name, image, script string) []string {
-	return []string{
-		"run", "--name", name, "--pull=never", "--interactive", "--log-driver=none",
-		"--label", "io.sprout.purpose=local-node-build", "--label", "io.sprout.owned=" + name,
-		"--network", "none", "--user", "65532:65532", "--read-only", "--cap-drop", "ALL",
-		"--security-opt", "no-new-privileges", "--cpus", "1", "--memory", "2g", "--memory-swap", "2g", "--pids-limit", "256",
-		"--tmpfs", "/workspace:rw,exec,nosuid,nodev,size=1073741824,uid=65532,gid=65532,mode=0700",
-		"--tmpfs", "/tmp:rw,nosuid,nodev,size=536870912,uid=65532,gid=65532,mode=0700",
-		"--workdir", "/workspace", "--env", "HOME=/tmp", "--env", "npm_config_cache=/tmp/npm-cache",
-		"--env", "HTTP_PROXY=", "--env", "HTTPS_PROXY=", "--env", "ALL_PROXY=", "--env", "NO_PROXY=",
-		"--env", "http_proxy=", "--env", "https_proxy=", "--env", "all_proxy=", "--env", "no_proxy=",
-		image, "sh", "-c", script,
-	}
+	return nil, errors.Join(err, cleanup)
 }
