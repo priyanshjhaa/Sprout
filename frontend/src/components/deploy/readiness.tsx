@@ -4,14 +4,16 @@ import { TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Chosen } from "@/lib/chosen-source";
 import { inspectNodeApp } from "@/lib/node-readiness";
+import { inspectPythonApp } from "@/lib/python-readiness";
 
 /** What may stop the chosen folder from running on Sprout, worked out in the browser. */
 export function useReadiness(chosen: Chosen | null): string[] {
   const [problems, setProblems] = useState<{ source: Chosen | null; list: string[] }>({ source: null, list: [] });
   useEffect(() => {
-    if (chosen?.kind !== "folder" || chosen.folder.kind !== "node") return;
+    if (chosen?.kind !== "folder" || chosen.folder.kind === "static") return;
+    const inspect = chosen.folder.kind === "python" ? inspectPythonApp : inspectNodeApp;
     let current = true;
-    inspectNodeApp(chosen.folder.files).then((list) => { if (current) setProblems({ source: chosen, list }); }, () => undefined);
+    inspect(chosen.folder.files).then((list) => { if (current) setProblems({ source: chosen, list }); }, () => undefined);
     return () => { current = false; };
   }, [chosen]);
   // Results belong to the folder they were computed for, so a new choice never shows stale warnings.

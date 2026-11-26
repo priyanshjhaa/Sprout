@@ -38,7 +38,7 @@ const size = (bytes: number) => bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)
 export function summarise(chosen: Chosen): string {
   if (chosen.kind === "archive") return `.tar archive · ${size(chosen.file.size)}`;
   const { folder } = chosen;
-  const what = folder.kind === "static" ? "Website" : "Node.js app";
+  const what = folder.kind === "static" ? "Website" : folder.kind === "python" ? "Python app" : "Node.js app";
   return `${what} · ${folder.files.length} ${folder.files.length === 1 ? "file" : "files"} · ${size(folder.totalBytes)}`;
 }
 

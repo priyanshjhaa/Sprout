@@ -256,6 +256,7 @@ func TestSkipReasonMatchesTheBrowser(t *testing.T) {
 	cases := map[string]Reason{
 		"._icon": ReasonJunk, ".env": ReasonHidden, "node_modules": ReasonDependencies, "Thumbs.db": ReasonJunk,
 		"__MACOSX": ReasonJunk, "desktop.ini": ReasonJunk, "credentials.json": ReasonPrivate, "key.PEM": ReasonPrivate,
+		"__pycache__": ReasonJunk, "venv": ReasonDependencies, "site-packages": ReasonDependencies,
 		"index.html": "", "src": "",
 	}
 	for name, want := range cases {
@@ -322,5 +323,43 @@ func TestPackLeavesOutANodeProjectsOwnDist(t *testing.T) {
 	write(t, dir, map[string]string{"index.html": "x", "dist/app.js": "x"})
 	if archive, err := Pack(context.Background(), dir); err != nil || archive.Files != 2 {
 		t.Fatalf("website: files %d, err %v", archive.Files, err)
+	}
+}
+
+func TestPacksAPythonProjectWithoutItsEnvironment(t *testing.T) {
+	dir := t.TempDir()
+	hash := strings.Repeat("a", 64)
+	write(t, dir, map[string]string{
+		"requirements.txt":                    "flask==3.1.3 --hash=sha256:" + hash + "\n",
+		"Procfile":                            "web: gunicorn app:app --bind 0.0.0.0:$PORT\n",
+		"app.py":                              "app = None\n",
+		"__pycache__/app.cpython-313.pyc":     "bytecode",
+		"venv/pyvenv.cfg":                     "home = /usr/bin",
+		"venv/lib/python3.13/site-packages/x": "installed",
+		".venv/pyvenv.cfg":                    "home = /usr/bin",
+	})
+	archive, err := Pack(context.Background(), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if archive.Kind != KindPython {
+		t.Fatalf("kind %q", archive.Kind)
+	}
+	got := entries(t, archive.Tar)
+	if len(got) != 3 || got["app.py"] == "" || got["Procfile"] == "" || got["requirements.txt"] == "" {
+		t.Fatalf("archive holds %v", got)
+	}
+	if err := Check(context.Background(), archive); err != nil {
+		t.Fatalf("the server's rules refuse it: %v", err)
+	}
+	// An unhashed requirements.txt is refused on this machine, with the
+	// server's own code.
+	write(t, dir, map[string]string{"requirements.txt": "flask\n"})
+	archive, err = Pack(context.Background(), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Check(context.Background(), archive); err == nil || err.Error() != "python_contract_requirements" {
+		t.Fatalf("check: %v", err)
 	}
 }

@@ -19,7 +19,7 @@ const frontDoors = [
   "sprout mcp: a deploy tool for coding agents that takes a folder of the project or a public GitHub repository at a commit",
 ];
 
-// Mirrors docs/node-build-contract.md and docs/static-sites-learning.md.
+// Mirrors docs/node-build-contract.md, docs/python-apps-learning.md and docs/static-sites-learning.md.
 const nodeContract = [
   "One npm application with package.json and package-lock.json at the root",
   "Node.js 24 (engines.node: \"24.x\") with a build script; npm packages from the public registry are installed for you",
@@ -27,11 +27,18 @@ const nodeContract = [
   "Builds into a dist/ folder; a server answers /health on PORT",
   "No Dockerfile, node_modules, .env files, or credentials",
 ];
+const pythonContract = [
+  "A requirements.txt at the top that pins every package with == and lists its hashes: uv pip compile requirements.in --generate-hashes -o requirements.txt",
+  "A Procfile with one line, such as web: gunicorn app:app --bind 0.0.0.0:$PORT",
+  "Python 3.13; packages from PyPI that have a ready-made wheel for Linux are installed for you",
+  "The server answers /health on PORT",
+  "No virtual environment, Dockerfile, .env files, or credentials (a venv folder is left out for you)",
+];
 const staticContract = [
-  "A folder with an index.html at the top and no package.json (hidden files are left out for you)",
+  "A folder with an index.html at the top and no package.json or requirements.txt (hidden files are left out for you)",
   "Plain file names: letters, numbers, dots, dashes and underscores, no dotfiles",
   "At most 256 files and 8 MiB; an optional 404.html is used for missing pages",
-  "Served as-is, with nothing built or executed. Python apps are next",
+  "Served as-is, with nothing built or executed",
 ];
 
 export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
@@ -68,6 +75,10 @@ export function DeployFlow({ workspaceSlug }: { workspaceSlug: string }) {
         <details>
           <summary>Node.js apps</summary>
           <ul>{nodeContract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+        </details>
+        <details>
+          <summary>Python apps</summary>
+          <ul>{pythonContract.map((rule) => <li key={rule}>{rule}</li>)}</ul>
         </details>
         <details>
           <summary>Static sites</summary>

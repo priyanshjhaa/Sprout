@@ -33,8 +33,8 @@ export class FolderProblem extends Error {
 export interface PreparedFolder {
   /** Files to upload, sorted, with paths relative to the app's root. */
   files: SourceFile[];
-  /** A website (index.html) or a Node.js app (package.json). */
-  kind: "static" | "node";
+  /** A website (index.html), a Node.js app (package.json) or a Python app (requirements.txt). */
+  kind: "static" | "node" | "python";
   /** The dropped folder's own name, a good starting point for the app's name. */
   folderName: string | null;
   totalBytes: number;
@@ -45,7 +45,10 @@ export interface PreparedFolder {
 const encoder = new TextEncoder();
 
 const secretNames = new Set(["credentials.json", "id_rsa", "id_ed25519", "id_ecdsa"]);
-const junkNames = new Set(["__macosx", "thumbs.db", "desktop.ini", "node_modules"]);
+const junkNames = new Set(["__macosx", "thumbs.db", "desktop.ini", "__pycache__"]);
+// Installed packages, which Sprout installs itself: venv is the virtual
+// environment name Python's docs use (.venv is hidden anyway).
+const dependencyNames = new Set(["node_modules", "venv", "site-packages"]);
 const secretSuffixes = [".pem", ".key", ".p12", ".pfx"];
 
 /**
@@ -57,7 +60,7 @@ export function skipReason(segment: string): "hidden" | "private" | "dependencie
   const lower = segment.toLowerCase();
   if (lower.startsWith("._")) return "junk"; // macOS resource forks
   if (lower.startsWith(".")) return "hidden";
-  if (lower === "node_modules") return "dependencies";
+  if (dependencyNames.has(lower)) return "dependencies";
   if (junkNames.has(lower)) return "junk";
   if (secretNames.has(lower) || secretSuffixes.some((suffix) => lower.endsWith(suffix))) return "private";
   return null;
@@ -81,7 +84,7 @@ function commonTop(paths: string[][]): string | null {
 }
 
 const hasRootMarker = (paths: string[][]) =>
-  paths.some((segments) => segments.length === 1 && (segments[0] === "index.html" || segments[0] === "package.json"));
+  paths.some((segments) => segments.length === 1 && ["index.html", "package.json", "requirements.txt"].includes(segments[0]));
 
 const listNames = (names: string[], max = 4) =>
   names.slice(0, max).map((name) => `"${name}"`).join(", ") + (names.length > max ? ` and ${names.length - max} more` : "");
@@ -124,7 +127,7 @@ export function prepareFolder(picked: SourceFile[]): PreparedFolder {
   }
 
   const roots = entries.filter((entry) => entry.segments.length === 1).map((entry) => entry.segments[0]);
-  const kind = roots.includes("package.json") ? "node" : roots.includes("index.html") ? "static" : null;
+  const kind = roots.includes("package.json") ? "node" : roots.includes("requirements.txt") ? "python" : roots.includes("index.html") ? "static" : null;
   if (kind === null) {
     const near = roots.find((name) => /^index\.html?$/i.test(name));
     const found = [...new Set(entries.map((entry) => entry.segments[0]))];
@@ -132,7 +135,7 @@ export function prepareFolder(picked: SourceFile[]): PreparedFolder {
     throw new FolderProblem(
       (near ? `Rename "${near}" to exactly "index.html". ` : "")
       + (built ? `This looks like a project whose finished website is in the "${built}" folder: drop that folder instead. ` : "")
-      + `Sprout needs an index.html (for a website) or a package.json (for a Node.js app) at the top of the folder. I found: ${listNames(found)}.`,
+      + `Sprout needs an index.html (for a website), a package.json (for a Node.js app) or a requirements.txt (for a Python app) at the top of the folder. I found: ${listNames(found)}.`,
     );
   }
 

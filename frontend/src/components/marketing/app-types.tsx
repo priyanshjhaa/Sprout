@@ -8,6 +8,7 @@ const COLUMNS = 16;
 const words = [
   { word: "STATICSITE", label: "Static sites", column: 3 },
   { word: "NODEAPI", label: "Node.js APIs", column: 8 },
+  { word: "PYTHONAPI", label: "Python APIs", column: 4 },
   { word: "DASHBOARD", label: "Internal dashboards", column: 1 },
   { word: "WEBHOOK", label: "Webhook receivers", column: 6 },
   { word: "CHATBOT", label: "Chat bots", column: 2 },
